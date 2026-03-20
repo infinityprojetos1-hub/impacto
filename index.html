@@ -1882,7 +1882,6 @@
                 margin: 0 !important;
             }
 
-            /* Botões de exportar/vincular JSON: empilha em coluna */
             .material-botoes-container {
                 flex-direction: column !important;
                 gap: 8px !important;
@@ -4589,7 +4588,7 @@
                     </p>
                     <div style="display: flex; gap: 12px; flex-wrap: wrap;">
                         <button class="btn-primary" onclick="executarBackupCompleto()">
-                            <i class="fas fa-download"></i> Baixar Backup (JSON)
+                            <i class="fas fa-download"></i> Baixar Backup
                         </button>
                         <label class="btn-secondary" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 8px;">
                             <i class="fas fa-upload"></i> Restaurar do Backup
@@ -4604,8 +4603,9 @@
     <script>
         // ===== MODAL DE CONFIGURAÇÕES =====
         
+        const modalConfig = document.getElementById('modalConfiguracoes');
         document.getElementById('btnConfiguracoes').addEventListener('click', function() {
-            document.getElementById('modalConfiguracoes').style.display = 'flex';
+            modalConfig.style.display = 'flex';
             verificarStatusSistema();
             
             // Anima o botão
@@ -4616,8 +4616,13 @@
         });
         
         function fecharModalConfiguracoes() {
-            document.getElementById('modalConfiguracoes').style.display = 'none';
+            modalConfig.style.display = 'none';
         }
+        
+        // Fecha o modal ao clicar fora do conteúdo
+        modalConfig.addEventListener('click', function(e) {
+            if (e.target === modalConfig) fecharModalConfiguracoes();
+        });
         
         function verificarStatusSistema() {
             if (typeof carregarConfigValores === 'function') carregarConfigValores();
@@ -4763,19 +4768,6 @@
                 });
             });
 
-            // Verifica se há arquivos vinculados e mostra botão para conectar
-            setTimeout(async () => {
-                let temArquivosVinculados = false;
-
-                // Verifica se há handles salvos
-                try {
-                    if (typeof window.forcarPermissaoNF === 'function' ||
-                        typeof window.forcarPermissaoMaterial === 'function' ||
-                        typeof window.forcarPermissaoRelatorio === 'function') {
-                        temArquivosVinculados = true;
-                    }
-                } catch (e) { }
-            }, 1000);
         });
     </script>
 

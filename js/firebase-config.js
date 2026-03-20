@@ -441,7 +441,10 @@ function iniciarSincronizacaoTempoReal() {
       const remoteMatTotal = (dados.pendentes||[]).length + (dados.enviadas||[]).length + (dados.pedidosSandro||[]).length;
       const perdaMat = localMatTotal > 0 && remoteMatTotal < localMatTotal;
       const mesmoMat = remoteTs === localTs && remoteTs > 0;
-      if (!mesmoMat && ((remoteTs < localTs && localStr) || (perdaMat && localStr))) {
+      // Protege local: timestamp mais novo OU mais itens (evita rollback)
+      const localMaisRecente = remoteTs < localTs && localStr;
+      const localTemMaisItens = perdaMat && localStr;
+      if (!mesmoMat && (localMaisRecente || localTemMaisItens)) {
         console.log('🛡️ Material: protegendo dados locais, enviando para Firebase');
         try {
           const local = localMat || JSON.parse(localStr);
@@ -668,6 +671,61 @@ function iniciarSincronizacaoTempoReal() {
     }
     window.dispatchEvent(new CustomEvent('firebaseSync', { detail: { tipo: 'checklists' } }));
   });
+
+  // ── Relatórios ───────────────────────────────────────────────────
+  database.ref('dados/relatorios').on('value', (snapshot) => {
+    const dados = snapshot.val();
+    if (!dados) {
+      const localStr = localStorage.getItem('relatoriosData');
+      if (localStr) {
+        try {
+          const local = JSON.parse(localStr);
+          const temDados = (local.pendentes && local.pendentes.length > 0) ||
+            (local.gerados && local.gerados.length > 0) ||
+            (local.pedidosSandro && local.pedidosSandro.length > 0);
+          if (temDados) {
+            if (!local._ts) local._ts = Date.now();
+            salvarNoDatabase('dados/relatorios', local);
+            console.log('📤 Relatórios locais enviados para Firebase (primeiro upload)');
+          }
+        } catch (e) { /* ignora */ }
+      }
+      return;
+    }
+    window._fbReceivendo = true;
+    try {
+      const localStr = localStorage.getItem('relatoriosData');
+      let localRel = null;
+      try { localRel = localStr ? JSON.parse(localStr) : null; } catch (_) {}
+      const localTs = localRel ? (localRel._ts || 0) : 0;
+      const remoteTs = dados._ts || 0;
+      const localTotal = localRel ? ((localRel.pendentes||[]).length + (localRel.gerados||[]).length + (localRel.pedidosSandro||[]).length) : 0;
+      const remoteTotal = (dados.pendentes||[]).length + (dados.gerados||[]).length + (dados.pedidosSandro||[]).length;
+      const perdaRel = localTotal > 0 && remoteTotal < localTotal;
+      const mesmoRel = remoteTs === localTs && remoteTs > 0;
+      if (!mesmoRel && ((remoteTs < localTs && localStr) || (perdaRel && localStr))) {
+        console.log('🛡️ Relatórios: protegendo dados locais, enviando para Firebase');
+        try {
+          const local = localRel || JSON.parse(localStr);
+          if (!local._ts) local._ts = Date.now();
+          salvarNoDatabase('dados/relatorios', local);
+        } catch (e) { /* ignora */ }
+      } else {
+        localStorage.setItem('relatoriosData', JSON.stringify(dados));
+        if (typeof relatoriosData !== 'undefined') {
+          relatoriosData.pendentes = Array.isArray(dados.pendentes) ? dados.pendentes : [];
+          relatoriosData.gerados = Array.isArray(dados.gerados) ? dados.gerados : [];
+          relatoriosData.pedidosSandro = Array.isArray(dados.pedidosSandro) ? dados.pedidosSandro : [];
+          relatoriosData._ts = dados._ts || 0;
+        }
+        _fbDebouncedUI('relatorios', () => { if (typeof atualizarListaRelatoriosNovo === 'function') atualizarListaRelatoriosNovo(); });
+        console.log('🔄 Relatórios atualizados do Firebase');
+      }
+    } finally {
+      window._fbReceivendo = false;
+    }
+    window.dispatchEvent(new CustomEvent('firebaseSync', { detail: { tipo: 'relatorios' } }));
+  });
 }
 
 // Auto-inicia a sincronização assim que o Firebase conecta
@@ -706,6 +764,7 @@ function forcarSyncParaFirebase() {
     if (typeof window.salvarDadosChecklist === 'function') window.salvarDadosChecklist();
     if (typeof window.salvarDadosEstoque === 'function') window.salvarDadosEstoque();
     if (typeof window.salvarDadosPagamento === 'function') window.salvarDadosPagamento();
+    if (typeof window.salvarDadosRelatorios === 'function') window.salvarDadosRelatorios();
   } catch (_) {}
   const ts = Date.now();
   try {
@@ -746,13 +805,21 @@ function forcarSyncParaFirebase() {
         salvarNoDatabase('dados/valoresIgreja', { ...d, _ts: ts });
       } catch (_) {}
     }
+    const rel = localStorage.getItem('relatoriosData');
+    if (rel) {
+      try {
+        const d = JSON.parse(rel);
+        if (!d._ts) d._ts = ts;
+        salvarNoDatabase('dados/relatorios', d);
+      } catch (_) {}
+    }
     console.log('📤 Sync forçado: todos os dados enviados para Firebase');
   } catch (e) { console.error('Erro ao forçar sync:', e); }
 }
 window.forcarSyncParaFirebase = forcarSyncParaFirebase;
 
 // Ao fechar aba ou trocar de aba: garante que dados locais sejam enviados ao Firebase
-// Debounce de 2.5s evita sync excessivo ao alternar entre abas rapidamente (ex: notebook + PC abertos)
+// Debounce de 1s: sync mais rápido ao sair, evita perder dados ao fechar
 let _fbVisibilitySyncTimer = null;
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
@@ -760,7 +827,7 @@ document.addEventListener('visibilitychange', () => {
     _fbVisibilitySyncTimer = setTimeout(() => {
       _fbVisibilitySyncTimer = null;
       forcarSyncParaFirebase();
-    }, 2500);
+    }, 1000);
   } else {
     if (_fbVisibilitySyncTimer) { clearTimeout(_fbVisibilitySyncTimer); _fbVisibilitySyncTimer = null; }
   }

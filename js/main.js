@@ -703,52 +703,7 @@ let relatoriosData = {
     pedidosSandro: []   // Pedidos do Sandro
 };
 let igrejaAtualRelatorio = null; // Igreja selecionada no modal
-let relatorioFileHandle = null; // Handle do arquivo JSON vinculado
 let abaAtivaRelatorio = 'pendentes'; // Aba ativa atual
-
-// ==========================================
-// PERSISTÊNCIA EM ARQUIVO JSON (RELATÓRIOS)
-// ==========================================
-
-const RELATORIO_DB_NAME = 'relatorio-db';
-const RELATORIO_STORE = 'handles';
-const RELATORIO_HANDLE_KEY = 'relatorioDataFile';
-
-function openRelatorioDB() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(RELATORIO_DB_NAME, 1);
-        request.onupgradeneeded = function () {
-            const db = request.result;
-            if (!db.objectStoreNames.contains(RELATORIO_STORE)) {
-                db.createObjectStore(RELATORIO_STORE);
-            }
-        };
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-    });
-}
-
-async function getStoredRelatorioHandle() {
-    const db = await openRelatorioDB();
-    return new Promise((resolve, reject) => {
-        const tx = db.transaction(RELATORIO_STORE, 'readonly');
-        const store = tx.objectStore(RELATORIO_STORE);
-        const req = store.get(RELATORIO_HANDLE_KEY);
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
-    });
-}
-
-async function setStoredRelatorioHandle(handle) {
-    const db = await openRelatorioDB();
-    return new Promise((resolve, reject) => {
-        const tx = db.transaction(RELATORIO_STORE, 'readwrite');
-        const store = tx.objectStore(RELATORIO_STORE);
-        const req = store.put(handle, RELATORIO_HANDLE_KEY);
-        req.onsuccess = () => resolve();
-        req.onerror = () => reject(req.error);
-    });
-}
 
 // Carrega dados dos relatórios do localStorage
 function carregarDadosRelatorios() {
@@ -786,291 +741,21 @@ function carregarDadosRelatorios() {
     }
 }
 
-// Salva dados dos relatórios no localStorage e arquivo vinculado
+// Salva dados dos relatórios no localStorage e Firebase
 function salvarDadosRelatorios() {
     try {
+        relatoriosData._ts = Date.now();
         localStorage.setItem('relatoriosData', JSON.stringify(relatoriosData));
-        console.log('✅ Dados de relatórios salvos no localStorage');
-
-        // Salva também no arquivo vinculado (se existir)
-        if (relatorioFileHandle) {
-            salvarRelatoriosEmArquivo().catch(err =>
-                console.error('❌ Erro ao salvar no arquivo:', err)
-            );
+        if (typeof salvarNoDatabase === 'function' && typeof firebaseDisponivel !== 'undefined' && firebaseDisponivel) {
+            salvarNoDatabase('dados/relatorios', relatoriosData)
+                .then(() => console.log('✅ Relatórios salvos no Firebase'))
+                .catch(err => console.warn('⚠️ Relatórios não salvos no Firebase:', err));
         }
+        console.log('✅ Dados de relatórios salvos');
     } catch (e) {
         console.error('❌ Erro ao salvar dados dos relatórios:', e);
     }
 }
-
-// Lê dados do arquivo JSON vinculado
-async function lerRelatoriosDoArquivo() {
-    try {
-        if (!relatorioFileHandle) return;
-        const file = await relatorioFileHandle.getFile();
-        const text = await file.text();
-
-        const json = JSON.parse(text || '{}');
-
-        // Garante estrutura correta
-        relatoriosData = {
-            pendentes: Array.isArray(json.pendentes) ? json.pendentes : [],
-            gerados: Array.isArray(json.gerados) ? json.gerados : [],
-            pedidosSandro: Array.isArray(json.pedidosSandro) ? json.pedidosSandro : []
-        };
-
-        localStorage.setItem('relatoriosData', JSON.stringify(relatoriosData));
-        const total = relatoriosData.pendentes.length + relatoriosData.gerados.length + relatoriosData.pedidosSandro.length;
-        console.log('✅ Dados de relatórios carregados do arquivo:', total, 'igrejas');
-
-        atualizarListaRelatoriosNovo();
-    } catch (error) {
-        console.error('❌ Erro ao ler relatórios do arquivo:', error);
-    }
-}
-
-// Salva dados no arquivo JSON vinculado
-async function salvarRelatoriosEmArquivo() {
-    try {
-        if (!relatorioFileHandle) {
-            console.log('📭 Nenhum arquivo vinculado para salvar');
-            return;
-        }
-
-        // Verifica se temos permissão antes de salvar
-        const permissao = await relatorioFileHandle.queryPermission({ mode: 'readwrite' });
-        if (permissao !== 'granted') {
-            console.log('⏳ Sem permissão para salvar, solicitando...');
-            const resultado = await relatorioFileHandle.requestPermission({ mode: 'readwrite' });
-            if (resultado !== 'granted') {
-                console.warn('❌ Permissão de escrita negada');
-                return;
-            }
-        }
-
-        const writable = await relatorioFileHandle.createWritable();
-        const conteudo = JSON.stringify(relatoriosData, null, 2);
-        await writable.write(conteudo);
-        await writable.close();
-        console.log('✅ Relatórios salvos no arquivo vinculado');
-    } catch (error) {
-        console.error('❌ Erro ao salvar relatórios no arquivo:', error);
-        // Se o erro for de permissão, limpa o handle
-        if (error.name === 'NotAllowedError' || error.name === 'SecurityError') {
-            console.warn('⚠️ Handle inválido, será necessário vincular novamente');
-        }
-    }
-}
-
-// Seleciona arquivo JSON existente para vincular
-async function selecionarArquivoRelatorios() {
-    try {
-        if (!('showOpenFilePicker' in window)) {
-            alert('Seu navegador não suporta vincular arquivo diretamente. Use Importar/Exportar JSON.');
-            return;
-        }
-        const [handle] = await window.showOpenFilePicker({
-            multiple: false,
-            types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
-        });
-        relatorioFileHandle = handle;
-        await setStoredRelatorioHandle(handle);
-        console.log('✅ Handle salvo no IndexedDB:', handle.name);
-        await lerRelatoriosDoArquivo();
-        atualizarStatusArquivoRelatorio(handle.name);
-        alert('Arquivo JSON de relatórios vinculado com sucesso!');
-    } catch (error) {
-        if (error.name !== 'AbortError') {
-            console.error('Erro ao vincular arquivo de relatórios:', error);
-        }
-    }
-}
-
-// Cria novo arquivo JSON para relatórios
-async function criarArquivoRelatorios() {
-    try {
-        if (!('showSaveFilePicker' in window)) {
-            alert('Seu navegador não suporta criar arquivo diretamente. Use Exportar JSON.');
-            return;
-        }
-        const handle = await window.showSaveFilePicker({
-            suggestedName: 'relatorios_data.json',
-            types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
-        });
-        relatorioFileHandle = handle;
-        await setStoredRelatorioHandle(handle);
-        console.log('✅ Handle salvo no IndexedDB:', handle.name);
-        await salvarRelatoriosEmArquivo();
-        atualizarStatusArquivoRelatorio(handle.name);
-        alert('Arquivo JSON de relatórios criado e vinculado!');
-    } catch (error) {
-        if (error.name !== 'AbortError') {
-            console.error('Erro ao criar arquivo de relatórios:', error);
-        }
-    }
-}
-
-// Exporta JSON para download manual
-function exportarRelatoriosJson() {
-    const conteudo = JSON.stringify(relatoriosData, null, 2);
-    const blob = new Blob([conteudo], { type: 'application/json;charset=utf-8' });
-    saveAs(blob, 'relatorios_data.json');
-}
-
-// Importa JSON de arquivo
-function importarRelatoriosJson(file) {
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        try {
-            const json = JSON.parse(e.target.result);
-
-            // Valida e garante estrutura
-            relatoriosData = {
-                pendentes: Array.isArray(json.pendentes) ? json.pendentes : [],
-                gerados: Array.isArray(json.gerados) ? json.gerados : [],
-                pedidosSandro: Array.isArray(json.pedidosSandro) ? json.pedidosSandro : []
-            };
-
-            salvarDadosRelatorios();
-            atualizarListaRelatoriosNovo();
-            alert('Dados de relatórios importados com sucesso!');
-        } catch (err) {
-            alert('Erro ao importar JSON: ' + err.message);
-        }
-    };
-    reader.readAsText(file);
-}
-
-// Inicializa arquivo de relatórios (restaura handle vinculado)
-async function inicializarArquivoRelatorios() {
-    try {
-        console.log('🔄 Tentando restaurar arquivo de relatórios...');
-        const handle = await getStoredRelatorioHandle();
-
-        if (handle) {
-            console.log('📁 Handle encontrado:', handle.name);
-
-            // Verifica permissão
-            const permissao = await handle.queryPermission({ mode: 'readwrite' });
-            console.log('🔐 Permissão atual:', permissao);
-
-            if (permissao === 'granted') {
-                relatorioFileHandle = handle;
-                await lerRelatoriosDoArquivo();
-                atualizarStatusArquivoRelatorio(handle.name);
-                console.log('✅ Arquivo de relatórios reconectado automaticamente!');
-            } else {
-                // Tenta pedir permissão
-                console.log('⏳ Pedindo permissão...');
-                const resultado = await handle.requestPermission({ mode: 'readwrite' });
-                console.log('🔐 Resultado da permissão:', resultado);
-
-                if (resultado === 'granted') {
-                    relatorioFileHandle = handle;
-                    await lerRelatoriosDoArquivo();
-                    atualizarStatusArquivoRelatorio(handle.name);
-                    console.log('✅ Arquivo de relatórios reconectado após permissão!');
-                } else {
-                    console.warn('❌ Permissão negada pelo usuário');
-                }
-            }
-        } else {
-            console.log('📭 Nenhum arquivo de relatórios vinculado anteriormente');
-        }
-    } catch (error) {
-        console.warn('⚠️ Erro ao restaurar arquivo de relatórios:', error);
-    }
-}
-
-// Atualiza status do arquivo vinculado na interface
-function atualizarStatusArquivoRelatorio(nome) {
-    const status = document.getElementById('relatorioArquivoStatus');
-    if (status) {
-        status.innerHTML = `<span style="color: #4ADC77;">✅ ${nome}</span>`;
-    }
-}
-
-// Função para verificar e pedir permissão do arquivo de relatórios
-async function verificarPermissaoRelatorio() {
-    try {
-        const handle = await getStoredRelatorioHandle();
-        if (!handle) {
-            console.log('📁 Relatório: Nenhum arquivo vinculado');
-            return { vinculado: false };
-        }
-
-        console.log('📁 Relatório: Arquivo encontrado:', handle.name);
-
-        const permissaoLeitura = await handle.queryPermission({ mode: 'read' });
-        if (permissaoLeitura !== 'granted') {
-            console.log('⏳ Relatório: Pedindo permissão de leitura...');
-            const resultado = await handle.requestPermission({ mode: 'read' });
-            if (resultado !== 'granted') {
-                return { vinculado: true, permissao: false };
-            }
-        }
-
-        const permissaoEscrita = await handle.queryPermission({ mode: 'readwrite' });
-        if (permissaoEscrita !== 'granted') {
-            console.log('⏳ Relatório: Pedindo permissão de escrita...');
-            const resultado = await handle.requestPermission({ mode: 'readwrite' });
-            if (resultado !== 'granted') {
-                return { vinculado: true, permissao: 'leitura' };
-            }
-        }
-
-        relatorioFileHandle = handle;
-
-        // Lê os dados do arquivo e atualiza a interface
-        await lerRelatoriosDoArquivo();
-        atualizarStatusArquivoRelatorio(handle.name);
-
-        console.log('✅ Relatório: Permissão concedida e dados carregados!');
-        return { vinculado: true, permissao: true };
-    } catch (error) {
-        console.error('❌ Relatório: Erro ao verificar permissão:', error);
-        return { vinculado: false, erro: error.message };
-    }
-}
-
-// Expõe função de verificação de permissão
-window.verificarPermissaoRelatorio = verificarPermissaoRelatorio;
-
-// Função que SEMPRE pede permissão (sem verificar antes)
-async function forcarPermissaoRelatorio() {
-    try {
-        const handle = await getStoredRelatorioHandle();
-        if (!handle) {
-            console.log('📭 Relatório: Nenhum arquivo vinculado');
-            return { vinculado: false };
-        }
-
-        console.log('🔐 Relatório: Solicitando permissão para:', handle.name);
-
-        // SEMPRE pede permissão, mesmo se já tiver
-        const resultado = await handle.requestPermission({ mode: 'readwrite' });
-
-        if (resultado === 'granted') {
-            relatorioFileHandle = handle;
-            await lerRelatoriosDoArquivo();
-            atualizarStatusArquivoRelatorio(handle.name);
-            console.log('✅ Relatório: Permissão concedida!');
-            return { vinculado: true, permissao: true };
-        } else {
-            console.warn('❌ Relatório: Permissão negada');
-            return { vinculado: true, permissao: false };
-        }
-    } catch (error) {
-        console.error('❌ Relatório: Erro:', error);
-        return { vinculado: false, erro: error.message };
-    }
-}
-
-window.forcarPermissaoRelatorio = forcarPermissaoRelatorio;
-
-// ==========================================
-// FIM DA PERSISTÊNCIA EM ARQUIVO
-// ==========================================
 
 // Sincroniza a lista de igrejas com as Notas Fiscais
 function sincronizarIgrejasRelatorio() {
@@ -1563,15 +1248,7 @@ async function inicializarRelatorioTecnico() {
     // Atualiza a lista inicial (cria os elementos da interface)
     atualizarListaRelatoriosNovo();
 
-    // Inicializa arquivo vinculado (se existir) - DEPOIS da lista ser criada
-    await inicializarArquivoRelatorios();
 }
-
-// Expõe funções de gerenciamento de JSON globalmente
-window.exportarRelatoriosJson = exportarRelatoriosJson;
-window.importarRelatoriosJson = importarRelatoriosJson;
-window.selecionarArquivoRelatorios = selecionarArquivoRelatorios;
-window.criarArquivoRelatorios = criarArquivoRelatorios;
 
 // Expõe funções globalmente
 window.abrirModalRelatorio = abrirModalRelatorio;

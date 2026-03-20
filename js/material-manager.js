@@ -158,11 +158,6 @@ function salvarDadosMaterial() {
                 window.salvarDadosNF();
             }
         }
-
-        // Salva também no arquivo JSON vinculado (Material)
-        if (materialFileHandle) {
-            salvarDadosEmArquivoMaterial().catch(err => console.error('❌ Erro ao salvar no arquivo vinculado de Material:', err));
-        }
     } catch (error) {
         console.error('❌ Erro ao salvar dados de material:', error);
     }
@@ -747,68 +742,6 @@ function compartilharWhatsApp(tipo, igrejaIndex) {
     if (modal) modal.remove();
 }
 
-// ===== GERENCIAMENTO DE ARQUIVO JSON =====
-
-let materialFileHandle = null;
-
-// Exporta os dados de material para um arquivo JSON
-function salvarMaterialJsonEmArquivo() {
-    try {
-        const conteudo = JSON.stringify(materialData, null, 2);
-        const blob = new Blob([conteudo], { type: 'application/json;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'material_data.json';
-        a.click();
-        URL.revokeObjectURL(url);
-        console.log('✅ JSON de Material exportado com sucesso!');
-    } catch (error) {
-        console.error('❌ Erro ao exportar JSON de Material:', error);
-        alert('Erro ao exportar arquivo JSON.');
-    }
-}
-
-// Importa os dados de material de um arquivo JSON
-function importarMaterialJsonDeArquivo(file) {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        try {
-            const dadosImportados = JSON.parse(e.target.result);
-
-            // Valida estrutura básica
-            if (!dadosImportados.pendentes) dadosImportados.pendentes = [];
-            if (!dadosImportados.enviadas) dadosImportados.enviadas = [];
-            if (!dadosImportados.pedidosSandro) dadosImportados.pedidosSandro = [];
-
-            materialData = dadosImportados;
-            salvarDadosMaterial();
-            atualizarListaMaterial();
-            console.log('✅ JSON de Material importado com sucesso!');
-            alert('Dados de Material importados com sucesso!');
-        } catch (error) {
-            console.error('❌ Erro ao importar JSON de Material:', error);
-            alert('Erro ao importar arquivo JSON. Verifique se o arquivo está correto.');
-        }
-    };
-    reader.readAsText(file);
-}
-
-// Salva os dados em um arquivo vinculado
-async function salvarDadosEmArquivoMaterial() {
-    try {
-        if (!materialFileHandle) return;
-        const writable = await materialFileHandle.createWritable();
-        const conteudo = JSON.stringify(materialData, null, 2);
-        await writable.write(new Blob([conteudo], { type: 'application/json;charset=utf-8' }));
-        await writable.close();
-        console.log('✅ Dados salvos no arquivo vinculado');
-    } catch (error) {
-        console.error('❌ Erro ao salvar no arquivo vinculado:', error);
-    }
-}
-
 // Função para recarregar/atualizar a lista de materiais
 function recarregarMateriais() {
     try {
@@ -839,216 +772,6 @@ function recarregarMateriais() {
     }
 }
 
-// Lê os dados de um arquivo vinculado
-async function lerMaterialDoArquivo() {
-    try {
-        if (!materialFileHandle) return;
-        const file = await materialFileHandle.getFile();
-        const text = await file.text();
-        const json = JSON.parse(text || '{}');
-
-        // Valida estrutura
-        if (!json.pendentes) json.pendentes = [];
-        if (!json.enviadas) json.enviadas = [];
-        if (!json.pedidosSandro) json.pedidosSandro = [];
-
-        materialData = json;
-        localStorage.setItem('materiaisIgrejas', JSON.stringify(materialData));
-        atualizarListaMaterial();
-        console.log('✅ Dados carregados do arquivo vinculado');
-    } catch (error) {
-        console.error('❌ Erro ao ler do arquivo vinculado:', error);
-    }
-}
-
-// Seleciona um arquivo JSON existente para vincular
-async function selecionarArquivoMaterial() {
-    try {
-        if (!window.showOpenFilePicker) {
-            alert('Seu navegador não suporta esta funcionalidade. Use Chrome ou Edge.');
-            return;
-        }
-
-        const [fileHandle] = await window.showOpenFilePicker({
-            types: [{
-                description: 'JSON Files',
-                accept: { 'application/json': ['.json'] }
-            }]
-        });
-
-        materialFileHandle = fileHandle;
-        await salvarHandleMaterial(fileHandle); // Salva para auto-vinculação
-        await lerMaterialDoArquivo();
-        alert('Arquivo vinculado com sucesso! As alterações serão salvas automaticamente nele.\n\nDa próxima vez que abrir a aplicação, o arquivo será carregado automaticamente.');
-    } catch (error) {
-        if (error.name !== 'AbortError') {
-            console.error('❌ Erro ao selecionar arquivo:', error);
-        }
-    }
-}
-
-// Cria um novo arquivo JSON e vincula
-async function criarArquivoMaterial() {
-    try {
-        if (!window.showSaveFilePicker) {
-            alert('Seu navegador não suporta esta funcionalidade. Use Chrome ou Edge.');
-            return;
-        }
-
-        const fileHandle = await window.showSaveFilePicker({
-            suggestedName: 'material_data.json',
-            types: [{
-                description: 'JSON Files',
-                accept: { 'application/json': ['.json'] }
-            }]
-        });
-
-        materialFileHandle = fileHandle;
-        await salvarHandleMaterial(fileHandle); // Salva para auto-vinculação
-        await salvarDadosEmArquivoMaterial();
-        alert('Arquivo criado e vinculado com sucesso!\n\nTodas as alterações serão salvas automaticamente.\nDa próxima vez que abrir a aplicação, o arquivo será carregado automaticamente.');
-    } catch (error) {
-        if (error.name !== 'AbortError') {
-            console.error('❌ Erro ao criar arquivo:', error);
-        }
-    }
-}
-
-// Inicializa o sistema de arquivo - igual ao NF
-async function inicializarArquivoMaterial() {
-    try {
-        // NÃO carrega mais de material_data.json nem do arquivo vinculado automaticamente.
-        // Dados vêm de localStorage + Firebase para evitar reset para versão antiga.
-        // Usuário pode importar manualmente via "Importar JSON" se quiser.
-        const handle = await obterHandleSalvoMaterial();
-        if (handle) {
-            materialFileHandle = handle;
-            // Não chama lerMaterialDoArquivo() - handle só para salvar quando usuário exportar
-        }
-    } catch (error) {
-        console.warn('Sem arquivo de Material vinculado ou erro ao carregar handle:', error);
-    }
-}
-
-// Função para verificar e pedir permissão do arquivo Material
-async function verificarPermissaoMaterial() {
-    try {
-        const handle = await obterHandleSalvoMaterial();
-        if (!handle) {
-            console.log('📁 Material: Nenhum arquivo vinculado');
-            return { vinculado: false };
-        }
-
-        // Verifica se tem permissão de leitura
-        const permissaoLeitura = await handle.queryPermission({ mode: 'read' });
-
-        if (permissaoLeitura !== 'granted') {
-            console.log('🔐 Material: Solicitando permissão de leitura...');
-            const resultado = await handle.requestPermission({ mode: 'read' });
-            if (resultado !== 'granted') {
-                console.warn('❌ Material: Permissão de leitura negada');
-                return { vinculado: true, permissao: false };
-            }
-        }
-
-        // Verifica se tem permissão de escrita
-        const permissaoEscrita = await handle.queryPermission({ mode: 'readwrite' });
-
-        if (permissaoEscrita !== 'granted') {
-            console.log('🔐 Material: Solicitando permissão de escrita...');
-            const resultado = await handle.requestPermission({ mode: 'readwrite' });
-            if (resultado !== 'granted') {
-                console.warn('⚠️ Material: Permissão de escrita negada (somente leitura)');
-                return { vinculado: true, permissao: 'leitura' };
-            }
-        }
-
-        // Permissão concedida, atualiza o handle
-        materialFileHandle = handle;
-        console.log('✅ Material: Permissão concedida!');
-        return { vinculado: true, permissao: true };
-    } catch (error) {
-        console.error('❌ Material: Erro ao verificar permissão:', error);
-        return { vinculado: false, erro: error.message };
-    }
-}
-
-// Expõe a função globalmente
-window.verificarPermissaoMaterial = verificarPermissaoMaterial;
-
-// Função que SEMPRE pede permissão (sem verificar antes)
-async function forcarPermissaoMaterial() {
-    try {
-        const handle = await obterHandleSalvoMaterial();
-        if (!handle) {
-            console.log('📭 Material: Nenhum arquivo vinculado');
-            return { vinculado: false };
-        }
-
-        console.log('🔐 Material: Solicitando permissão para:', handle.name);
-
-        // SEMPRE pede permissão, mesmo se já tiver
-        const resultado = await handle.requestPermission({ mode: 'readwrite' });
-
-        if (resultado === 'granted') {
-            materialFileHandle = handle;
-            // Não lê do arquivo - evita sobrescrever dados com versão antiga
-            console.log('✅ Material: Permissão concedida!');
-            return { vinculado: true, permissao: true };
-        } else {
-            console.warn('❌ Material: Permissão negada');
-            return { vinculado: true, permissao: false };
-        }
-    } catch (error) {
-        console.error('❌ Material: Erro:', error);
-        return { vinculado: false, erro: error.message };
-    }
-}
-
-window.forcarPermissaoMaterial = forcarPermissaoMaterial;
-
-// Funções para gerenciar IndexedDB (armazenar o file handle)
-async function abrirBDMaterial() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open('MaterialDB', 1);
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => resolve(request.result);
-        request.onupgradeneeded = (event) => {
-            const db = event.target.result;
-            if (!db.objectStoreNames.contains('fileHandles')) {
-                db.createObjectStore('fileHandles');
-            }
-        };
-    });
-}
-
-async function salvarHandleMaterial(handle) {
-    try {
-        const db = await abrirBDMaterial();
-        const transaction = db.transaction(['fileHandles'], 'readwrite');
-        const store = transaction.objectStore('fileHandles');
-        await store.put(handle, 'materialFileHandle');
-    } catch (error) {
-        console.error('Erro ao salvar handle:', error);
-    }
-}
-
-async function obterHandleSalvoMaterial() {
-    try {
-        const db = await abrirBDMaterial();
-        return new Promise((resolve, reject) => {
-            const transaction = db.transaction(['fileHandles'], 'readonly');
-            const store = transaction.objectStore('fileHandles');
-            const request = store.get('materialFileHandle');
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error);
-        });
-    } catch (error) {
-        console.error('Erro ao obter handle salvo:', error);
-        return null;
-    }
-}
-
 // Expõe funções globalmente
 window.abrirModalMaterial = abrirModalMaterial;
 window.abrirModalAdicionarItem = abrirModalAdicionarItem;
@@ -1062,15 +785,10 @@ window.moverParaEnviadas = moverParaEnviadas;
 window.moverParaSandro = moverParaSandro;
 window.sincronizarIgrejasNF = sincronizarIgrejasNF;
 window.recarregarMateriais = recarregarMateriais;
-window.salvarMaterialJsonEmArquivo = salvarMaterialJsonEmArquivo;
-window.importarMaterialJsonDeArquivo = importarMaterialJsonDeArquivo;
-window.selecionarArquivoMaterial = selecionarArquivoMaterial;
-window.criarArquivoMaterial = criarArquivoMaterial;
 
 // Inicializa quando a página carregar
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Inicializando módulo de Material...');
     carregarDadosMaterial();
-    inicializarArquivoMaterial();
 });
 
