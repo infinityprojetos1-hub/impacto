@@ -767,36 +767,63 @@ function _piscarBadgeSync() {
 window._piscarBadgeSync = _piscarBadgeSync;
 
 // Força envio de TODOS os dados locais para o Firebase e aguarda confirmação.
-// IMPORTANTE: lê APENAS do localStorage (nunca dos objetos em memória).
-// Retorna uma Promise que resolve quando TODAS as escritas foram confirmadas pelo Firebase.
-async function forcarSyncParaFirebase() {
+// Ao ser chamado manualmente (forcarAgora=true), atribui um timestamp NOVO a cada
+// dataset para garantir que este snapshot "vença" qualquer versão antiga em outros
+// dispositivos, e renova as janelas de proteção dos listeners.
+async function forcarSyncParaFirebase(forcarAgora = false) {
   if (!firebaseDisponivel || !database) return;
   try {
     const saves = [];
+    // Timestamp único para todo o sync — garante que vence qualquer dispositivo parado
+    const tsAgora = forcarAgora ? Date.now() : null;
 
-    const nf = localStorage.getItem('notasFiscais');
-    if (nf) { try { saves.push(salvarNoDatabase('dados/notasFiscais', JSON.parse(nf))); } catch (_) {} }
+    function prepararDado(raw) {
+      const d = JSON.parse(raw);
+      if (forcarAgora) d._ts = tsAgora;
+      return d;
+    }
 
-    const mat = localStorage.getItem('materiaisIgrejas');
-    if (mat) { try { saves.push(salvarNoDatabase('dados/materiais', JSON.parse(mat))); } catch (_) {} }
+    const nfRaw = localStorage.getItem('notasFiscais');
+    if (nfRaw) {
+      try {
+        const nf = prepararDado(nfRaw);
+        if (forcarAgora) {
+          localStorage.setItem('notasFiscais', JSON.stringify(nf));
+          window._nfSalvouTs = tsAgora; // renova proteção do listener
+        }
+        saves.push(salvarNoDatabase('dados/notasFiscais', nf));
+      } catch (_) {}
+    }
 
-    const chk = localStorage.getItem('checklistsIgrejas');
-    if (chk) { try { saves.push(salvarNoDatabase('dados/checklists', JSON.parse(chk))); } catch (_) {} }
+    const matRaw = localStorage.getItem('materiaisIgrejas');
+    if (matRaw) {
+      try {
+        const mat = prepararDado(matRaw);
+        if (forcarAgora) {
+          localStorage.setItem('materiaisIgrejas', JSON.stringify(mat));
+          window._materialSalvouTs = tsAgora;
+        }
+        saves.push(salvarNoDatabase('dados/materiais', mat));
+      } catch (_) {}
+    }
 
-    const est = localStorage.getItem('estoqueData');
-    if (est) { try { saves.push(salvarNoDatabase('dados/estoque', JSON.parse(est))); } catch (_) {} }
+    const chkRaw = localStorage.getItem('checklistsIgrejas');
+    if (chkRaw) { try { saves.push(salvarNoDatabase('dados/checklists', prepararDado(chkRaw))); } catch (_) {} }
 
-    const pag = localStorage.getItem('pagamentoData');
-    if (pag) { try { saves.push(salvarNoDatabase('dados/pagamento', JSON.parse(pag))); } catch (_) {} }
+    const estRaw = localStorage.getItem('estoqueData');
+    if (estRaw) { try { saves.push(salvarNoDatabase('dados/estoque', prepararDado(estRaw))); } catch (_) {} }
 
-    const val = localStorage.getItem('configValoresIgreja');
-    if (val) { try { saves.push(salvarNoDatabase('dados/valoresIgreja', JSON.parse(val))); } catch (_) {} }
+    const pagRaw = localStorage.getItem('pagamentoData');
+    if (pagRaw) { try { saves.push(salvarNoDatabase('dados/pagamento', prepararDado(pagRaw))); } catch (_) {} }
 
-    const rel = localStorage.getItem('relatoriosData');
-    if (rel) { try { saves.push(salvarNoDatabase('dados/relatorios', JSON.parse(rel))); } catch (_) {} }
+    const valRaw = localStorage.getItem('configValoresIgreja');
+    if (valRaw) { try { saves.push(salvarNoDatabase('dados/valoresIgreja', prepararDado(valRaw))); } catch (_) {} }
+
+    const relRaw = localStorage.getItem('relatoriosData');
+    if (relRaw) { try { saves.push(salvarNoDatabase('dados/relatorios', prepararDado(relRaw))); } catch (_) {} }
 
     await Promise.all(saves);
-    console.log('📤 Sync forçado: todos os dados CONFIRMADOS no Firebase');
+    console.log('📤 Sync forçado: todos os dados CONFIRMADOS no Firebase' + (forcarAgora ? ' (timestamp renovado)' : ''));
   } catch (e) { console.error('Erro ao forçar sync:', e); }
 }
 window.forcarSyncParaFirebase = forcarSyncParaFirebase;

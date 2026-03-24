@@ -4642,7 +4642,7 @@
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
                 btn.disabled = true;
                 try {
-                    await window.forcarSyncParaFirebase();
+                    await window.forcarSyncParaFirebase(true);
                     btn.innerHTML = '<i class="fas fa-check"></i> Confirmado no Firebase!';
                 } catch (e) {
                     btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Erro ao salvar';
