@@ -140,8 +140,8 @@ function salvarDadosMaterial() {
                 });
             }
 
-            // Usa o mesmo _ts do material para que NF não pareça "mais recente"
-            nfLocal._ts = materialData._ts;
+            // Mantém o _ts original do NF para não interferir no conflito de sincronização entre dispositivos
+            // O NF tem seu próprio controle de versão via salvarDadosNF() e forcarSyncParaFirebase()
 
             // Salva o NF atualizado no localStorage e sincroniza o objeto global em memória
             localStorage.setItem('notasFiscais', JSON.stringify(nfLocal));
@@ -151,11 +151,8 @@ function salvarDadosMaterial() {
                 nfData.especiais  = nfLocal.especiais  || nfData.especiais;
                 nfData._ts        = nfLocal._ts;
             }
-
-            // Salva NF no Firebase direto (sem chamar salvarDadosNF, que usa o objeto global antigo)
-            if (!_materialCarregando && typeof salvarNoDatabase === 'function' && typeof firebaseDisponivel !== 'undefined' && firebaseDisponivel) {
-                setTimeout(() => salvarNoDatabase('dados/notasFiscais', nfLocal), 0);
-            }
+            // NF no Firebase é sincronizado via forcarSyncParaFirebase() (automático a cada 15s)
+            // Não salvamos NF no Firebase aqui para não sobrescrever com timestamp de material
         }
     } catch (error) {
         console.error('❌ Erro ao salvar dados de material:', error);

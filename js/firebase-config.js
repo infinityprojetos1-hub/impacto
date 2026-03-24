@@ -383,9 +383,10 @@ function iniciarSincronizacaoTempoReal() {
       const localTs = localParsed ? (localParsed._ts || 0) : 0;
       const remoteTs = dados._ts || 0;
       const mesmoDado = remoteTs === localTs && remoteTs > 0;
-      // Timestamp é a única autoridade: local mais recente → protege local
-      if (!mesmoDado && remoteTs < localTs && localStr) {
-        console.log('🛡️ NF: protegendo dados locais, enviando para Firebase');
+      // Proteção extra: se NF foi salvo localmente nos últimos 30s, sempre protege local
+      const nfSalvouHaPouco = window._nfSalvouTs && (Date.now() - window._nfSalvouTs < 30000);
+      if (!mesmoDado && (nfSalvouHaPouco || remoteTs < localTs) && localStr) {
+        console.log('🛡️ NF: protegendo dados locais, enviando para Firebase' + (nfSalvouHaPouco ? ' (salvo há pouco)' : ''));
         try {
           const local = localParsed || JSON.parse(localStr);
           if (!local._ts) local._ts = Date.now();

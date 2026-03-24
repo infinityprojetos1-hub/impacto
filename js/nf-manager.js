@@ -119,6 +119,7 @@ function salvarDadosNF() {
 
         // Marca timestamp para resolver conflitos de concorrência
         nfData._ts = Date.now();
+        if (typeof window !== 'undefined') window._nfSalvouTs = Date.now();
 
         const dadosParaSalvar = JSON.stringify(nfData);
         localStorage.setItem('notasFiscais', dadosParaSalvar);
