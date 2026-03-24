@@ -382,13 +382,9 @@ function iniciarSincronizacaoTempoReal() {
       try { localParsed = localStr ? JSON.parse(localStr) : null; } catch (_) {}
       const localTs = localParsed ? (localParsed._ts || 0) : 0;
       const remoteTs = dados._ts || 0;
-      const localTotal = localParsed ? ((localParsed.igrejas||[]).length + (localParsed.arquivadas||[]).length + (localParsed.especiais||[]).length) : 0;
-      const remoteTotal = (dados.igrejas||[]).length + (dados.arquivadas||[]).length + (dados.especiais||[]).length;
-      const perdaDados = localTotal > 0 && remoteTotal < localTotal;
-      // Protege também se remoto quer "restaurar" igrejas que deletamos (tem mais que local)
-      const remoteTentaRestaurar = localTotal > 0 && remoteTotal > localTotal && localTs > 0;
       const mesmoDado = remoteTs === localTs && remoteTs > 0;
-      if (!mesmoDado && ((remoteTs < localTs && localStr) || (perdaDados && localStr) || (remoteTentaRestaurar && localStr))) {
+      // Timestamp é a única autoridade: local mais recente → protege local
+      if (!mesmoDado && remoteTs < localTs && localStr) {
         console.log('🛡️ NF: protegendo dados locais, enviando para Firebase');
         try {
           const local = localParsed || JSON.parse(localStr);
@@ -447,16 +443,8 @@ function iniciarSincronizacaoTempoReal() {
       try { localMat = localStr ? JSON.parse(localStr) : null; } catch (_) {}
       const localTs = localMat ? (localMat._ts || 0) : 0;
       const remoteTs = dados._ts || 0;
-      const localMatTotal = localMat ? ((localMat.pendentes||[]).length + (localMat.enviadas||[]).length + (localMat.pedidosSandro||[]).length) : 0;
-      const remoteMatTotal = (dados.pendentes||[]).length + (dados.enviadas||[]).length + (dados.pedidosSandro||[]).length;
-      const perdaMat = localMatTotal > 0 && remoteMatTotal < localMatTotal;
-      // Protege se remoto quer restaurar igrejas que deletamos
-      const remoteTentaRestaurarMat = localMatTotal > 0 && remoteMatTotal > localMatTotal && localTs > 0;
       const mesmoMat = remoteTs === localTs && remoteTs > 0;
-      const materialSalvouHaPouco = (typeof window._materialSalvouTs === 'number') && (Date.now() - window._materialSalvouTs) < 8000;
-      const localMaisRecente = remoteTs < localTs && localStr;
-      const localTemMaisItens = perdaMat && localStr;
-      if (!mesmoMat && (materialSalvouHaPouco || localMaisRecente || localTemMaisItens || (remoteTentaRestaurarMat && localStr))) {
+      if (!mesmoMat && (remoteTs < localTs) && localStr) {
         console.log('🛡️ Material: protegendo dados locais, enviando para Firebase');
         try {
           const local = localMat || JSON.parse(localStr);
@@ -509,12 +497,8 @@ function iniciarSincronizacaoTempoReal() {
       try { localEst = localStr ? JSON.parse(localStr) : null; } catch (_) {}
       const localTs = localEst ? (localEst._ts || 0) : 0;
       const remoteTs = dados._ts || 0;
-      const localEstLen = localEst && localEst.itens ? localEst.itens.length : 0;
-      const remoteEstLen = Array.isArray(dados.itens) ? dados.itens.length : 0;
-      const perdaEst = localEstLen > 0 && remoteEstLen < localEstLen;
-      const remoteTentaRestaurarEst = localEstLen > 0 && remoteEstLen > localEstLen && localTs > 0;
       const mesmoEst = remoteTs === localTs && remoteTs > 0;
-      if (!mesmoEst && ((remoteTs < localTs && localStr) || (perdaEst && localStr) || (remoteTentaRestaurarEst && localStr))) {
+      if (!mesmoEst && remoteTs < localTs && localStr) {
         console.log('🛡️ Estoque: protegendo dados locais, enviando para Firebase');
         try {
           const local = localEst || JSON.parse(localStr);
@@ -573,12 +557,8 @@ function iniciarSincronizacaoTempoReal() {
     try { localPag = localStr ? JSON.parse(localStr) : null; } catch (_) {}
     const localTs = localPag ? (localPag._ts || 0) : 0;
     const remoteTs = dados._ts || 0;
-    const localPagLen = localPag ? (Object.keys(localPag.igrejasSelecionadas||{}).length + (localPag.itensExtras||[]).length) : 0;
-    const remotePagLen = Object.keys(dados.igrejasSelecionadas||{}).length + (dados.itensExtras||[]).length;
-      const perdaPag = localPagLen > 0 && remotePagLen < localPagLen;
-      const remoteTentaRestaurarPag = localPagLen > 0 && remotePagLen > localPagLen && localTs > 0;
-      const mesmoPag = remoteTs === localTs && remoteTs > 0;
-      if (!mesmoPag && ((remoteTs < localTs && localStr) || (perdaPag && localStr) || (remoteTentaRestaurarPag && localStr))) {
+    const mesmoPag = remoteTs === localTs && remoteTs > 0;
+    if (!mesmoPag && remoteTs < localTs && localStr) {
       console.log('🛡️ Pagamento: protegendo dados locais, enviando para Firebase');
       try {
         const local = localPag || JSON.parse(localStr);
@@ -649,12 +629,8 @@ function iniciarSincronizacaoTempoReal() {
       try { localChk = localStr ? JSON.parse(localStr) : null; } catch (_) {}
       const localTs = localChk ? (localChk._ts || 0) : 0;
       const remoteTs = dados._ts || 0;
-      const localChkTotal = localChk ? ((localChk.igrejas||[]).length + (localChk.pedidosSandro||[]).length) : 0;
-      const remoteChkTotal = (dados.igrejas||[]).length + (dados.pedidosSandro||[]).length;
-      const perdaChk = localChkTotal > 0 && remoteChkTotal < localChkTotal;
-      const remoteTentaRestaurarChk = localChkTotal > 0 && remoteChkTotal > localChkTotal && localTs > 0;
       const mesmoChk = remoteTs === localTs && remoteTs > 0;
-      if (!mesmoChk && ((remoteTs < localTs && localStr) || (perdaChk && localStr) || (remoteTentaRestaurarChk && localStr))) {
+      if (!mesmoChk && remoteTs < localTs && localStr) {
         console.log('🛡️ Checklist: protegendo dados locais, enviando para Firebase');
         try {
           const local = localChk || JSON.parse(localStr);
@@ -724,12 +700,8 @@ function iniciarSincronizacaoTempoReal() {
       try { localRel = localStr ? JSON.parse(localStr) : null; } catch (_) {}
       const localTs = localRel ? (localRel._ts || 0) : 0;
       const remoteTs = dados._ts || 0;
-      const localTotal = localRel ? ((localRel.pendentes||[]).length + (localRel.gerados||[]).length + (localRel.pedidosSandro||[]).length) : 0;
-      const remoteTotal = (dados.pendentes||[]).length + (dados.gerados||[]).length + (dados.pedidosSandro||[]).length;
-      const perdaRel = localTotal > 0 && remoteTotal < localTotal;
-      const remoteTentaRestaurarRel = localTotal > 0 && remoteTotal > localTotal && localTs > 0;
       const mesmoRel = remoteTs === localTs && remoteTs > 0;
-      if (!mesmoRel && ((remoteTs < localTs && localStr) || (perdaRel && localStr) || (remoteTentaRestaurarRel && localStr))) {
+      if (!mesmoRel && remoteTs < localTs && localStr) {
         console.log('🛡️ Relatórios: protegendo dados locais, enviando para Firebase');
         try {
           const local = localRel || JSON.parse(localStr);
