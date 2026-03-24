@@ -739,6 +739,14 @@ database && database.ref('.info/connected').on('value', (snapshot) => {
   }
 });
 
+// Sync periódico automático: garante que Firebase sempre tem os dados mais recentes
+// mesmo que algum save anterior tenha falhado ou a aba ficou aberta muito tempo.
+setInterval(() => {
+  if (firebaseDisponivel && database && document.visibilityState !== 'hidden') {
+    forcarSyncParaFirebase();
+  }
+}, 60000); // a cada 60 segundos
+
 // Utilitário: pisca o badge indicando "salvando"
 function _piscarBadgeSync() {
   const label = document.getElementById('syncLabel');
