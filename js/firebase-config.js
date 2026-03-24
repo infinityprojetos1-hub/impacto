@@ -385,8 +385,10 @@ function iniciarSincronizacaoTempoReal() {
       const localTotal = localParsed ? ((localParsed.igrejas||[]).length + (localParsed.arquivadas||[]).length + (localParsed.especiais||[]).length) : 0;
       const remoteTotal = (dados.igrejas||[]).length + (dados.arquivadas||[]).length + (dados.especiais||[]).length;
       const perdaDados = localTotal > 0 && remoteTotal < localTotal;
+      // Protege também se remoto quer "restaurar" igrejas que deletamos (tem mais que local)
+      const remoteTentaRestaurar = localTotal > 0 && remoteTotal > localTotal && localTs > 0;
       const mesmoDado = remoteTs === localTs && remoteTs > 0;
-      if (!mesmoDado && ((remoteTs < localTs && localStr) || (perdaDados && localStr))) {
+      if (!mesmoDado && ((remoteTs < localTs && localStr) || (perdaDados && localStr) || (remoteTentaRestaurar && localStr))) {
         console.log('🛡️ NF: protegendo dados locais, enviando para Firebase');
         try {
           const local = localParsed || JSON.parse(localStr);
@@ -448,12 +450,13 @@ function iniciarSincronizacaoTempoReal() {
       const localMatTotal = localMat ? ((localMat.pendentes||[]).length + (localMat.enviadas||[]).length + (localMat.pedidosSandro||[]).length) : 0;
       const remoteMatTotal = (dados.pendentes||[]).length + (dados.enviadas||[]).length + (dados.pedidosSandro||[]).length;
       const perdaMat = localMatTotal > 0 && remoteMatTotal < localMatTotal;
+      // Protege se remoto quer restaurar igrejas que deletamos
+      const remoteTentaRestaurarMat = localMatTotal > 0 && remoteMatTotal > localMatTotal && localTs > 0;
       const mesmoMat = remoteTs === localTs && remoteTs > 0;
       const materialSalvouHaPouco = (typeof window._materialSalvouTs === 'number') && (Date.now() - window._materialSalvouTs) < 8000;
-      const dentroGrace = (Date.now() - _fbPageLoadTime) < 30000 && localStr && localMatTotal > 0;
       const localMaisRecente = remoteTs < localTs && localStr;
       const localTemMaisItens = perdaMat && localStr;
-      if (!mesmoMat && (materialSalvouHaPouco || dentroGrace || localMaisRecente || localTemMaisItens)) {
+      if (!mesmoMat && (materialSalvouHaPouco || localMaisRecente || localTemMaisItens || (remoteTentaRestaurarMat && localStr))) {
         console.log('🛡️ Material: protegendo dados locais, enviando para Firebase');
         try {
           const local = localMat || JSON.parse(localStr);
@@ -778,66 +781,36 @@ function _piscarBadgeSync() {
 }
 window._piscarBadgeSync = _piscarBadgeSync;
 
-// Força envio de TODOS os dados locais para o Firebase (ignora _fbReceivendo)
+// Força envio de TODOS os dados locais para o Firebase
+// IMPORTANTE: lê APENAS do localStorage (nunca dos objetos em memória).
+// Objetos em memória podem estar desatualizados quando outro dispositivo
+// enviou uma deleção que ainda não chegou via listener — chamar salvarDadosNF()
+// etc. aqui sobrescreveria o Firebase com dados velhos e timestamp mais novo.
 function forcarSyncParaFirebase() {
   if (!firebaseDisponivel || !database) return;
-  // Garante que dados em memória sejam salvos no localStorage antes de enviar
-  try {
-    if (typeof window.salvarDadosNF === 'function') window.salvarDadosNF();
-    if (typeof window.salvarDadosMaterial === 'function') window.salvarDadosMaterial();
-    if (typeof window.salvarDadosChecklist === 'function') window.salvarDadosChecklist();
-    if (typeof window.salvarDadosEstoque === 'function') window.salvarDadosEstoque();
-    if (typeof window.salvarDadosPagamento === 'function') window.salvarDadosPagamento();
-    if (typeof window.salvarDadosRelatorios === 'function') window.salvarDadosRelatorios();
-  } catch (_) {}
-  const ts = Date.now();
   try {
     const nf = localStorage.getItem('notasFiscais');
-    if (nf) {
-      const d = JSON.parse(nf);
-      if (!d._ts) d._ts = ts;
-      salvarNoDatabase('dados/notasFiscais', d);
-    }
+    if (nf) { try { salvarNoDatabase('dados/notasFiscais', JSON.parse(nf)); } catch (_) {} }
+
     const mat = localStorage.getItem('materiaisIgrejas');
-    if (mat) {
-      const d = JSON.parse(mat);
-      if (!d._ts) d._ts = ts;
-      salvarNoDatabase('dados/materiais', d);
-    }
+    if (mat) { try { salvarNoDatabase('dados/materiais', JSON.parse(mat)); } catch (_) {} }
+
     const chk = localStorage.getItem('checklistsIgrejas');
-    if (chk) {
-      const d = JSON.parse(chk);
-      if (!d._ts) d._ts = ts;
-      salvarNoDatabase('dados/checklists', d);
-    }
+    if (chk) { try { salvarNoDatabase('dados/checklists', JSON.parse(chk)); } catch (_) {} }
+
     const est = localStorage.getItem('estoqueData');
-    if (est) {
-      const d = JSON.parse(est);
-      if (!d._ts) d._ts = ts;
-      salvarNoDatabase('dados/estoque', d);
-    }
+    if (est) { try { salvarNoDatabase('dados/estoque', JSON.parse(est)); } catch (_) {} }
+
     const pag = localStorage.getItem('pagamentoData');
-    if (pag) {
-      const d = JSON.parse(pag);
-      if (!d._ts) d._ts = ts;
-      salvarNoDatabase('dados/pagamento', d);
-    }
+    if (pag) { try { salvarNoDatabase('dados/pagamento', JSON.parse(pag)); } catch (_) {} }
+
     const val = localStorage.getItem('configValoresIgreja');
-    if (val) {
-      try {
-        const d = JSON.parse(val);
-        salvarNoDatabase('dados/valoresIgreja', { ...d, _ts: ts });
-      } catch (_) {}
-    }
+    if (val) { try { const d = JSON.parse(val); salvarNoDatabase('dados/valoresIgreja', d); } catch (_) {} }
+
     const rel = localStorage.getItem('relatoriosData');
-    if (rel) {
-      try {
-        const d = JSON.parse(rel);
-        if (!d._ts) d._ts = ts;
-        salvarNoDatabase('dados/relatorios', d);
-      } catch (_) {}
-    }
-    console.log('📤 Sync forçado: todos os dados enviados para Firebase');
+    if (rel) { try { salvarNoDatabase('dados/relatorios', JSON.parse(rel)); } catch (_) {} }
+
+    console.log('📤 Sync forçado: todos os dados enviados para Firebase (via localStorage)');
   } catch (e) { console.error('Erro ao forçar sync:', e); }
 }
 window.forcarSyncParaFirebase = forcarSyncParaFirebase;
