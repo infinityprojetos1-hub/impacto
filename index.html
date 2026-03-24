@@ -4607,6 +4607,9 @@
                             <i class="fas fa-upload"></i> Restaurar do Backup
                             <input type="file" id="inputRestaurarBackup" accept=".json,application/json" style="display: none;" onchange="restaurarDoBackup(this)">
                         </label>
+                        <button class="btn-secondary" style="background:#1565c0; color:#fff; border:none;" onclick="forcarSyncAgora()" title="Força envio de todos os dados locais para o Firebase agora">
+                            <i class="fas fa-cloud-upload-alt"></i> Salvar tudo na nuvem agora
+                        </button>
                     </div>
                 </div>
             </div>
@@ -4630,6 +4633,17 @@
         
         function fecharModalConfiguracoes() {
             modalConfig.style.display = 'none';
+        }
+
+        function forcarSyncAgora() {
+            if (typeof window.forcarSyncParaFirebase === 'function') {
+                window.forcarSyncParaFirebase();
+                const btn = event.currentTarget;
+                const orig = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check"></i> Salvo!';
+                btn.disabled = true;
+                setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 2500);
+            }
         }
         
         // Fecha o modal ao clicar fora do conteúdo
