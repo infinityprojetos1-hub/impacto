@@ -743,6 +743,7 @@ database && database.ref('.info/connected').on('value', (snapshot) => {
 // Sync periódico automático: garante que Firebase sempre tem os dados mais recentes
 // mesmo que algum save anterior tenha falhado ou a aba ficou aberta muito tempo.
 setInterval(() => {
+  if (typeof window._resetSyncArc === 'function') window._resetSyncArc();
   if (firebaseDisponivel && database && document.visibilityState !== 'hidden') {
     forcarSyncParaFirebase();
   }
@@ -758,10 +759,12 @@ function _piscarBadgeSync() {
   if (label) label.textContent = 'Salvando na nuvem…';
   if (dot)   dot.style.background = '#1565c0';
   if (badge) { badge.style.background = '#e3f2fd'; badge.style.color = '#1565c0'; badge.style.border = '1px solid #90caf9'; }
+  if (typeof window._syncArcSalvando === 'function') window._syncArcSalvando();
   setTimeout(() => {
     if (label) label.textContent    = orig || 'Sincronizado com a nuvem';
     if (dot)   dot.style.background = '#4caf50';
     if (badge) { badge.style.background = '#e8f5e9'; badge.style.color = '#2e7d32'; badge.style.border = '1px solid #a5d6a7'; }
+    if (typeof window._syncArcConcluido === 'function') window._syncArcConcluido();
   }, 1800);
 }
 window._piscarBadgeSync = _piscarBadgeSync;

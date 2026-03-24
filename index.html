@@ -4095,8 +4095,26 @@
                 margin-top: 10px; padding: 4px 12px; border-radius: 20px;
                 font-size: 0.78em; font-weight: 600; letter-spacing: 0.3px;
                 background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7;
-                transition: all 0.4s ease;">
-                <span id="syncDot" style="width:8px;height:8px;border-radius:50%;background:#4caf50;display:inline-block;"></span>
+                transition: all 0.4s ease; cursor: default;"
+                title="Próximo sync automático em breve">
+                <!-- Arco de contagem regressiva + ponto central -->
+                <span style="position:relative;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;flex-shrink:0;">
+                    <svg id="syncArcSvg" width="18" height="18" viewBox="0 0 18 18"
+                         style="position:absolute;top:0;left:0;transform:rotate(-90deg);">
+                        <!-- Trilha de fundo -->
+                        <circle cx="9" cy="9" r="6.5" fill="none"
+                                stroke="rgba(76,175,80,0.2)" stroke-width="1.8"/>
+                        <!-- Arco de progresso -->
+                        <circle id="syncArc" cx="9" cy="9" r="6.5" fill="none"
+                                stroke="#4caf50" stroke-width="1.8"
+                                stroke-linecap="round"
+                                stroke-dasharray="40.84"
+                                stroke-dashoffset="40.84"
+                                style="transition:stroke-dashoffset 0.15s linear, stroke 0.4s ease;"/>
+                    </svg>
+                    <!-- Ponto central (mantém id para firebase-config.js) -->
+                    <span id="syncDot" style="width:7px;height:7px;border-radius:50%;background:#4caf50;display:inline-block;position:relative;z-index:1;transition:background 0.4s ease;"></span>
+                </span>
                 <span id="syncLabel">Sincronizado com a nuvem</span>
             </div>
             <div id="cacheVersionBadge" style="
@@ -5010,6 +5028,63 @@
         }
         window.compartilharWhatsApp = window.compartilharWhatsAppMaterial;
     });
+    </script>
+
+    <!-- Arco de contagem regressiva do sync automático -->
+    <script>
+    (function() {
+        const SYNC_MS    = 15000;
+        const CIRCUNF    = 40.84; // 2 * π * 6.5
+        let   _arcStart  = Date.now();
+        let   _salvando  = false;
+
+        function _getArc()   { return document.getElementById('syncArc'); }
+        function _getBadge() { return document.getElementById('syncStatusBadge'); }
+
+        // Atualiza o arco a cada 150 ms
+        setInterval(function() {
+            const arc = _getArc();
+            if (!arc || _salvando) return;
+            const elapsed  = Date.now() - _arcStart;
+            const progress = Math.min(elapsed / SYNC_MS, 1);
+            arc.style.strokeDashoffset = CIRCUNF * (1 - progress);
+            // Tooltip dinâmico
+            const badge = _getBadge();
+            if (badge) {
+                const restaSeg = Math.max(0, Math.round((SYNC_MS - elapsed) / 1000));
+                badge.title = restaSeg > 0
+                    ? 'Próximo salvamento automático em ' + restaSeg + 's'
+                    : 'Salvando na nuvem…';
+            }
+        }, 150);
+
+        // Expõe funções para firebase-config.js usar
+        window._resetSyncArc = function() {
+            _arcStart  = Date.now();
+            _salvando  = false;
+            const arc  = _getArc();
+            if (arc) {
+                arc.style.strokeDashoffset = CIRCUNF;
+                arc.setAttribute('stroke', '#4caf50');
+            }
+        };
+
+        window._syncArcSalvando = function() {
+            _salvando = true;
+            const arc = _getArc();
+            if (arc) {
+                arc.setAttribute('stroke', '#1565c0');
+                arc.style.strokeDashoffset = 0; // arco cheio enquanto salva
+            }
+        };
+
+        window._syncArcConcluido = function() {
+            _salvando = false;
+            const arc = _getArc();
+            if (arc) arc.setAttribute('stroke', '#4caf50');
+            window._resetSyncArc();
+        };
+    })();
     </script>
 </body>
 
