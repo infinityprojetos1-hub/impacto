@@ -745,7 +745,7 @@ setInterval(() => {
   if (firebaseDisponivel && database && document.visibilityState !== 'hidden') {
     forcarSyncParaFirebase();
   }
-}, 60000); // a cada 60 segundos
+}, 15000); // a cada 15 segundos
 
 // Utilitário: pisca o badge indicando "salvando"
 function _piscarBadgeSync() {
