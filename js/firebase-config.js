@@ -195,136 +195,6 @@ async function buscarArquivoBase64(caminho) {
   }
 }
 
-// ===== MIGRAÇÃO DO LOCALSTORAGE PARA FIREBASE =====
-
-async function migrarLocalStorageParaFirebase() {
-  console.log('🔄 Iniciando migração do localStorage para Firebase Realtime Database...');
-  
-  const migracoes = [];
-  
-  try {
-    // 1. Migrar Igrejas (Orçamentos) - MIGRAÇÃO COMPLETA DE TODOS OS DADOS
-    const igrejasLS = localStorage.getItem('igrejas');
-    if (igrejasLS) {
-      const igrejas = JSON.parse(igrejasLS);
-      console.log(`📊 Migrando ${igrejas.length} igrejas com TODOS os dados...`);
-      
-      for (const igreja of igrejas) {
-        const igrejaId = (igreja.id || igreja.nome.replace(/[^a-z0-9]/gi, '_')).toLowerCase();
-        await salvarNoDatabase(`igrejas/${igrejaId}`, {
-          // Migra TODOS os campos da igreja
-          ...igreja,
-          dataMigracao: new Date().toISOString(),
-          origem: 'migracao_localstorage'
-        });
-      }
-      migracoes.push(`✅ ${igrejas.length} igrejas migradas (dados completos)`);
-    }
-    
-    // 2. Migrar Notas Fiscais
-    const nfLS = localStorage.getItem('notasFiscais');
-    if (nfLS) {
-      const nfData = JSON.parse(nfLS);
-      console.log('📊 Migrando Notas Fiscais...');
-      
-      await salvarNoDatabase('configuracoes/notasFiscais', {
-        dados: nfData,
-        dataAtualizacao: new Date().toISOString()
-      });
-      
-      migracoes.push('✅ Notas Fiscais migradas');
-    }
-    
-    // 3. Migrar Material
-    const materialLS = localStorage.getItem('materiaisIgrejas');
-    if (materialLS) {
-      const materialData = JSON.parse(materialLS);
-      console.log('📊 Migrando Material...');
-      
-      await salvarNoDatabase('configuracoes/materiais', {
-        dados: materialData,
-        dataAtualizacao: new Date().toISOString()
-      });
-      
-      migracoes.push('✅ Material migrado');
-    }
-    
-    // 4. Migrar Checklists (SEM imagens/assinaturas para economizar espaço)
-    const checklistLS = localStorage.getItem('checklistsIgrejas');
-    if (checklistLS) {
-      const checklistData = JSON.parse(checklistLS);
-      console.log('📊 Migrando Checklists (sem imagens)...');
-      
-      if (checklistData.igrejas && checklistData.igrejas.length > 0) {
-        for (const igreja of checklistData.igrejas) {
-          if (igreja.checklist) {
-            const checklistId = (igreja.id || igreja.nome.replace(/[^a-z0-9]/gi, '_')).toLowerCase();
-            
-            await salvarNoDatabase(`checklists/${checklistId}`, {
-              igreja: igreja.nome,
-              igrejaId: igreja.id,
-              responsavel: igreja.checklist.responsavel,
-              respostas: igreja.checklist.respostas,
-              // NÃO migra assinatura (economiza espaço)
-              dataPreenchimento: igreja.checklist.dataPreenchimento,
-              dataMigracao: new Date().toISOString()
-            });
-          }
-        }
-      }
-      
-      migracoes.push('✅ Checklists migrados (sem imagens)');
-    }
-    
-    // 5. Migrar Logos (SEM salvar no Firebase para economizar espaço)
-    const logosLS = localStorage.getItem('logosBase64');
-    if (logosLS) {
-      console.log('📊 Logos detectadas (mantidas apenas localmente para economizar espaço)');
-      migracoes.push('ℹ️ Logos mantidas apenas localmente');
-    }
-    
-    // 6. Migrar Relatórios Técnicos (SEM imagens)
-    const relatoriosLS = localStorage.getItem('relatoriosTecnicos');
-    if (relatoriosLS) {
-      const relatorios = JSON.parse(relatoriosLS);
-      console.log('📊 Migrando Relatórios Técnicos (sem imagens)...');
-      
-      // Migra apenas os dados textuais, não as imagens
-      const relatoriosSemImagens = {};
-      for (const [key, relatorio] of Object.entries(relatorios)) {
-        relatoriosSemImagens[key] = {
-          ...relatorio,
-          fotos: relatorio.fotos ? relatorio.fotos.length : 0 // Apenas conta as fotos
-          // Não migra as imagens em si
-        };
-      }
-      
-      await salvarNoDatabase('configuracoes/relatoriosTecnicos', {
-        dados: relatoriosSemImagens,
-        dataAtualizacao: new Date().toISOString()
-      });
-      
-      migracoes.push('✅ Relatórios Técnicos migrados (sem imagens)');
-    }
-    
-    console.log('✅ Migração concluída com sucesso!');
-    console.log('📋 Resumo:', migracoes);
-    
-    return {
-      sucesso: true,
-      migracoes: migracoes
-    };
-    
-  } catch (error) {
-    console.error('❌ Erro durante a migração:', error);
-    return {
-      sucesso: false,
-      erro: error.message,
-      migracoes: migracoes
-    };
-  }
-}
-
 // ===== SINCRONIZAÇÃO BIDIRECIONAL =====
 
 // Flag global para evitar loop: quando recebendo do Firebase, não salva de volta
@@ -584,7 +454,10 @@ function iniciarSincronizacaoTempoReal() {
     const { _ts, ...valores } = dados;
     if (valores && Object.keys(valores).length > 0) {
       try {
-        localStorage.setItem('configValoresIgreja', JSON.stringify(valores));
+        // Preserva _ts no localStorage para que o sync periódico e o forcarSync
+        // consigam detectar que estes dados já foram enviados e evitem re-envio.
+        localStorage.setItem('configValoresIgreja', JSON.stringify(dados));
+        if (_ts) window._fbMarcarEnviado && window._fbMarcarEnviado('configValoresIgreja', _ts);
         _fbDebouncedUI('valores', () => { if (typeof carregarConfigValores === 'function') carregarConfigValores(); });
         console.log('🔄 Valores igreja atualizados do Firebase');
       } catch (e) { /* ignora */ }
@@ -822,6 +695,8 @@ async function forcarSyncParaFirebase(forcarAgora = false) {
       if (!raw) return;
       try {
         const d = prepararDado(raw);
+        // Se não for forçado, pula caminhos cujo _ts não mudou desde o último envio confirmado
+        if (!forcarAgora && d._ts && d._ts === _ultimoTsEnviado[lsKey]) return;
         if (forcarAgora) localStorage.setItem(lsKey, JSON.stringify(d));
         if (extraFn) extraFn(d);
         saves.push(salvarNoDatabase(fbPath, d).then(() => {
@@ -871,7 +746,6 @@ window.firebaseDB = {
   deletar: deletarDoDatabase,
   salvarArquivo: salvarArquivoBase64,
   buscarArquivo: buscarArquivoBase64,
-  migrarDados: migrarLocalStorageParaFirebase,
   iniciarSync: iniciarSincronizacaoTempoReal,
   forcarSync: forcarSyncParaFirebase,
   disponivel: () => firebaseDisponivel

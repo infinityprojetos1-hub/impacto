@@ -22,10 +22,15 @@ function obterValoresIgreja() {
 
 function salvarValoresIgreja(valores) {
     try {
-        localStorage.setItem(CONFIG_VALORES_KEY, JSON.stringify(valores));
-        // Sincroniza com Firebase para refletir no notebook/outros dispositivos
+        const tsAgora = Date.now();
+        const dadosComTs = { ...valores, _ts: tsAgora };
+        localStorage.setItem(CONFIG_VALORES_KEY, JSON.stringify(dadosComTs));
         if (typeof salvarNoDatabase === 'function' && typeof firebaseDisponivel !== 'undefined' && firebaseDisponivel) {
-            salvarNoDatabase('dados/valoresIgreja', { ...valores, _ts: Date.now() });
+            salvarNoDatabase('dados/valoresIgreja', dadosComTs).then(() => {
+                if (typeof window._fbMarcarEnviado === 'function') {
+                    window._fbMarcarEnviado('configValoresIgreja', tsAgora);
+                }
+            });
         }
         return true;
     } catch (e) {
