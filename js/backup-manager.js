@@ -120,8 +120,8 @@ function restaurarDoBackup(input) {
 
       // Atualiza listas e abas
       if (typeof window.atualizarListaNF === 'function') window.atualizarListaNF();
-      if (typeof window.renderizarAbaMaterial === 'function') window.renderizarAbaMaterial();
-      if (typeof window.renderizarChecklist === 'function') window.renderizarChecklist();
+      if (typeof window.atualizarListaMaterial === 'function') window.atualizarListaMaterial();
+      if (typeof window.atualizarListaChecklist === 'function') window.atualizarListaChecklist();
       if (typeof window.atualizarListaEstoque === 'function') window.atualizarListaEstoque();
       if (typeof window.atualizarListaPagamento === 'function') window.atualizarListaPagamento();
       if (typeof window.carregarConfigValores === 'function') window.carregarConfigValores();
@@ -141,7 +141,8 @@ function restaurarDoBackup(input) {
 
       // Atualiza abas visíveis
       if (typeof window.mostrarAba === 'function') {
-        const abaAtiva = document.querySelector('.aba-nav-item.active')?.getAttribute('data-aba');
+        const btnAtivo = document.querySelector('.tab-button.active');
+        const abaAtiva = btnAtivo?.getAttribute('data-tab');
         if (abaAtiva) window.mostrarAba(abaAtiva);
       }
     } catch (e) {

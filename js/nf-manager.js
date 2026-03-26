@@ -96,12 +96,12 @@ function carregarDadosNF() {
 
             console.log('Dados carregados e validados:', nfData);
         } else {
-            nfData = { igrejas: [], arquivadas: [] };
+            nfData = { igrejas: [], arquivadas: [], especiais: [] };
         }
         atualizarListaNF();
     } catch (error) {
         console.error('Erro ao carregar dados das NFs:', error);
-        nfData = { igrejas: [], arquivadas: [] };
+        nfData = { igrejas: [], arquivadas: [], especiais: [] };
     }
 }
 

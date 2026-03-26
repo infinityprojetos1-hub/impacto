@@ -341,9 +341,6 @@ function _fbDebouncedUI(tipo, fn) {
   }, _fbDebounceMs);
 }
 
-// Timestamp do carregamento da página (evita Firebase sobrescrever dados locais recentes)
-const _fbPageLoadTime = Date.now();
-
 // Listener para sincronizar dados em tempo real
 function iniciarSincronizacaoTempoReal() {
   if (!firebaseDisponivel || !database) {

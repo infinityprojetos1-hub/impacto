@@ -3,7 +3,7 @@
 // ==========================================
 // SISTEMA DE PASTA DE TRABALHO
 // ==========================================
-let pastaTrabalhoHandle = null;
+window.pastaTrabalhoHandle = null;
 
 // Função para escolher pasta de trabalho
 async function escolherPastaTrabalho() {
@@ -17,7 +17,7 @@ async function escolherPastaTrabalho() {
             mode: 'readwrite'
         });
 
-        pastaTrabalhoHandle = handle;
+        window.pastaTrabalhoHandle = handle;
 
         // Salva o handle no IndexedDB para persistir
         await salvarHandlePastaTrabalho(handle);
@@ -37,14 +37,14 @@ async function escolherPastaTrabalho() {
 
 // Função para criar estrutura de pastas para uma igreja
 async function criarPastasIgreja(nomeIgreja) {
-    if (!pastaTrabalhoHandle) {
+    if (!window.pastaTrabalhoHandle) {
         console.log('⚠️ Nenhuma pasta de trabalho selecionada');
         return null;
     }
 
     try {
         // Verifica permissão
-        const permissao = await pastaTrabalhoHandle.requestPermission({ mode: 'readwrite' });
+        const permissao = await window.pastaTrabalhoHandle.requestPermission({ mode: 'readwrite' });
         if (permissao !== 'granted') {
             console.error('❌ Permissão negada para a pasta de trabalho');
             return null;
@@ -58,7 +58,7 @@ async function criarPastasIgreja(nomeIgreja) {
             .toUpperCase();
 
         // Cria pasta da igreja
-        const pastaIgreja = await pastaTrabalhoHandle.getDirectoryHandle(nomePastaSanitizado, { create: true });
+        const pastaIgreja = await window.pastaTrabalhoHandle.getDirectoryHandle(nomePastaSanitizado, { create: true });
 
         // Cria subpastas
         const pastaFotos = await pastaIgreja.getDirectoryHandle('FOTOS', { create: true });
@@ -187,7 +187,7 @@ async function inicializarPastaTrabalho() {
     try {
         const handle = await obterHandlePastaTrabalho();
         if (handle) {
-            pastaTrabalhoHandle = handle;
+            window.pastaTrabalhoHandle = handle;
             atualizarStatusPastaTrabalho(handle.name);
             console.log('✅ Pasta de trabalho restaurada:', handle.name);
         }

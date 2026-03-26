@@ -4625,7 +4625,7 @@
                             <i class="fas fa-upload"></i> Restaurar do Backup
                             <input type="file" id="inputRestaurarBackup" accept=".json,application/json" style="display: none;" onchange="restaurarDoBackup(this)">
                         </label>
-                        <button class="btn-secondary" style="background:#1565c0; color:#fff; border:none;" onclick="forcarSyncAgora()" title="Força envio de todos os dados locais para o Firebase agora">
+                        <button class="btn-secondary" style="background:#1565c0; color:#fff; border:none;" onclick="forcarSyncAgora(this)" title="Força envio de todos os dados locais para o Firebase agora">
                             <i class="fas fa-cloud-upload-alt"></i> Salvar tudo na nuvem agora
                         </button>
                     </div>
@@ -4653,9 +4653,8 @@
             modalConfig.style.display = 'none';
         }
 
-        async function forcarSyncAgora() {
+        async function forcarSyncAgora(btn) {
             if (typeof window.forcarSyncParaFirebase === 'function') {
-                const btn = event.currentTarget;
                 const orig = btn.innerHTML;
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
                 btn.disabled = true;
