@@ -126,8 +126,12 @@ function salvarDadosChecklist() {
         // Salva no Firebase completo (com assinaturas), fora do carregamento inicial
         if (!_checklistCarregando && typeof salvarNoDatabase === 'function' && typeof firebaseDisponivel !== 'undefined' && firebaseDisponivel) {
             if (typeof window._piscarBadgeSync === 'function') window._piscarBadgeSync();
+            const _ts = checklistData._ts;
             salvarNoDatabase('dados/checklists', checklistData)
-                .then(() => console.log('✅ Checklist salvo no Firebase (com assinaturas)'))
+                .then(() => {
+                    console.log('✅ Checklist salvo no Firebase (com assinaturas)');
+                    if (typeof window._fbMarcarEnviado === 'function') window._fbMarcarEnviado('checklistsIgrejas', _ts);
+                })
                 .catch(err => console.warn('⚠️ Checklist não salvo no Firebase:', err));
         }
     } catch (error) {
@@ -150,6 +154,8 @@ function sincronizarIgrejasChecklistNF() {
             ...(nfData.especiais  || [])
         ];
 
+        let houveMudanca = false;
+
         // Remove igrejas apenas quando excluídas de todas as listas NF
         const _filtrarExistentes = (lista) => lista.filter(igrejaCheck => {
             const aindaExiste = todasIgrejasNF.some(igrejaNF =>
@@ -157,6 +163,7 @@ function sincronizarIgrejasChecklistNF() {
             );
             if (!aindaExiste) {
                 console.log(`🗑️ Removendo igreja "${igrejaCheck.nome}" do Checklist - excluída das NFs`);
+                houveMudanca = true;
             }
             return aindaExiste;
         });
@@ -180,10 +187,11 @@ function sincronizarIgrejasChecklistNF() {
                 };
                 checklistData.igrejas.push(novaIgreja);
                 console.log(`➕ Nova igreja adicionada ao Checklist: "${novaIgreja.nome}"`);
+                houveMudanca = true;
             }
         });
 
-        salvarDadosChecklist();
+        if (houveMudanca) salvarDadosChecklist();
     } catch (error) {
         console.error('Erro ao sincronizar igrejas do checklist:', error);
     }
@@ -550,29 +558,8 @@ async function salvarChecklist(event, tipo, igrejaIndex) {
         dataPreenchimento: new Date().toISOString()
     };
 
+    // Salva via salvarDadosChecklist() que persiste em dados/checklists (fonte única de verdade)
     salvarDadosChecklist();
-    
-    // NÃO salva assinaturas no Firebase para economizar espaço
-    // Apenas salva os dados do checklist (sem imagens)
-    if (typeof window.firebaseDB !== 'undefined' && window.firebaseDB.disponivel()) {
-        try {
-            const checklistId = igreja.nome.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            
-            // Salva checklist no Realtime Database (SEM assinatura)
-            await window.firebaseDB.salvar(`checklists/${checklistId}`, {
-                igreja: igreja.nome,
-                igrejaId: igreja.id,
-                responsavel: responsavel,
-                respostas: respostas,
-                // assinatura não é salva no Firebase
-                dataPreenchimento: new Date().toISOString()
-            });
-            
-            console.log('✅ Checklist salvo no Firebase Realtime Database (sem imagens)!');
-        } catch (error) {
-            console.error('❌ Erro ao salvar no Firebase:', error);
-        }
-    }
     
     atualizarListaChecklist();
 

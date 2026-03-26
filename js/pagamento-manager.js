@@ -67,7 +67,10 @@ function salvarDadosPagamento() {
         localStorage.setItem('pagamentoData', JSON.stringify(dados));
         if (typeof salvarNoDatabase === 'function') {
             _pagSalvandoTs = Date.now(); // marca que acabamos de salvar (cooldown 3s)
-            salvarNoDatabase('dados/pagamento', dados);
+            const _ts = dados._ts;
+            salvarNoDatabase('dados/pagamento', dados).then(() => {
+                if (typeof window._fbMarcarEnviado === 'function') window._fbMarcarEnviado('pagamentoData', _ts);
+            });
             if (typeof window._piscarBadgeSync === 'function') window._piscarBadgeSync();
         }
     } catch (e) {

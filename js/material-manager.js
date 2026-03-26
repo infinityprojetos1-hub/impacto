@@ -109,8 +109,12 @@ function salvarDadosMaterial() {
         // Salva no Firebase imediatamente (sempre automático, exceto no carregamento inicial)
         if (!_materialCarregando && typeof salvarNoDatabase === 'function' && typeof firebaseDisponivel !== 'undefined' && firebaseDisponivel) {
             if (typeof window._piscarBadgeSync === 'function') window._piscarBadgeSync();
+            const _ts = materialData._ts;
             salvarNoDatabase('dados/materiais', materialData)
-                .then(() => console.log('✅ Material salvo no Firebase'))
+                .then(() => {
+                    console.log('✅ Material salvo no Firebase');
+                    if (typeof window._fbMarcarEnviado === 'function') window._fbMarcarEnviado('materiaisIgrejas', _ts);
+                })
                 .catch(err => console.warn('⚠️ Material não salvo no Firebase:', err));
         }
 
@@ -174,19 +178,21 @@ function sincronizarIgrejasNF() {
             ...(nfData.especiais || [])
         ];
 
+        let houveMudanca = false;
+
         // PASSO 1: Remover igrejas do Material apenas quando forem excluídas de todas as listas NF
         ['pendentes', 'enviadas', 'pedidosSandro'].forEach(categoria => {
+            const antes = materialData[categoria].length;
             materialData[categoria] = materialData[categoria].filter(igrejaMat => {
                 const aindaExiste = todasIgrejasNF.some(igrejaNF =>
                     igrejaNF.nome === igrejaMat.nome && igrejaNF.id === igrejaMat.id
                 );
-
                 if (!aindaExiste) {
                     console.log(`🗑️ Removendo igreja "${igrejaMat.nome}" (ID: ${igrejaMat.id}) do Material - excluída das NFs`);
                 }
-
                 return aindaExiste;
             });
+            if (materialData[categoria].length !== antes) houveMudanca = true;
         });
 
         // PASSO 2: Adiciona igrejas ativas e especiais que estão em NF mas não em Material
@@ -203,18 +209,14 @@ function sincronizarIgrejasNF() {
             );
 
             if (!jaExistePendente && !jaExisteEnviada && !jaExisteSandro) {
-                // Verifica se a igreja já tem dados de material salvos no JSON
                 const statusMaterial = igrejaNF.statusMaterial || 'pendente';
                 const materiaisSalvos = igrejaNF.materiais || [];
-
                 const novaIgreja = {
                     nome: igrejaNF.nome,
                     id: igrejaNF.id || '',
                     link: igrejaNF.link || '',
                     materiais: materiaisSalvos
                 };
-
-                // Adiciona na aba correta baseado no status salvo
                 if (statusMaterial === 'enviado') {
                     materialData.enviadas.push(novaIgreja);
                 } else if (statusMaterial === 'sandro') {
@@ -222,15 +224,13 @@ function sincronizarIgrejasNF() {
                 } else {
                     materialData.pendentes.push(novaIgreja);
                 }
-
                 console.log(`➕ Nova igreja adicionada ao Material: "${novaIgreja.nome}" (ID: ${novaIgreja.id})`);
-            } else {
-                // Material é SEMPRE a fonte da verdade para os itens (nunca restaura do NF)
-                // O NF só serve para adicionar igrejas novas, não para restaurar itens excluídos
+                houveMudanca = true;
             }
         });
 
-        salvarDadosMaterial();
+        // Só persiste e envia ao Firebase se algo realmente mudou
+        if (houveMudanca) salvarDadosMaterial();
     } catch (error) {
         console.error('Erro ao sincronizar igrejas:', error);
     }

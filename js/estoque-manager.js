@@ -39,7 +39,10 @@ function salvarDadosEstoque() {
         const dados = { itens: estoqueData.itens, _ts: Date.now() };
         localStorage.setItem('estoqueData', JSON.stringify(dados));
         if (typeof salvarNoDatabase === 'function' && typeof firebaseDisponivel !== 'undefined' && firebaseDisponivel) {
-            salvarNoDatabase('dados/estoque', dados);
+            const _ts = dados._ts;
+            salvarNoDatabase('dados/estoque', dados).then(() => {
+                if (typeof window._fbMarcarEnviado === 'function') window._fbMarcarEnviado('estoqueData', _ts);
+            });
             if (typeof window._piscarBadgeSync === 'function') window._piscarBadgeSync();
         }
     } catch (e) {

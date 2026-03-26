@@ -128,8 +128,12 @@ function salvarDadosNF() {
         // Salva no Firebase imediatamente (sempre automático)
         if (typeof salvarNoDatabase === 'function' && typeof firebaseDisponivel !== 'undefined' && firebaseDisponivel) {
             if (typeof window._piscarBadgeSync === 'function') window._piscarBadgeSync();
+            const _ts = nfData._ts;
             salvarNoDatabase('dados/notasFiscais', nfData)
-                .then(() => console.log('✅ NF salva no Firebase'))
+                .then(() => {
+                    console.log('✅ NF salva no Firebase');
+                    if (typeof window._fbMarcarEnviado === 'function') window._fbMarcarEnviado('notasFiscais', _ts);
+                })
                 .catch(err => console.warn('⚠️ NF não salva no Firebase:', err));
         }
     } catch (error) {
@@ -1127,8 +1131,10 @@ function atualizarListaNF() {
     // Mostra a lista ativa por padrão
     mostrarLista('ativas');
 
-    // Adiciona estilos específicos
+    // Garante que os estilos existem apenas uma vez no head
+    if (!document.getElementById('nf-dynamic-styles')) {
     const style = document.createElement('style');
+    style.id = 'nf-dynamic-styles';
     style.textContent = `
         .nf-tabs {
             display: flex;
@@ -1381,6 +1387,7 @@ function atualizarListaNF() {
         .nf-radio-group input[type="radio"] { margin: 0; }
     `;
     document.head.appendChild(style);
+    } // fim do guard de estilos
 }
 
 // Função para excluir uma igreja

@@ -408,7 +408,6 @@ function iniciarSincronizacaoTempoReal() {
     } finally {
       window._fbReceivendo = false;
     }
-    window.dispatchEvent(new CustomEvent('firebaseSync', { detail: { tipo: 'notasFiscais' } }));
   });
 
   // ── Materiais ──────────────────────────────────────────────────
@@ -468,7 +467,6 @@ function iniciarSincronizacaoTempoReal() {
     } finally {
       window._fbReceivendo = false;
     }
-    window.dispatchEvent(new CustomEvent('firebaseSync', { detail: { tipo: 'materiais' } }));
   });
 
   // ── Estoque ─────────────────────────────────────────────────────
@@ -567,7 +565,6 @@ function iniciarSincronizacaoTempoReal() {
       _fbDebouncedUI('pagamento', () => window._aplicarDadosFirebasePagamento(dados));
       console.log('🔄 Pagamento atualizado do Firebase');
     }
-    window.dispatchEvent(new CustomEvent('firebaseSync', { detail: { tipo: 'pagamento' } }));
   });
 
   // ── Valores por tipo de igreja (config) ─────────────────────────
@@ -668,7 +665,6 @@ function iniciarSincronizacaoTempoReal() {
     } finally {
       window._fbReceivendo = false;
     }
-    window.dispatchEvent(new CustomEvent('firebaseSync', { detail: { tipo: 'checklists' } }));
   });
 
   // ── Relatórios ───────────────────────────────────────────────────
@@ -725,7 +721,6 @@ function iniciarSincronizacaoTempoReal() {
     } finally {
       window._fbReceivendo = false;
     }
-    window.dispatchEvent(new CustomEvent('firebaseSync', { detail: { tipo: 'relatorios' } }));
   });
 }
 
@@ -737,10 +732,13 @@ database && database.ref('.info/connected').on('value', (snapshot) => {
   }
 });
 
-// Rastreia o último _ts enviado ao Firebase por caminho.
-// O sync periódico SÓ escreve no Firebase se o dado mudou desde o último envio,
-// evitando writes desnecessários que disparariam downloads em todos os dispositivos.
+// Rastreia o último _ts enviado ao Firebase por chave de localStorage.
+// Exposto em window para que os managers possam marcar após saves imediatos,
+// evitando que o sync periódico de 15s reenvie dados já confirmados.
 const _ultimoTsEnviado = {};
+window._fbMarcarEnviado = function(lsKey, ts) {
+  _ultimoTsEnviado[lsKey] = ts || 0;
+};
 
 function _tsLocal(chave) {
   try {

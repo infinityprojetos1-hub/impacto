@@ -747,8 +747,12 @@ function salvarDadosRelatorios() {
         relatoriosData._ts = Date.now();
         localStorage.setItem('relatoriosData', JSON.stringify(relatoriosData));
         if (typeof salvarNoDatabase === 'function' && typeof firebaseDisponivel !== 'undefined' && firebaseDisponivel) {
+            const _ts = relatoriosData._ts;
             salvarNoDatabase('dados/relatorios', relatoriosData)
-                .then(() => console.log('✅ Relatórios salvos no Firebase'))
+                .then(() => {
+                    console.log('✅ Relatórios salvos no Firebase');
+                    if (typeof window._fbMarcarEnviado === 'function') window._fbMarcarEnviado('relatoriosData', _ts);
+                })
                 .catch(err => console.warn('⚠️ Relatórios não salvos no Firebase:', err));
         }
         console.log('✅ Dados de relatórios salvos');
