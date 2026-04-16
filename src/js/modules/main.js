@@ -404,22 +404,22 @@ function exibirLogosCarregadas() {
     });
 }
 
-// Mapeamento: chave de logosBase64 → arquivo na pasta logo/ e IDs no DOM
+// Mapeamento: chave de logosBase64 → arquivo na pasta assets/logos/ e IDs no DOM
 const LOGOS_MAPA = [
-    { key: 'impactoSolucoes', arquivo: 'logo/impacto - logo.jpeg',             imgId: 'logoImpacto',       statusId: 'statusLogoImpacto'       },
-    { key: 'impactoSolucoesCarimbo', arquivo: 'logo/impacto - Carimbo.png', imgId: 'carimboImpacto',    statusId: 'statusCarimboImpacto'    },
-    { key: 'spgDaSilva',      arquivo: 'logo/spg - logo.jpg',                  imgId: 'logoSPG',           statusId: 'statusLogoSPG'           },
-    { key: 'virtualGuitar',   arquivo: 'logo/virtualGuitarShop - logo.jpg',    imgId: 'logoVirtualGuitar', statusId: 'statusLogoVirtualGuitar' },
-    { key: 'ggProauto',       arquivo: 'logo/gg proauto - logo.jpg',           imgId: 'logoGGProauto',     statusId: 'statusLogoGGProauto'     },
-    { key: 'stv',             arquivo: 'logo/stv - logo.jpg',                  imgId: 'logoSTV',           statusId: 'statusLogoSTV'           },
-    { key: 'upServicos',      arquivo: 'logo/up - logo.jpg',                   imgId: 'logoUPServicos',    statusId: 'statusLogoUPServicos'    },
-    { key: 'sena',            arquivo: 'logo/sena - logo.jpg',                 imgId: 'logoSena',          statusId: 'statusLogoSena'          },
-    { key: 'instalassom',     arquivo: 'logo/instalasom - logo.jpg',           imgId: 'logoInstalassom',   statusId: 'statusLogoInstalassom'   },
-    { key: 'glauber',         arquivo: 'logo/glauber - logo.png',              imgId: 'logoGlauber',       statusId: 'statusLogoGlauber'       },
-    { key: 'megaLogo',        arquivo: 'logo/Mega Eventos - logo.jpg',         imgId: 'logoMegaEventos',   statusId: 'statusLogoMegaEventos'   },
-    { key: 'megaCarimbo',     arquivo: 'logo/Mega Eventos - Carimbo.jpg',      imgId: 'carimboMegaEventos',statusId: 'statusCarimboMegaEventos'},
-    { key: 'tellaLogo',       arquivo: 'logo/Tella video - logo.jpg',          imgId: 'logoTellaVideo',    statusId: 'statusLogoTellaVideo'    },
-    { key: 'tellaCarimbo',    arquivo: 'logo/Tella video - Carimbo.jpg',       imgId: 'carimboTellaVideo', statusId: 'statusCarimboTellaVideo' },
+    { key: 'impactoSolucoes', arquivo: 'assets/logos/impacto - logo.jpeg',             imgId: 'logoImpacto',       statusId: 'statusLogoImpacto'       },
+    { key: 'impactoSolucoesCarimbo', arquivo: 'assets/logos/impacto - Carimbo.png', imgId: 'carimboImpacto',    statusId: 'statusCarimboImpacto'    },
+    { key: 'spgDaSilva',      arquivo: 'assets/logos/spg - logo.jpg',                  imgId: 'logoSPG',           statusId: 'statusLogoSPG'           },
+    { key: 'virtualGuitar',   arquivo: 'assets/logos/virtualGuitarShop - logo.jpg',    imgId: 'logoVirtualGuitar', statusId: 'statusLogoVirtualGuitar' },
+    { key: 'ggProauto',       arquivo: 'assets/logos/gg proauto - logo.jpg',           imgId: 'logoGGProauto',     statusId: 'statusLogoGGProauto'     },
+    { key: 'stv',             arquivo: 'assets/logos/stv - logo.jpg',                  imgId: 'logoSTV',           statusId: 'statusLogoSTV'           },
+    { key: 'upServicos',      arquivo: 'assets/logos/up - logo.jpg',                   imgId: 'logoUPServicos',    statusId: 'statusLogoUPServicos'    },
+    { key: 'sena',            arquivo: 'assets/logos/sena - logo.jpg',                 imgId: 'logoSena',          statusId: 'statusLogoSena'          },
+    { key: 'instalassom',     arquivo: 'assets/logos/instalasom - logo.jpg',           imgId: 'logoInstalassom',   statusId: 'statusLogoInstalassom'   },
+    { key: 'glauber',         arquivo: 'assets/logos/glauber - logo.png',              imgId: 'logoGlauber',       statusId: 'statusLogoGlauber'       },
+    { key: 'megaLogo',        arquivo: 'assets/logos/Mega Eventos - logo.jpg',         imgId: 'logoMegaEventos',   statusId: 'statusLogoMegaEventos'   },
+    { key: 'megaCarimbo',     arquivo: 'assets/logos/Mega Eventos - Carimbo.jpg',      imgId: 'carimboMegaEventos',statusId: 'statusCarimboMegaEventos'},
+    { key: 'tellaLogo',       arquivo: 'assets/logos/Tella video - logo.jpg',          imgId: 'logoTellaVideo',    statusId: 'statusLogoTellaVideo'    },
+    { key: 'tellaCarimbo',    arquivo: 'assets/logos/Tella video - Carimbo.jpg',       imgId: 'carimboTellaVideo', statusId: 'statusCarimboTellaVideo' },
 ];
 
 function _aplicarLogoNaUI(entry) {
@@ -437,7 +437,7 @@ function _aplicarLogoNaUI(entry) {
 
 // Função para carregar logos das empresas que já estão no DOM
 // 1. Carrega do localStorage primeiro (exibe imediatamente o que já foi salvo)
-// 2. Para as que faltam, tenta da pasta logo/ (funciona quando app está em servidor http)
+// 2. Para as que faltam, tenta da pasta assets/logos/ (funciona quando app está em servidor http)
 // 3. Em file:// a pasta pode falhar; localStorage garante que logos continuem visíveis
 function inicializarLogos() {
     const logosSalvas = carregarLogosDoLocalStorage();
@@ -462,7 +462,7 @@ function inicializarLogos() {
     });
 }
 
-// Carrega da pasta logo/ as imagens que ainda não estão em logosBase64
+// Carrega da pasta assets/logos/ as imagens que ainda não estão em logosBase64
 function _carregarLogosPendentesDaPasta() {
     const pendentes = LOGOS_MAPA.filter(entry => !logosBase64[entry.key]);
     if (pendentes.length === 0) return;
@@ -488,7 +488,7 @@ function _carregarLogosPendentesDaPasta() {
     });
 }
 
-// Força recarregar todas as imagens da pasta logo/ (substitui as do localStorage)
+// Força recarregar todas as imagens da pasta assets/logos/ (substitui as do localStorage)
 function recarregarLogosDaPasta() {
     LOGOS_MAPA.forEach(entry => {
         delete logosBase64[entry.key];

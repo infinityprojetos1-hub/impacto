@@ -87,17 +87,12 @@ inpacto/
 ├── index.html              # Página principal
 ├── manifest.json           # PWA Manifest
 ├── sw.js                   # Service Worker
-├── icon-192.png           # Ícone 192x192
-├── icon-512.png           # Ícone 512x512
-├── js/
-│   ├── config.js          # Configurações gerais
-│   ├── firebase-config.js # Firebase Realtime Database
-│   ├── orcamentos.js      # Geração de orçamentos
-│   ├── pdf-generator.js   # Geração de PDFs
-│   ├── checklist-manager.js # Checklists técnicos
-│   ├── material-manager.js  # Gerenciamento de material
-│   ├── notas-fiscais.js     # Notas fiscais
-│   └── ...                  # Outros módulos
+├── data/                   # JSON de exemplo / referência (dados reais no Firebase + localStorage)
+├── assets/logos/           # Logos das empresas (carregadas pelo app)
+├── src/js/
+│   ├── core/               # utils, config, firebase-config, backup-manager, ui-controller
+│   ├── budget/             # orçamentos, PDFs, empresa-*.js
+│   └── modules/            # NF, home, estoque, material, checklist, main, relatório, pagamento
 └── docs/
     └── ...                 # Documentação
 ```
@@ -153,9 +148,9 @@ Edite as variáveis CSS em `index.html`:
 
 ### Adicionar Empresas:
 
-1. Crie `js/empresa-nome.js`
-2. Adicione em `js/pdf-concorrentes.js`
-3. Configure em `js/config.js`
+1. Crie `src/js/budget/empresa-nome.js`
+2. Adicione em `src/js/budget/pdf-concorrentes.js`
+3. Configure em `src/js/core/config.js`
 
 ## 📝 Licença
 

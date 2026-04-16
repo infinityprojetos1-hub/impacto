@@ -4392,10 +4392,10 @@
         <div id="logos" class="tab-content">
             <div class="section">
                 <h2>Logos das Empresas</h2>
-                <p>Carregue as logos ou use as da pasta <strong>logo/</strong> (quando o app estiver em servidor). As logos ficam salvas localmente e funcionam em qualquer dispositivo após o primeiro carregamento.</p>
+                <p>Carregue as logos ou use as da pasta <strong>assets/logos/</strong> (quando o app estiver em servidor). As logos ficam salvas localmente e funcionam em qualquer dispositivo após o primeiro carregamento.</p>
                 <p style="margin-bottom:12px;">
                     <button type="button" class="btn-secondary" onclick="recarregarLogosDaPasta()" style="padding:8px 16px;">
-                        <i class="fas fa-sync-alt"></i> Recarregar imagens da pasta logo/
+                        <i class="fas fa-sync-alt"></i> Recarregar imagens da pasta assets/logos/
                     </button>
                     <span style="font-size:12px; color:var(--text-muted); margin-left:8px;">Use após adicionar arquivos na pasta (requer app em servidor http).</span>
                 </p>
@@ -4660,31 +4660,31 @@
     </div>
 
     <!-- Carregar scripts em ordem - sem usar módulos ES6 -->
-    <script src="js/utils.js"></script>
-    <script src="js/config.js"></script>
-    <script src="js/firebase-config.js"></script>
-    <script src="js/backup-manager.js"></script>
-    <script src="js/ui-controller.js"></script>
-    <script src="js/orcamentos.js"></script>
-    <script src="js/pdf-concorrentes.js"></script>
-    <script src="js/pdf-generator.js"></script>
-    <script src="js/empresa-ggproauto.js"></script>
-    <script src="js/empresa-stv.js"></script>
-    <script src="js/empresa-upservicos.js"></script>
-    <script src="js/empresa-sena.js"></script>
-    <script src="js/empresa-instalassom.js"></script>
-    <script src="js/empresa-megaeventos.js"></script>
-    <script src="js/empresa-tellavideo.js"></script>
-    <script src="js/empresa-virtualguitar.js"></script>
-    <script src="js/empresa-glauber.js"></script>
-    <script src="js/nf-manager.js"></script>
-    <script src="js/home-manager.js"></script>
-    <script src="js/estoque-manager.js"></script>
-    <script src="js/material-manager.js"></script>
-    <script src="js/checklist-manager.js"></script>
-    <script src="js/main.js"></script>
-    <script src="js/relatorio.js"></script>
-    <script src="js/pagamento-manager.js"></script>
+    <script src="src/js/core/utils.js"></script>
+    <script src="src/js/core/config.js"></script>
+    <script src="src/js/core/firebase-config.js"></script>
+    <script src="src/js/core/backup-manager.js"></script>
+    <script src="src/js/core/ui-controller.js"></script>
+    <script src="src/js/budget/orcamentos.js"></script>
+    <script src="src/js/budget/pdf-concorrentes.js"></script>
+    <script src="src/js/budget/pdf-generator.js"></script>
+    <script src="src/js/budget/empresa-ggproauto.js"></script>
+    <script src="src/js/budget/empresa-stv.js"></script>
+    <script src="src/js/budget/empresa-upservicos.js"></script>
+    <script src="src/js/budget/empresa-sena.js"></script>
+    <script src="src/js/budget/empresa-instalassom.js"></script>
+    <script src="src/js/budget/empresa-megaeventos.js"></script>
+    <script src="src/js/budget/empresa-tellavideo.js"></script>
+    <script src="src/js/budget/empresa-virtualguitar.js"></script>
+    <script src="src/js/budget/empresa-glauber.js"></script>
+    <script src="src/js/modules/nf-manager.js"></script>
+    <script src="src/js/modules/home-manager.js"></script>
+    <script src="src/js/modules/estoque-manager.js"></script>
+    <script src="src/js/modules/material-manager.js"></script>
+    <script src="src/js/modules/checklist-manager.js"></script>
+    <script src="src/js/modules/main.js"></script>
+    <script src="src/js/modules/relatorio.js"></script>
+    <script src="src/js/modules/pagamento-manager.js"></script>
 
     <!-- Modal de Configurações — inicializado após todos os scripts para garantir que
          carregarConfigValores e forcarSyncParaFirebase já estejam disponíveis -->
