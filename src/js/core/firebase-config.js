@@ -211,12 +211,20 @@ function _fbDebouncedUI(tipo, fn) {
   }, _fbDebounceMs);
 }
 
+// Guarda interna para evitar listener duplo
+let _sincronizacaoIniciada = false;
+
 // Listener para sincronizar dados em tempo real
 function iniciarSincronizacaoTempoReal() {
+  if (_sincronizacaoIniciada) {
+    console.log('ℹ️ Sincronização já iniciada, ignorando chamada duplicada.');
+    return;
+  }
   if (!firebaseDisponivel || !database) {
     console.warn('⚠️ Firebase não disponível para sincronização');
     return;
   }
+  _sincronizacaoIniciada = true;
 
   console.log('🔄 Iniciando sincronização em tempo real...');
 
@@ -269,8 +277,11 @@ function iniciarSincronizacaoTempoReal() {
         }
         if (!mesmoDado) {
           _fbDebouncedUI('notasFiscais', () => {
-            const el = document.getElementById('notasFiscais');
-            if (el && el.classList.contains('active') && typeof atualizarListaNF === 'function') atualizarListaNF();
+            // Sempre atualiza a lista de NF quando dados chegam do Firebase
+            if (typeof atualizarListaNF === 'function') atualizarListaNF();
+            // Também atualiza módulos que dependem de nfData
+            if (typeof sincronizarIgrejasNF === 'function') sincronizarIgrejasNF();
+            if (typeof sincronizarIgrejasChecklistNF === 'function') sincronizarIgrejasChecklistNF();
           });
           console.log('🔄 Notas Fiscais atualizadas do Firebase');
         }
@@ -328,8 +339,7 @@ function iniciarSincronizacaoTempoReal() {
         }
         if (!mesmoMat) {
           _fbDebouncedUI('materiais', () => {
-            const el = document.getElementById('material');
-            if (el && el.classList.contains('active') && typeof atualizarListaMaterial === 'function') atualizarListaMaterial();
+            if (typeof atualizarListaMaterial === 'function') atualizarListaMaterial();
           });
           console.log('🔄 Materiais atualizados do Firebase');
         }
@@ -753,3 +763,13 @@ window.firebaseDB = {
 };
 
 console.log('✅ Firebase Realtime Database Config carregado e pronto!');
+
+// Garante que a sincronização inicie automaticamente assim que o DOM estiver pronto,
+// independentemente de erros em outros scripts
+document.addEventListener('DOMContentLoaded', () => {
+  if (firebaseDisponivel && !_sincronizacaoIniciada) {
+    iniciarSincronizacaoTempoReal();
+    window._syncIniciado = true;
+    console.log('🔄 Sync Firebase iniciado automaticamente pelo firebase-config.js');
+  }
+});
