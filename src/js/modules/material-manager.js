@@ -447,6 +447,9 @@ function abrirModalMaterial(tipo, index) {
             </div>
 
             <div class="material-modal-body">
+                <!-- Sugestões da Prévia -->
+                <div id="listaSugestoes_${tipo}_${index}"></div>
+
                 <div class="material-actions">
                     <button class="btn-success" onclick="abrirModalAdicionarItem('${tipo}', ${index})">
                         <i class="fas fa-plus"></i> Adicionar Item
@@ -467,10 +470,11 @@ function abrirModalMaterial(tipo, index) {
     `;
 
     document.body.appendChild(modal);
+    atualizarSugestoesModal(tipo, index);
     atualizarListaMaterialModal(tipo, index);
 }
 
-// Atualiza a lista de materiais dentro do modal
+// Atualiza sugestões + lista de materiais dentro do modal
 function atualizarListaMaterialModal(tipo, igrejaIndex) {
     const igreja = materialData[tipo][igrejaIndex];
     const lista = document.getElementById(`listaMateriais_${tipo}_${igrejaIndex}`);
@@ -787,6 +791,154 @@ function recarregarMateriais() {
     }
 }
 
+// ── Sugestões da Prévia dentro do modal de Material ──────────────────────────
+function atualizarSugestoesModal(tipo, igrejaIndex) {
+    const container = document.getElementById(`listaSugestoes_${tipo}_${igrejaIndex}`);
+    if (!container) return;
+
+    if (typeof window.obterSugestoesPrevia !== 'function' || typeof window.chavePrevia !== 'function') {
+        container.innerHTML = '';
+        return;
+    }
+
+    const igreja     = materialData[tipo][igrejaIndex];
+    const chave      = window.chavePrevia(igreja);
+    const sugestoes  = window.obterSugestoesPrevia(chave);
+
+    if (sugestoes.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    container.innerHTML = `
+        <div style="background:#fff8e1;border:1px solid #f9a825;border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+                <h4 style="margin:0;color:#e65100;font-size:14px;">
+                    <i class="fas fa-clipboard-list"></i> Sugestões da Prévia
+                    <span style="font-size:12px;color:#888;font-weight:normal;margin-left:6px;">(pré-lista pendente de confirmação)</span>
+                </h4>
+                <button onclick="confirmarTodasSugestoes('${tipo}', ${igrejaIndex})"
+                    style="background:#2e7d32;color:#fff;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:12px;font-weight:bold;">
+                    <i class="fas fa-check-double"></i> Confirmar Todas
+                </button>
+            </div>
+            <div id="sugestoesItens_${tipo}_${igrejaIndex}"></div>
+        </div>`;
+
+    _renderizarItensSugestoes(tipo, igrejaIndex, chave, sugestoes);
+}
+
+function _renderizarItensSugestoes(tipo, igrejaIndex, chave, sugestoes) {
+    const container = document.getElementById(`sugestoesItens_${tipo}_${igrejaIndex}`);
+    if (!container) return;
+
+    container.innerHTML = sugestoes.map((s, i) => `
+        <div style="display:grid;grid-template-columns:1fr 80px auto auto;gap:8px;align-items:center;
+                    padding:8px 10px;background:#fff;border-radius:6px;margin-bottom:6px;
+                    border:1px solid #ffe082;">
+            <span style="font-size:13px;font-weight:500;">
+                <i class="fas fa-box" style="color:#f57f17;margin-right:6px;"></i>${s.nome}
+            </span>
+            <input type="number" min="1" value="${s.quantidade}"
+                id="sugestaoQtd_${tipo}_${igrejaIndex}_${i}"
+                style="padding:5px 8px;border:1px solid #ddd;border-radius:5px;font-size:13px;text-align:center;">
+            <button onclick="confirmarSugestao('${tipo}', ${igrejaIndex}, ${s._idx})"
+                style="background:#2e7d32;color:#fff;border:none;border-radius:6px;
+                       padding:6px 12px;cursor:pointer;font-size:12px;white-space:nowrap;"
+                title="Confirmar este item para a lista de material">
+                <i class="fas fa-check"></i> Confirmar
+            </button>
+            <button onclick="removerSugestaoMaterial('${tipo}', ${igrejaIndex}, ${s._idx})"
+                style="background:#ffebee;color:#e53935;border:1px solid #ffcdd2;border-radius:6px;
+                       padding:6px 10px;cursor:pointer;font-size:12px;"
+                title="Remover da Prévia">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>`).join('');
+}
+
+function confirmarSugestao(tipo, igrejaIndex, sugestaoIdx) {
+    if (typeof window.obterSugestoesPrevia !== 'function' || typeof window.chavePrevia !== 'function') return;
+
+    const igreja   = materialData[tipo][igrejaIndex];
+    const chave    = window.chavePrevia(igreja);
+    const lista    = window.obterSugestoesPrevia(chave);
+    const sugestao = lista.find(s => s._idx === sugestaoIdx);
+    if (!sugestao) return;
+
+    // Lê a quantidade editada no input (pode ter sido modificada pelo usuário)
+    const inputs = document.querySelectorAll(`[id^="sugestaoQtd_${tipo}_${igrejaIndex}_"]`);
+    let qtdFinal = sugestao.quantidade;
+    inputs.forEach(inp => {
+        const partes = inp.id.split('_');
+        // O índice visual pode diferir do _idx original após remoções — usamos posição no array renderizado
+        // Identifica pelo valor padrão coincidente ou pelo texto ao lado (usamos o índice da lista renderizada)
+    });
+    // Abordagem mais segura: lê pelo ID fixo se existir
+    const inputDireto = document.getElementById(`sugestaoQtd_${tipo}_${igrejaIndex}_${lista.indexOf(sugestao)}`);
+    if (inputDireto) qtdFinal = parseInt(inputDireto.value, 10) || sugestao.quantidade;
+
+    if (!qtdFinal || qtdFinal < 1) { alert('Informe uma quantidade válida.'); return; }
+
+    // Adiciona ao material da igreja
+    if (!igreja.materiais) igreja.materiais = [];
+    igreja.materiais.push({ item: sugestao.nome, quantidade: String(qtdFinal) });
+
+    // Deduz do estoque se disponível
+    if (typeof deduzirEstoque === 'function') {
+        deduzirEstoque(sugestao.nome, qtdFinal);
+    }
+
+    // Remove da Prévia
+    window.removerSugestaoPrevia(chave, sugestaoIdx);
+
+    salvarDadosMaterial();
+    atualizarSugestoesModal(tipo, igrejaIndex);
+    atualizarListaMaterialModal(tipo, igrejaIndex);
+    atualizarListaMaterial();
+}
+
+function confirmarTodasSugestoes(tipo, igrejaIndex) {
+    if (typeof window.obterSugestoesPrevia !== 'function' || typeof window.chavePrevia !== 'function') return;
+
+    const igreja  = materialData[tipo][igrejaIndex];
+    const chave   = window.chavePrevia(igreja);
+    const lista   = window.obterSugestoesPrevia(chave);
+    if (lista.length === 0) return;
+
+    if (!igreja.materiais) igreja.materiais = [];
+
+    // Coleta quantidades editadas (posição visual = índice no array atual)
+    lista.forEach((s, posVisual) => {
+        const inp = document.getElementById(`sugestaoQtd_${tipo}_${igrejaIndex}_${posVisual}`);
+        const qtd = inp ? (parseInt(inp.value, 10) || s.quantidade) : s.quantidade;
+        igreja.materiais.push({ item: s.nome, quantidade: String(qtd) });
+        if (typeof deduzirEstoque === 'function') deduzirEstoque(s.nome, qtd);
+    });
+
+    // Limpa toda a Prévia para esta igreja
+    if (typeof window.chavePrevia === 'function') {
+        if (typeof previaMateriais !== 'undefined') {
+            // Acessa via função pública
+        }
+    }
+    // Remove todas as sugestões da Prévia (do maior índice para o menor para não deslocar)
+    const indicesOriginais = lista.map(s => s._idx).sort((a, b) => b - a);
+    indicesOriginais.forEach(idx => window.removerSugestaoPrevia(chave, idx));
+
+    salvarDadosMaterial();
+    atualizarSugestoesModal(tipo, igrejaIndex);
+    atualizarListaMaterialModal(tipo, igrejaIndex);
+    atualizarListaMaterial();
+}
+
+function removerSugestaoMaterial(tipo, igrejaIndex, sugestaoIdx) {
+    if (typeof window.removerSugestaoPrevia !== 'function' || typeof window.chavePrevia !== 'function') return;
+    const chave = window.chavePrevia(materialData[tipo][igrejaIndex]);
+    window.removerSugestaoPrevia(chave, sugestaoIdx);
+    atualizarSugestoesModal(tipo, igrejaIndex);
+}
+
 // Expõe funções globalmente
 window.abrirModalMaterial = abrirModalMaterial;
 window.abrirModalAdicionarItem = abrirModalAdicionarItem;
@@ -800,6 +952,9 @@ window.moverParaEnviadas = moverParaEnviadas;
 window.moverParaSandro = moverParaSandro;
 window.sincronizarIgrejasNF = sincronizarIgrejasNF;
 window.recarregarMateriais = recarregarMateriais;
+window.confirmarSugestao = confirmarSugestao;
+window.confirmarTodasSugestoes = confirmarTodasSugestoes;
+window.removerSugestaoMaterial = removerSugestaoMaterial;
 
 // Inicializa quando a página carregar
 document.addEventListener('DOMContentLoaded', () => {

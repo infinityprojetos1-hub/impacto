@@ -500,6 +500,24 @@ window._previaRemoverItemModal = function(chave, idx) {
     _mostrarListaPrevia(abaAtivaPrevia);
 };
 
+// ── Helpers expostos para o Material Manager ─────────────────────────────────
+// Retorna sugestões da Prévia para uma igreja (chave = "id_nome")
+window.obterSugestoesPrevia = function(chave) {
+    return (previaMateriais[chave] || []).map((item, idx) => ({ ...item, _idx: idx }));
+};
+
+// Remove uma sugestão da Prévia pelo índice
+window.removerSugestaoPrevia = function(chave, idx) {
+    if (!previaMateriais[chave]) return;
+    previaMateriais[chave].splice(idx, 1);
+    salvarPreviaMateriais();
+};
+
+// Constrói a chave da Prévia a partir de um objeto igreja (igual ao _chaveIgreja)
+window.chavePrevia = function(igreja) {
+    return `${igreja.id}_${igreja.nome}`;
+};
+
 function inicializarPrevia() {
     carregarPreviaMateriais();
 }
