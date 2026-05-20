@@ -292,7 +292,8 @@ function atualizarListaIgrejas() {
             <p><strong>Tipo de igreja:</strong> ${igreja.tipoIgreja === 'padrao' ? 'Padrão' :
                 igreja.tipoIgreja === 'som_para_tras' ? 'Som para trás' :
                     igreja.tipoIgreja === 'longe_2' ? 'Longe (Até 2 igrejas)' :
-                        igreja.tipoIgreja === 'longe_3' ? 'Longe (Acima de 3 igrejas)' : '-'
+                        igreja.tipoIgreja === 'longe_3' ? 'Longe (Acima de 3 igrejas)' :
+                            igreja.tipoIgreja === 'longe_bruno' ? 'Longe (Bruno)' : '-'
             }</p>
             <p><strong>Tipo de texto:</strong> ${igreja.tipoTexto === 'forro' ? 'Forro' :
                 igreja.tipoTexto === 'tenda' ? 'Tenda' :

@@ -5,7 +5,8 @@ const VALORES_IGREJA_DEFAULT = {
     padrao: { min: 3200, max: 4000 },
     som_para_tras: { min: 4500, max: 5500 },
     longe_2: { min: 4500, max: 5000 },
-    longe_3: { min: 4000, max: 4500 }
+    longe_3: { min: 4000, max: 4500 },
+    longe_bruno: { min: 3850, max: 3900 }
 };
 const CONFIG_VALORES_KEY = 'configValoresIgreja';
 
@@ -41,7 +42,7 @@ function salvarValoresIgreja(valores) {
 
 function carregarConfigValores() {
     const v = obterValoresIgreja();
-    ['padrao', 'som_para_tras', 'longe_2', 'longe_3'].forEach(tipo => {
+    ['padrao', 'som_para_tras', 'longe_2', 'longe_3', 'longe_bruno'].forEach(tipo => {
         const elMin = document.getElementById('valMin_' + tipo);
         const elMax = document.getElementById('valMax_' + tipo);
         if (elMin) elMin.value = v[tipo] ? v[tipo].min : '';
@@ -51,13 +52,13 @@ function carregarConfigValores() {
 
 function salvarConfigValores() {
     const v = {};
-    ['padrao', 'som_para_tras', 'longe_2', 'longe_3'].forEach(tipo => {
+    ['padrao', 'som_para_tras', 'longe_2', 'longe_3', 'longe_bruno'].forEach(tipo => {
         const elMin = document.getElementById('valMin_' + tipo);
         const elMax = document.getElementById('valMax_' + tipo);
         const min = parseFloat(elMin && elMin.value) || 0;
         const max = parseFloat(elMax && elMax.value) || 0;
         if (min > max) {
-            const nomes = { padrao: 'Padrão', som_para_tras: 'Som para trás', longe_2: 'Longe (Até 2 igrejas)', longe_3: 'Longe (Acima de 3 igrejas)' };
+            const nomes = { padrao: 'Padrão', som_para_tras: 'Som para trás', longe_2: 'Longe (Até 2 igrejas)', longe_3: 'Longe (Acima de 3 igrejas)', longe_bruno: 'Longe (Bruno)' };
             alert(`Em "${nomes[tipo] || tipo}": o valor mínimo não pode ser maior que o máximo.`);
             return;
         }

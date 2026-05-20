@@ -4259,6 +4259,7 @@
                         <option value="som_para_tras">Som para trás</option>
                         <option value="longe_2">Longe (Até 2 igrejas)</option>
                         <option value="longe_3">Longe (Acima de 3 igrejas)</option>
+                        <option value="longe_bruno">Longe (Bruno)</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -4654,6 +4655,12 @@
                             <span style="font-weight: 600;">Longe (Acima de 3 igrejas)</span>
                             <div><label style="font-size: 0.85em; color: var(--text-muted);">Mín (R$)</label><input type="number" id="valMin_longe_3" min="0" step="100" style="width: 90px; padding: 8px;"></div>
                             <div><label style="font-size: 0.85em; color: var(--text-muted);">Máx (R$)</label><input type="number" id="valMax_longe_3" min="0" step="100" style="width: 90px; padding: 8px;"></div>
+                        </div>
+                        <!-- Longe (Bruno) -->
+                        <div class="config-valores-row" style="display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; padding: 12px; background: white; border-radius: 8px; border: 1px solid var(--border-color);">
+                            <span style="font-weight: 600;">Longe (Bruno)</span>
+                            <div><label style="font-size: 0.85em; color: var(--text-muted);">Mín (R$)</label><input type="number" id="valMin_longe_bruno" min="0" step="100" style="width: 90px; padding: 8px;"></div>
+                            <div><label style="font-size: 0.85em; color: var(--text-muted);">Máx (R$)</label><input type="number" id="valMax_longe_bruno" min="0" step="100" style="width: 90px; padding: 8px;"></div>
                         </div>
                     </div>
                     <button class="btn-primary" onclick="salvarConfigValores()" style="margin-top: 12px;">
