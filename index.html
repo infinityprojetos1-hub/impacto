@@ -272,14 +272,14 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            padding: 16px 28px;
+            gap: 6px;
+            padding: 12px 16px;
             cursor: pointer;
             border: none;
             background: transparent;
             color: var(--text-muted);
             font-weight: 600;
-            font-size: 0.95em;
+            font-size: 0.82em;
             transition: color 0.3s ease;
             position: relative;
             white-space: nowrap;
@@ -288,6 +288,7 @@
             z-index: 1;
             touch-action: manipulation;
             -webkit-tap-highlight-color: rgba(102,126,234,0.15);
+            flex-shrink: 0;
         }
 
         /* touch-action em todos os sub-tabs para evitar conflito com scroll no Android */
@@ -4158,7 +4159,7 @@
                 <i class="fas fa-home"></i> Início
             </button>
             <button class="tab-button" data-tab="orcamentos">
-                <i class="fas fa-file-invoice"></i> Gerar Orçamentos
+                <i class="fas fa-file-invoice"></i> Orçamentos
             </button>
             <button class="tab-button" data-tab="resultados">
                 <i class="fas fa-chart-line"></i> Resultados
@@ -4167,16 +4168,19 @@
                 <i class="fas fa-images"></i> Logos
             </button>
             <button class="tab-button" data-tab="relatorioTecnico">
-                <i class="fas fa-file-alt"></i> Relatório Técnico
+                <i class="fas fa-file-alt"></i> Rel. Técnico
             </button>
             <button class="tab-button" data-tab="material">
                 <i class="fas fa-boxes"></i> Material
+            </button>
+            <button class="tab-button" data-tab="previaMaterial">
+                <i class="fas fa-clipboard-list"></i> Prévia
             </button>
             <button class="tab-button" data-tab="estoque">
                 <i class="fas fa-warehouse"></i> Estoque
             </button>
             <button class="tab-button" data-tab="notasFiscais">
-                <i class="fas fa-receipt"></i> Notas Fiscais
+                <i class="fas fa-receipt"></i> NF
             </button>
             <button class="tab-button" data-tab="checklist">
                 <i class="fas fa-clipboard-check"></i> Checklist
@@ -4184,31 +4188,28 @@
             <button class="tab-button" data-tab="pagamento">
                 <i class="fas fa-money-bill-wave"></i> Pagamento
             </button>
-            <button class="tab-button" data-tab="previaMaterial">
-                <i class="fas fa-clipboard-list"></i> Prévia Material
-            </button>
         </div>
 
         <div id="home" class="tab-content active">
+            <!-- Pedidos Pendentes -->
+            <div style="padding: 16px 20px 0;">
+                <div style="background: #fffde7; border: 1px solid #f9a825; border-radius: 10px; padding: 14px 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h3 style="margin: 0; color: #f57f17; font-size: 14px;"><i class="fas fa-list-ol"></i> Pedidos Pendentes</h3>
+                        <button onclick="abrirModalAdicionarPedido()"
+                            style="background: #f57f17; color: #fff; border: none; border-radius: 6px; padding: 5px 12px; cursor: pointer; font-size: 12px;">
+                            <i class="fas fa-plus"></i> Adicionar
+                        </button>
+                    </div>
+                    <div id="listaPedidosPendentes">
+                        <p style="color: #aaa; font-size: 13px; margin: 0;">Nenhum pedido pendente.</p>
+                    </div>
+                </div>
+            </div>
             <div id="homeContainer"></div>
         </div>
 
         <div id="orcamentos" class="tab-content">
-
-            <!-- Pedidos Pendentes -->
-            <div class="section" style="margin-bottom: 20px; background: #fffde7; border: 1px solid #f9a825;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <h3 style="margin: 0; color: #f57f17;"><i class="fas fa-list-ol"></i> Pedidos Pendentes</h3>
-                    <button id="btnAdicionarPedidoPendente" onclick="abrirModalAdicionarPedido()"
-                        style="background: #f57f17; color: #fff; border: none; border-radius: 6px; padding: 7px 14px; cursor: pointer; font-size: 13px;">
-                        <i class="fas fa-plus"></i> Adicionar
-                    </button>
-                </div>
-                <div id="listaPedidosPendentes">
-                    <p style="color: #aaa; font-size: 13px; margin: 0;">Nenhum pedido pendente.</p>
-                </div>
-            </div>
-
             <div class="section">
                 <h2>Dados das Igrejas</h2>
                 <p>Preencha os campos abaixo para adicionar uma igreja à lista de orçamentos</p>
