@@ -36,6 +36,25 @@ function _obterIgrejasPrevia(tipo) {
     return [];
 }
 
+// Converte tipo da Prévia para o tipo interno do Material
+function _tipoMaterial(tipoPreviа) {
+    return tipoPreviа === 'arquivados' ? 'enviadas' : tipoPreviа;
+}
+
+// Wrappers de mover que atualizam a Prévia após a ação
+window._previaMoverParaPendentes = function(tipo, index) {
+    if (typeof moverParaPendentes === 'function') moverParaPendentes(_tipoMaterial(tipo), index);
+    _mostrarListaPrevia(abaAtivaPrevia);
+};
+window._previaMoverParaArquivados = function(tipo, index) {
+    if (typeof moverParaEnviadas === 'function') moverParaEnviadas(_tipoMaterial(tipo), index);
+    _mostrarListaPrevia(abaAtivaPrevia);
+};
+window._previaMoverParaSandro = function(tipo, index) {
+    if (typeof moverParaSandro === 'function') moverParaSandro(_tipoMaterial(tipo), index);
+    _mostrarListaPrevia(abaAtivaPrevia);
+};
+
 // Gera lista de necessidade: o que falta no estoque
 function calcularNecessidade(materiaisIniciais) {
     const itensEstoque = (typeof obterItensEstoque === 'function') ? obterItensEstoque() : [];
@@ -154,6 +173,7 @@ function _mostrarListaPrevia(tipo) {
 
         const chaveEsc = chave.replace(/'/g, "\\'");
         const nomeEsc  = (ig.nome || '').replace(/'/g, "\\'");
+        const idxNum   = igrejas.indexOf(ig);
 
         linha.innerHTML = `
             <div class="material-col-igreja">
@@ -165,7 +185,26 @@ function _mostrarListaPrevia(tipo) {
                 <span class="material-status ${statusClass}">${statusText}</span>
             </div>
             <div class="material-col-acoes" onclick="event.stopPropagation()">
-                <button class="btn-primary" onclick="event.stopPropagation(); abrirModalPrevia('${chaveEsc}','${nomeEsc}')">
+                ${tipo !== 'pendentes' ? `
+                <button class="btn-icon btn-warning"
+                    onclick="event.stopPropagation(); _previaMoverParaPendentes('${tipo}', ${idxNum})"
+                    title="Mover para Pendentes" data-label-mobile="Pendentes">
+                    <i class="fas fa-clock"></i>
+                </button>` : ''}
+                ${tipo !== 'arquivados' ? `
+                <button class="btn-icon btn-success"
+                    onclick="event.stopPropagation(); _previaMoverParaArquivados('${tipo}', ${idxNum})"
+                    title="Mover para Arquivados" data-label-mobile="Arquivados">
+                    <i class="fas fa-archive"></i>
+                </button>` : ''}
+                ${tipo !== 'pedidosSandro' ? `
+                <button class="btn-icon btn-secondary"
+                    onclick="event.stopPropagation(); _previaMoverParaSandro('${tipo}', ${idxNum})"
+                    title="Mover para Sandro" data-label-mobile="Sandro">
+                    <i class="fas fa-user"></i>
+                </button>` : ''}
+                <button class="btn-primary"
+                    onclick="event.stopPropagation(); abrirModalPrevia('${chaveEsc}','${nomeEsc}')">
                     <i class="fas fa-clipboard-list"></i> Ver Prévia
                 </button>
             </div>`;
