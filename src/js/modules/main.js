@@ -619,6 +619,11 @@ async function iniciarGeracaoOrcamentos() {
                     console.error("Função atualizarInterfaceResultados não encontrada");
                 }
 
+                // Remove pedido pendente se a igreja tiver número de pedido vinculado
+                if (igreja.numeroPedido && typeof window.removerPedidoPendenteByNumero === 'function') {
+                    window.removerPedidoPendenteByNumero(igreja.numeroPedido);
+                }
+
                 // Pausa breve para permitir que a UI atualize
                 await new Promise(resolve => setTimeout(resolve, 100));
             }
@@ -1816,6 +1821,11 @@ function inicializarAbas() {
         if (tabId === 'pagamento' && window.renderizarAbaPagamento) {
             setTimeout(window.renderizarAbaPagamento, 50);
         }
+
+        // Se for a aba de Prévia de Material, renderiza
+        if (tabId === 'previaMaterial' && window.renderizarAbaPrevia) {
+            setTimeout(window.renderizarAbaPrevia, 50);
+        }
     }
 
     // Adiciona os event listeners
@@ -1868,6 +1878,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Inicializa a Home (tela inicial com pesquisa)
     if (typeof inicializarHome === 'function') {
         inicializarHome();
+    }
+
+    // Inicializa o gerenciador de prévia de material
+    if (typeof inicializarPrevia === 'function') {
+        inicializarPrevia();
     }
 
     // Inicializa o sistema de pasta de trabalho

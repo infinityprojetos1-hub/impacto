@@ -4184,6 +4184,9 @@
             <button class="tab-button" data-tab="pagamento">
                 <i class="fas fa-money-bill-wave"></i> Pagamento
             </button>
+            <button class="tab-button" data-tab="previaMaterial">
+                <i class="fas fa-clipboard-list"></i> Prévia Material
+            </button>
         </div>
 
         <div id="home" class="tab-content active">
@@ -4191,6 +4194,21 @@
         </div>
 
         <div id="orcamentos" class="tab-content">
+
+            <!-- Pedidos Pendentes -->
+            <div class="section" style="margin-bottom: 20px; background: #fffde7; border: 1px solid #f9a825;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <h3 style="margin: 0; color: #f57f17;"><i class="fas fa-list-ol"></i> Pedidos Pendentes</h3>
+                    <button id="btnAdicionarPedidoPendente" onclick="abrirModalAdicionarPedido()"
+                        style="background: #f57f17; color: #fff; border: none; border-radius: 6px; padding: 7px 14px; cursor: pointer; font-size: 13px;">
+                        <i class="fas fa-plus"></i> Adicionar
+                    </button>
+                </div>
+                <div id="listaPedidosPendentes">
+                    <p style="color: #aaa; font-size: 13px; margin: 0;">Nenhum pedido pendente.</p>
+                </div>
+            </div>
+
             <div class="section">
                 <h2>Dados das Igrejas</h2>
                 <p>Preencha os campos abaixo para adicionar uma igreja à lista de orçamentos</p>
@@ -4258,6 +4276,10 @@
                         <option value="padrao" selected>Padrão</option>
                         <option value="especial">Especial</option>
                     </select>
+                </div>
+                <div class="form-group">
+                    <label for="numeroPedidoIgreja">Número do Pedido <span style="color:#aaa;font-size:12px;">(opcional — vincula a um pedido pendente)</span></label>
+                    <input type="text" id="numeroPedidoIgreja" placeholder="Ex: OP-001">
                 </div>
                 <div class="form-group" id="grupoValorManual" style="display:none;">
                     <label for="valorManual">Valor do Orçamento (R$)</label>
@@ -4582,6 +4604,14 @@
                 <div id="pagamentoContainer"></div>
             </div>
         </div>
+
+        <div id="previaMaterial" class="tab-content" style="display: none;">
+            <div class="section">
+                <h2><i class="fas fa-clipboard-list"></i> Prévia de Material por Igreja</h2>
+                <p>Defina os materiais iniciais necessários para cada igreja e compare com o estoque atual para saber o que precisa pedir ao fornecedor.</p>
+                <div id="previaContainer"></div>
+            </div>
+        </div>
     </div>
 
     <!-- Modal de Configurações -->
@@ -4685,6 +4715,7 @@
     <script src="src/js/modules/main.js"></script>
     <script src="src/js/modules/relatorio.js"></script>
     <script src="src/js/modules/pagamento-manager.js"></script>
+    <script src="src/js/modules/previa-manager.js"></script>
 
     <!-- Modal de Configurações — inicializado após todos os scripts para garantir que
          carregarConfigValores e forcarSyncParaFirebase já estejam disponíveis -->

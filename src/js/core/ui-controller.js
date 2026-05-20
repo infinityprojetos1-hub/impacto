@@ -74,6 +74,9 @@ function inicializarTabs() {
                     if (typeof window.atualizarListaChecklist === 'function') window.atualizarListaChecklist();
                 }, 80);
             }
+            if (tabId === 'previaMaterial' && typeof window.renderizarAbaPrevia === 'function') {
+                setTimeout(window.renderizarAbaPrevia, 80);
+            }
 
             if (window.innerWidth <= 768) {
                 requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
@@ -181,6 +184,7 @@ function inicializarGerenciamentoIgrejas() {
         const tipoIgreja = document.getElementById('tipoIgreja').value;
         const tipoTexto = (document.getElementById('tipoTexto') && document.getElementById('tipoTexto').value) || 'padrao';
         const tipoPedido = (document.getElementById('tipoPedido') && document.getElementById('tipoPedido').value) || 'padrao';
+        const numeroPedido = (document.getElementById('numeroPedidoIgreja') && document.getElementById('numeroPedidoIgreja').value.trim()) || '';
 
         if (!nomeIgreja || !idIgreja) {
             alert('Por favor, preencha pelo menos o nome e o ID da igreja.');
@@ -217,7 +221,8 @@ function inicializarGerenciamentoIgrejas() {
             tipoTexto: tipoTexto,
             textoSuaEmpresa: usarTextoPersonalizado ? txtSua : '',
             textoConcorrente: usarTextoPersonalizado ? txtConc : '',
-            tipoPedido: tipoPedido
+            tipoPedido: tipoPedido,
+            numeroPedido: numeroPedido
         };
 
         if (_indiceEdicaoIgreja !== null && _indiceEdicaoIgreja >= 0 && _indiceEdicaoIgreja < igrejasAdicionadas.length) {
@@ -253,6 +258,7 @@ function inicializarGerenciamentoIgrejas() {
         document.getElementById('tipoIgreja').selectedIndex = 0;
         document.getElementById('tipoTexto').selectedIndex = 0;
         if (document.getElementById('tipoPedido')) document.getElementById('tipoPedido').value = 'padrao';
+        if (document.getElementById('numeroPedidoIgreja')) document.getElementById('numeroPedidoIgreja').value = '';
         const grupoValorManual = document.getElementById('grupoValorManual');
         if (grupoValorManual) grupoValorManual.style.display = 'none';
     });
@@ -297,6 +303,7 @@ function atualizarListaIgrejas() {
                         igreja.tipoTexto === 'personalizado' ? 'Personalizado' : 'Padrão'
             }</p>
             <p><strong>Tipo de pedido:</strong> ${igreja.tipoPedido === 'especial' ? 'Especial' : 'Padrão'}</p>
+            ${igreja.numeroPedido ? `<p><strong>Nº Pedido:</strong> <span style="background:#fff3e0;color:#e65100;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:bold;">${igreja.numeroPedido}</span></p>` : ''}
             ${igreja.tipoValorOrcamento === 'manual' && igreja.valorManual !== null && !isNaN(igreja.valorManual) ? `<p><strong>Valor Manual:</strong> R$ ${igreja.valorManual.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>` : ''}
             <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
                 <button type="button" class="btn-secondary editar-igreja" data-index="${index}" style="padding:6px 12px; font-size:13px;">
@@ -375,6 +382,9 @@ function atualizarListaIgrejas() {
             const selPedido = document.getElementById('tipoPedido');
             if (selPedido) selPedido.value = ig.tipoPedido || 'padrao';
 
+            const numPedidoEl = document.getElementById('numeroPedidoIgreja');
+            if (numPedidoEl) numPedidoEl.value = ig.numeroPedido || '';
+
             const nomeEl = document.getElementById('nomeIgreja');
             if (nomeEl && nomeEl.scrollIntoView) nomeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
         });
@@ -414,8 +424,124 @@ function inicializarInterface() {
     // Inicializar a lista vazia quando a página carregar
     atualizarRotuloBotaoAdicionarIgreja();
     atualizarListaIgrejas();
+    inicializarPedidosPendentes();
 }
 
 // Disponibiliza as funções globalmente
 window.inicializarInterface = inicializarInterface;
-window.atualizarListaIgrejas = atualizarListaIgrejas; 
+window.atualizarListaIgrejas = atualizarListaIgrejas;
+
+// =============================================
+// SISTEMA DE PEDIDOS PENDENTES
+// =============================================
+
+let pedidosPendentes = [];
+
+function carregarPedidosPendentes() {
+    try {
+        const salvo = localStorage.getItem('pedidosPendentes');
+        if (salvo) pedidosPendentes = JSON.parse(salvo);
+        if (!Array.isArray(pedidosPendentes)) pedidosPendentes = [];
+    } catch (e) {
+        pedidosPendentes = [];
+    }
+}
+
+function salvarPedidosPendentes() {
+    try {
+        localStorage.setItem('pedidosPendentes', JSON.stringify(pedidosPendentes));
+    } catch (e) {}
+}
+
+function renderizarPedidosPendentes() {
+    const container = document.getElementById('listaPedidosPendentes');
+    if (!container) return;
+
+    if (pedidosPendentes.length === 0) {
+        container.innerHTML = '<p style="color:#aaa;font-size:13px;margin:0;">Nenhum pedido pendente.</p>';
+        return;
+    }
+
+    container.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:8px;">` +
+        pedidosPendentes.map((num, idx) => `
+            <span style="display:inline-flex;align-items:center;gap:6px;background:#fff3e0;border:1px solid #f9a825;border-radius:20px;padding:4px 12px;font-size:13px;font-weight:bold;color:#e65100;">
+                ${num}
+                <button onclick="removerPedidoPendente(${idx})"
+                    style="background:none;border:none;cursor:pointer;color:#e65100;font-size:14px;line-height:1;padding:0;margin:0;">&times;</button>
+            </span>`).join('') +
+        `</div>`;
+}
+
+window.abrirModalAdicionarPedido = function() {
+    const modal = document.createElement('div');
+    modal.className = 'material-modal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML = `
+        <div style="background:#fff;border-radius:12px;width:95%;max-width:380px;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #eee;">
+                <h3 style="margin:0;font-size:16px;"><i class="fas fa-list-ol"></i> Adicionar Pedido Pendente</h3>
+                <button onclick="this.closest('.material-modal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#666;">&times;</button>
+            </div>
+            <div style="padding:20px;">
+                <div style="margin-bottom:16px;">
+                    <label style="display:block;font-size:13px;color:#555;margin-bottom:6px;">Número do Pedido</label>
+                    <input type="text" id="inputNovoPedidoPendente" placeholder="Ex: OP-001"
+                        style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;box-sizing:border-box;">
+                </div>
+                <div style="display:flex;justify-content:flex-end;gap:10px;">
+                    <button onclick="this.closest('.material-modal').remove()"
+                        style="background:#f0f0f0;color:#333;border:none;border-radius:6px;padding:10px 20px;cursor:pointer;">Cancelar</button>
+                    <button onclick="_confirmarAdicionarPedido()"
+                        style="background:#f57f17;color:#fff;border:none;border-radius:6px;padding:10px 20px;cursor:pointer;font-weight:bold;">Adicionar</button>
+                </div>
+            </div>
+        </div>`;
+    document.body.appendChild(modal);
+
+    const input = document.getElementById('inputNovoPedidoPendente');
+    if (input) {
+        input.focus();
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter') _confirmarAdicionarPedido();
+        });
+    }
+};
+
+window._confirmarAdicionarPedido = function() {
+    const input = document.getElementById('inputNovoPedidoPendente');
+    if (!input) return;
+    const numero = input.value.trim();
+    if (!numero) { input.focus(); return; }
+    if (pedidosPendentes.includes(numero)) {
+        alert('Este número de pedido já está na lista.');
+        return;
+    }
+    pedidosPendentes.push(numero);
+    salvarPedidosPendentes();
+    renderizarPedidosPendentes();
+    document.querySelector('.material-modal').remove();
+};
+
+window.removerPedidoPendente = function(idx) {
+    pedidosPendentes.splice(idx, 1);
+    salvarPedidosPendentes();
+    renderizarPedidosPendentes();
+};
+
+// Remove pedido da lista pelo número (chamado após geração de orçamento)
+window.removerPedidoPendenteByNumero = function(numero) {
+    if (!numero) return;
+    const idx = pedidosPendentes.indexOf(numero);
+    if (idx >= 0) {
+        pedidosPendentes.splice(idx, 1);
+        salvarPedidosPendentes();
+        renderizarPedidosPendentes();
+    }
+};
+
+function inicializarPedidosPendentes() {
+    carregarPedidosPendentes();
+    renderizarPedidosPendentes();
+}
+
+window.obterPedidosPendentes = function() { return pedidosPendentes; };
