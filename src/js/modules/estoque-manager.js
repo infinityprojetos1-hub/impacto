@@ -298,6 +298,7 @@ function abrirModalAdicionarEstoque() {
                         <label><i class="fas fa-sort-numeric-up"></i> Quantidade em Estoque:</label>
                         <input type="number" id="estoqueItemQtd" placeholder="0" min="0" value="0" required>
                     </div>
+                    <input type="hidden" id="estoqueItemForceNew" value="0">
                     <div class="material-modal-buttons">
                         <button type="submit" class="btn-primary"><i class="fas fa-check"></i> Adicionar</button>
                         <button type="button" class="btn-secondary" onclick="this.closest('.material-modal').remove()">Cancelar</button>
@@ -317,9 +318,11 @@ function adicionarItemEstoque(event) {
     const modelo = (document.getElementById('estoqueItemModelo') ? document.getElementById('estoqueItemModelo').value.trim() : '');
     const unidade = (document.getElementById('estoqueItemUnidade') ? document.getElementById('estoqueItemUnidade').value : 'un');
     const qtd = parseInt(document.getElementById('estoqueItemQtd').value, 10) || 0;
+    const forceNew = document.getElementById('estoqueItemForceNew') && document.getElementById('estoqueItemForceNew').value === '1';
     if (!nome || qtd < 0) return;
 
-    const idx = _encontrarItemEstoque(nome);
+    // Só mescla com item existente se NÃO for duplicação forçada
+    const idx = forceNew ? -1 : _encontrarItemEstoque(nome);
     if (idx >= 0) {
         const it = estoqueData.itens[idx];
         it.quantidade = (parseInt(it.quantidade, 10) || 0) + qtd;
@@ -428,6 +431,10 @@ function duplicarItemEstoque(index) {
         if (modeloEl)  modeloEl.value  = origem.modelo || '';
         if (unidadeEl) unidadeEl.value = origem.unidade || 'un';
         if (qtdEl)     qtdEl.value     = '0';
+
+        // Marca como criação forçada (não mescla com item de mesmo nome)
+        const forceEl = document.getElementById('estoqueItemForceNew');
+        if (forceEl) forceEl.value = '1';
 
         // Muda o título do modal para indicar duplicação
         const titulo = document.querySelector('.material-modal-content-small .material-modal-header h3');
