@@ -494,10 +494,16 @@ function atualizarListaMaterialModal(tipo, igrejaIndex) {
     igreja.materiais.forEach((material, materialIndex) => {
         const item = document.createElement('div');
         item.className = 'material-item';
+        const badgeMarca = material.marca ? `<span style="font-size:11px;background:#e8eaf6;color:#3949ab;padding:2px 8px;border-radius:4px;font-weight:500;">${material.marca}</span>` : '';
+        const badgeModelo = material.modelo ? `<span style="font-size:11px;background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:4px;font-weight:600;">${material.modelo}</span>` : '';
+        const unidadeMat = material.unidade || 'un';
         item.innerHTML = `
             <div class="material-item-info" onclick="editarMaterial('${tipo}', ${igrejaIndex}, ${materialIndex})" style="cursor: pointer;" title="Clique para editar">
                 <span class="material-item-nome"><i class="fas fa-box" style="margin-right: 8px; color: var(--gradient-start);"></i>${material.item}</span>
-                <span class="material-item-qtd"><i class="fas fa-hashtag" style="margin-right: 5px;"></i>Quantidade: ${material.quantidade}</span>
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:3px;">
+                    ${badgeMarca}${badgeModelo}
+                    <span class="material-item-qtd"><i class="fas fa-hashtag" style="margin-right:5px;"></i>${material.quantidade} ${unidadeMat}</span>
+                </div>
             </div>
             <button class="btn-danger" onclick="removerMaterial('${tipo}', ${igrejaIndex}, ${materialIndex})" title="Remover">
                 <i class="fas fa-trash"></i>
@@ -543,8 +549,34 @@ function abrirModalAdicionarItem(tipo, igrejaIndex) {
                         </select>
                     </div>
                     <div class="form-group" id="grupoItemLivre" style="${temEstoque ? 'display:none' : ''}">
-                        <label><i class="fas fa-tag"></i> Item:</label>
+                        <label><i class="fas fa-tag"></i> Nome do Item: *</label>
                         <input type="text" id="itemNome" placeholder="Ex: Cabo HDMI">
+                    </div>
+                    <div class="form-group" id="grupoMarcaModelo" style="${temEstoque ? 'display:none' : ''}">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div>
+                                <label style="display:block;margin-bottom:4px;"><i class="fas fa-tag"></i> Marca:</label>
+                                <input type="text" id="itemMarca" placeholder="Ex: LL Audio" style="width:100%;box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block;margin-bottom:4px;"><i class="fas fa-microchip"></i> Modelo:</label>
+                                <input type="text" id="itemModelo" placeholder="Ex: 1600" style="width:100%;box-sizing:border-box;">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-ruler"></i> Unidade:</label>
+                        <select id="itemUnidade">
+                            <option value="un">Unidade (un)</option>
+                            <option value="kg">Quilograma (kg)</option>
+                            <option value="m">Metro (m)</option>
+                            <option value="m²">Metro Quadrado (m²)</option>
+                            <option value="l">Litro (l)</option>
+                            <option value="cx">Caixa (cx)</option>
+                            <option value="pc">Peça (pc)</option>
+                            <option value="rolo">Rolo</option>
+                            <option value="fardo">Fardo</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label for="itemQuantidade"><i class="fas fa-sort-numeric-up"></i> Quantidade:</label>
@@ -571,16 +603,19 @@ function abrirModalAdicionarItem(tipo, igrejaIndex) {
 function toggleItemOrigem(valor) {
     const grupoEstoque = document.getElementById('grupoItemEstoque');
     const grupoLivre = document.getElementById('grupoItemLivre');
+    const grupoMarcaModelo = document.getElementById('grupoMarcaModelo');
     const selEstoque = document.getElementById('itemEstoqueSelect');
     const inpLivre = document.getElementById('itemNome');
     if (valor === 'estoque') {
         if (grupoEstoque) grupoEstoque.style.display = '';
         if (grupoLivre) grupoLivre.style.display = 'none';
+        if (grupoMarcaModelo) grupoMarcaModelo.style.display = 'none';
         if (selEstoque) { selEstoque.required = true; selEstoque.value = selEstoque.options[1] ? selEstoque.options[1].value : ''; }
         if (inpLivre) { inpLivre.required = false; inpLivre.value = ''; }
     } else {
         if (grupoEstoque) grupoEstoque.style.display = 'none';
         if (grupoLivre) grupoLivre.style.display = '';
+        if (grupoMarcaModelo) grupoMarcaModelo.style.display = '';
         if (selEstoque) { selEstoque.required = false; selEstoque.value = ''; }
         if (inpLivre) inpLivre.required = true;
     }
@@ -608,10 +643,17 @@ function adicionarItem(event, tipo, igrejaIndex) {
         if (!item) return;
     }
 
+    const marca = (document.getElementById('itemMarca') ? document.getElementById('itemMarca').value.trim() : '');
+    const modelo = (document.getElementById('itemModelo') ? document.getElementById('itemModelo').value.trim() : '');
+    const unidade = (document.getElementById('itemUnidade') ? document.getElementById('itemUnidade').value : 'un');
+
     const igreja = materialData[tipo][igrejaIndex];
     if (!igreja.materiais) igreja.materiais = [];
 
-    igreja.materiais.push({ item, quantidade });
+    const novoItem = { item, quantidade, unidade };
+    if (marca) novoItem.marca = marca;
+    if (modelo) novoItem.modelo = modelo;
+    igreja.materiais.push(novoItem);
 
     if (origem && origem.value === 'estoque' && typeof deduzirEstoque === 'function') {
         deduzirEstoque(item, quantidade);
@@ -640,15 +682,39 @@ function editarMaterial(tipo, igrejaIndex, materialIndex) {
             <div class="material-modal-form-body">
                 <form id="formEditarItem" onsubmit="salvarEdicaoMaterial(event, '${tipo}', ${igrejaIndex}, ${materialIndex})">
                     <div class="form-group">
-                        <label for="itemNomeEdit"><i class="fas fa-tag"></i> Item:</label>
+                        <label for="itemNomeEdit"><i class="fas fa-tag"></i> Nome do Item: *</label>
                         <input type="text" id="itemNomeEdit" value="${material.item}" placeholder="Ex: Cabo HDMI" required>
                     </div>
-                    
+                    <div class="form-group">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div>
+                                <label style="display:block;margin-bottom:4px;"><i class="fas fa-tag"></i> Marca:</label>
+                                <input type="text" id="itemMarcaEdit" value="${material.marca || ''}" placeholder="Ex: LL Audio" style="width:100%;box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block;margin-bottom:4px;"><i class="fas fa-microchip"></i> Modelo:</label>
+                                <input type="text" id="itemModeloEdit" value="${material.modelo || ''}" placeholder="Ex: 1600" style="width:100%;box-sizing:border-box;">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-ruler"></i> Unidade:</label>
+                        <select id="itemUnidadeEdit">
+                            <option value="un" ${(material.unidade||'un')==='un'?'selected':''}>Unidade (un)</option>
+                            <option value="kg" ${material.unidade==='kg'?'selected':''}>Quilograma (kg)</option>
+                            <option value="m" ${material.unidade==='m'?'selected':''}>Metro (m)</option>
+                            <option value="m²" ${material.unidade==='m²'?'selected':''}>Metro Quadrado (m²)</option>
+                            <option value="l" ${material.unidade==='l'?'selected':''}>Litro (l)</option>
+                            <option value="cx" ${material.unidade==='cx'?'selected':''}>Caixa (cx)</option>
+                            <option value="pc" ${material.unidade==='pc'?'selected':''}>Peça (pc)</option>
+                            <option value="rolo" ${material.unidade==='rolo'?'selected':''}>Rolo</option>
+                            <option value="fardo" ${material.unidade==='fardo'?'selected':''}>Fardo</option>
+                        </select>
+                    </div>
                     <div class="form-group">
                         <label for="itemQuantidadeEdit"><i class="fas fa-sort-numeric-up"></i> Quantidade:</label>
                         <input type="number" id="itemQuantidadeEdit" value="${material.quantidade}" placeholder="Ex: 5" min="1" required>
                     </div>
-                    
                     <div class="material-modal-buttons">
                         <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar</button>
                         <button type="button" class="btn-secondary" onclick="this.closest('.material-modal').remove()"><i class="fas fa-times"></i> Cancelar</button>
@@ -675,6 +741,10 @@ function salvarEdicaoMaterial(event, tipo, igrejaIndex, materialIndex) {
     const quantidadeNova = document.getElementById('itemQuantidadeEdit').value.trim();
     if (!itemNovo || !quantidadeNova) return;
 
+    const marcaNova = (document.getElementById('itemMarcaEdit') ? document.getElementById('itemMarcaEdit').value.trim() : '');
+    const modeloNovo = (document.getElementById('itemModeloEdit') ? document.getElementById('itemModeloEdit').value.trim() : '');
+    const unidadeNova = (document.getElementById('itemUnidadeEdit') ? document.getElementById('itemUnidadeEdit').value : 'un');
+
     const igreja = materialData[tipo][igrejaIndex];
     const materialAntigo = igreja.materiais[materialIndex];
 
@@ -685,7 +755,10 @@ function salvarEdicaoMaterial(event, tipo, igrejaIndex, materialIndex) {
         deduzirEstoque(itemNovo, quantidadeNova);
     }
 
-    igreja.materiais[materialIndex] = { item: itemNovo, quantidade: quantidadeNova };
+    const itemAtualizado = { item: itemNovo, quantidade: quantidadeNova, unidade: unidadeNova };
+    if (marcaNova) itemAtualizado.marca = marcaNova;
+    if (modeloNovo) itemAtualizado.modelo = modeloNovo;
+    igreja.materiais[materialIndex] = itemAtualizado;
 
     salvarDadosMaterial();
     atualizarListaMaterialModal(tipo, igrejaIndex);
@@ -722,13 +795,18 @@ function compartilharWhatsApp(tipo, igrejaIndex) {
         return;
     }
 
-    // Monta mensagem: nome - id\n\nitem - qtd.\n...
+    // Monta mensagem: nome - id\n\nitem (marca modelo) - qtd unidade\n...
     const id = (igreja.id || '').toString().trim();
     let mensagem = (igreja.nome || '');
     if (id) mensagem += ' - ' + id;
     mensagem += '\n\n';
     igreja.materiais.forEach(m => {
-        mensagem += m.quantidade + ' - ' + m.item + '\n';
+        let linha = m.quantidade + ' - ' + m.item;
+        const extras = [m.marca, m.modelo].filter(Boolean).join(' ');
+        if (extras) linha += ' (' + extras + ')';
+        const un = m.unidade || 'un';
+        if (un !== 'un') linha += ' [' + un + ']';
+        mensagem += linha + '\n';
     });
     mensagem = mensagem.trim();
     const encoded = encodeURIComponent(mensagem);
@@ -882,7 +960,10 @@ function confirmarSugestao(tipo, igrejaIndex, sugestaoIdx) {
 
     // Adiciona ao material da igreja
     if (!igreja.materiais) igreja.materiais = [];
-    igreja.materiais.push({ item: sugestao.nome, quantidade: String(qtdFinal) });
+    const itemSugestao = { item: sugestao.nome, quantidade: String(qtdFinal), unidade: sugestao.unidade || 'un' };
+    if (sugestao.marca) itemSugestao.marca = sugestao.marca;
+    if (sugestao.modelo) itemSugestao.modelo = sugestao.modelo;
+    igreja.materiais.push(itemSugestao);
 
     // Deduz do estoque se disponível
     if (typeof deduzirEstoque === 'function') {
@@ -912,7 +993,10 @@ function confirmarTodasSugestoes(tipo, igrejaIndex) {
     lista.forEach((s, posVisual) => {
         const inp = document.getElementById(`sugestaoQtd_${tipo}_${igrejaIndex}_${posVisual}`);
         const qtd = inp ? (parseInt(inp.value, 10) || s.quantidade) : s.quantidade;
-        igreja.materiais.push({ item: s.nome, quantidade: String(qtd) });
+        const itemConf = { item: s.nome, quantidade: String(qtd), unidade: s.unidade || 'un' };
+        if (s.marca) itemConf.marca = s.marca;
+        if (s.modelo) itemConf.modelo = s.modelo;
+        igreja.materiais.push(itemConf);
         if (typeof deduzirEstoque === 'function') deduzirEstoque(s.nome, qtd);
     });
 
