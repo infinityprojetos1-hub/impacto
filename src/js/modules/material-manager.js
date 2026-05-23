@@ -518,9 +518,15 @@ function atualizarListaMaterialModal(tipo, igrejaIndex) {
 // Abre o modal secundário para adicionar um item
 function abrirModalAdicionarItem(tipo, igrejaIndex) {
     const itensEstoque = typeof obterItensEstoque === 'function' ? obterItensEstoque() : [];
-    const optsEstoque = itensEstoque.map((it, i) =>
-        `<option value="${(it.nome || '').replace(/"/g, '&quot;')}" data-qtd="${it.quantidade}">${it.nome} (${it.quantidade} disp.)</option>`
-    ).join('');
+    const optsEstoque = itensEstoque.map((it) => {
+        const info = [it.marca, it.modelo].filter(Boolean).join(' ');
+        const label = it.nome + (info ? ` — ${info}` : '') + ` (${it.quantidade} disp.)`;
+        return `<option value="${(it.nome||'').replace(/"/g,'&quot;')}"
+            data-qtd="${it.quantidade}"
+            data-marca="${(it.marca||'').replace(/"/g,'&quot;')}"
+            data-modelo="${(it.modelo||'').replace(/"/g,'&quot;')}"
+            data-unidade="${it.unidade||'un'}">${label}</option>`;
+    }).join('');
     const temEstoque = optsEstoque.length > 0;
 
     const modal = document.createElement('div');
@@ -643,9 +649,24 @@ function adicionarItem(event, tipo, igrejaIndex) {
         if (!item) return;
     }
 
-    const marca = (document.getElementById('itemMarca') ? document.getElementById('itemMarca').value.trim() : '');
-    const modelo = (document.getElementById('itemModelo') ? document.getElementById('itemModelo').value.trim() : '');
-    const unidade = (document.getElementById('itemUnidade') ? document.getElementById('itemUnidade').value : 'un');
+    let marca = '';
+    let modelo = '';
+    let unidade = 'un';
+
+    if (origem && origem.value === 'estoque') {
+        // Pega marca/modelo/unidade dos data-attributes do option selecionado
+        const sel = document.getElementById('itemEstoqueSelect');
+        if (sel && sel.selectedIndex >= 0) {
+            const opt = sel.options[sel.selectedIndex];
+            marca = opt.getAttribute('data-marca') || '';
+            modelo = opt.getAttribute('data-modelo') || '';
+            unidade = opt.getAttribute('data-unidade') || 'un';
+        }
+    } else {
+        marca = (document.getElementById('itemMarca') ? document.getElementById('itemMarca').value.trim() : '');
+        modelo = (document.getElementById('itemModelo') ? document.getElementById('itemModelo').value.trim() : '');
+        unidade = (document.getElementById('itemUnidade') ? document.getElementById('itemUnidade').value : 'un');
+    }
 
     const igreja = materialData[tipo][igrejaIndex];
     if (!igreja.materiais) igreja.materiais = [];

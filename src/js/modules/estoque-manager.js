@@ -3,7 +3,7 @@
 // =============================================
 
 let estoqueData = {
-    itens: []  // [{ nome: string, quantidade: number }]
+    itens: []  // [{ nome, marca?, modelo?, unidade, quantidade }]
 };
 
 window._estoqueCarregando = false;
@@ -77,7 +77,7 @@ function deduzirEstoque(nome, quantidade) {
 }
 
 // Devolve quantidade ao estoque (ao remover material da igreja)
-function devolverEstoque(nome, quantidade) {
+function devolverEstoque(nome, quantidade, extra) {
     const qtd = parseInt(quantidade, 10) || 0;
     if (qtd <= 0) return;
     const idx = _encontrarItemEstoque(nome);
@@ -85,7 +85,10 @@ function devolverEstoque(nome, quantidade) {
         const item = estoqueData.itens[idx];
         item.quantidade = (parseInt(item.quantidade, 10) || 0) + qtd;
     } else {
-        estoqueData.itens.push({ nome: String(nome).trim(), quantidade: qtd });
+        const novoItem = { nome: String(nome).trim(), quantidade: qtd, unidade: (extra && extra.unidade) || 'un' };
+        if (extra && extra.marca) novoItem.marca = extra.marca;
+        if (extra && extra.modelo) novoItem.modelo = extra.modelo;
+        estoqueData.itens.push(novoItem);
     }
     salvarDadosEstoque();
 }
@@ -102,11 +105,24 @@ function temEstoqueSuficiente(nome, quantidade) {
 // UI DA ABA ESTOQUE
 // =============================================
 
+function _badgeEstoque(it) {
+    const m = it.marca ? `<span style="font-size:11px;background:#e8eaf6;color:#3949ab;padding:2px 8px;border-radius:4px;font-weight:500;margin-right:4px;">${it.marca}</span>` : '';
+    const mod = it.modelo ? `<span style="font-size:11px;background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:4px;font-weight:600;">${it.modelo}</span>` : '';
+    return m + mod;
+}
+
 function renderizarAbaEstoque() {
     const container = document.getElementById('estoqueContainer');
     if (!container) return;
 
     const itens = obterItensEstoque();
+
+    // Campo de busca: captura o valor antes de re-renderizar
+    const buscaAtual = (document.getElementById('estoqueBusca') || {}).value || '';
+
+    const itensFiltrados = buscaAtual.trim()
+        ? itens.filter(it => [it.nome, it.marca, it.modelo].filter(Boolean).join(' ').toLowerCase().includes(buscaAtual.trim().toLowerCase()))
+        : itens;
 
     container.innerHTML = `
         <div class="section">
@@ -115,34 +131,65 @@ function renderizarAbaEstoque() {
 
             <div class="estoque-actions">
                 <button class="btn-primary" onclick="abrirModalAdicionarEstoque()">
-                    <i class="fas fa-plus"></i> Adicionar Item ao Estoque
+                    <i class="fas fa-plus"></i> Novo Item
                 </button>
                 ${itens.length > 0 ? `
                 <button class="btn-success" onclick="abrirModalAdicionarAExistente()">
-                    <i class="fas fa-boxes-stacked"></i> Adicionar a Item Existente
+                    <i class="fas fa-boxes-stacked"></i> Adicionar Quantidade
                 </button>
                 ` : ''}
             </div>
 
-            <div class="estoque-lista" id="estoqueLista">
-                ${itens.length === 0
-                    ? '<div class="estoque-empty"><i class="fas fa-box-open"></i><p>Nenhum item no estoque.</p><p>Clique em "Adicionar Item ao Estoque" para começar.</p></div>'
-                    : itens.map((it, i) => `
-                        <div class="estoque-item" data-index="${i}" onclick="editarItemEstoque(${i})" role="button" tabindex="0">
-                            <div class="estoque-item-info">
-                                <strong>${it.nome}</strong>
-                                <span class="estoque-item-qtd">${it.quantidade} un.</span>
+            ${itens.length > 0 ? `
+            <div style="position:relative;margin:14px 0 10px;">
+                <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#aaa;font-size:13px;"></i>
+                <input type="text" id="estoqueBusca" value="${buscaAtual.replace(/"/g,'&quot;')}"
+                    placeholder="Buscar por nome, marca ou modelo..."
+                    oninput="renderizarAbaEstoque()"
+                    style="width:100%;box-sizing:border-box;padding:10px 14px 10px 36px;border:1px solid var(--border-color);border-radius:10px;font-size:14px;background:var(--bg-light);color:var(--text-primary);">
+            </div>` : ''}
+
+            <div class="estoque-lista" id="estoqueLista" style="display:flex;flex-direction:column;gap:10px;margin-top:10px;">
+                ${itensFiltrados.length === 0
+                    ? '<div class="estoque-empty"><i class="fas fa-box-open"></i><p>Nenhum item encontrado.</p></div>'
+                    : itensFiltrados.map((it) => {
+                        const i = itens.indexOf(it);
+                        const unidade = it.unidade || 'un';
+                        const qtdNum = parseInt(it.quantidade, 10) || 0;
+                        const qtdColor = qtdNum === 0 ? '#e53935' : qtdNum < 5 ? '#f57c00' : '#2e7d32';
+                        const badges = _badgeEstoque(it);
+                        return `
+                        <div class="estoque-item" style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--card-bg,#fff);border:1px solid var(--border-color);border-radius:14px;cursor:pointer;" onclick="editarItemEstoque(${i})" role="button" tabindex="0">
+                            <div style="width:40px;height:40px;border-radius:10px;background:#e3f2fd;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                <i class="fas fa-box" style="color:#1565c0;font-size:16px;"></i>
                             </div>
-                            <div class="estoque-item-acoes" onclick="event.stopPropagation()">
+                            <div style="flex:1;min-width:0;">
+                                <div style="font-weight:600;font-size:15px;margin-bottom:3px;">${it.nome}</div>
+                                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                    ${badges}
+                                    ${!it.marca && !it.modelo ? `<span style="font-size:12px;color:#888;">Unidade: ${unidade}</span>` : `<span style="font-size:11px;color:#aaa;">Unid.: ${unidade}</span>`}
+                                </div>
+                            </div>
+                            <div style="text-align:center;flex-shrink:0;min-width:48px;">
+                                <div style="font-size:20px;font-weight:700;color:${qtdColor};line-height:1;">${qtdNum}</div>
+                                <div style="font-size:11px;color:#aaa;">${unidade}</div>
+                            </div>
+                            <div style="display:flex;gap:6px;flex-shrink:0;" onclick="event.stopPropagation()">
                                 <button class="btn-secondary btn-icon" onclick="editarItemEstoque(${i})" title="Editar"><i class="fas fa-edit"></i></button>
                                 <button class="btn-danger btn-icon" onclick="removerItemEstoque(${i})" title="Remover"><i class="fas fa-trash"></i></button>
                             </div>
-                        </div>
-                    `).join('')
+                        </div>`;
+                    }).join('')
                 }
             </div>
         </div>
     `;
+
+    // Reaplica foco no campo de busca (evita perder o cursor ao redigitar)
+    if (buscaAtual) {
+        const inp = document.getElementById('estoqueBusca');
+        if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+    }
 }
 
 function abrirModalAdicionarAExistente() {
@@ -209,17 +256,43 @@ function abrirModalAdicionarEstoque() {
     modal.innerHTML = `
         <div class="material-modal-content material-modal-content-small">
             <div class="material-modal-header">
-                <h3><i class="fas fa-plus-circle"></i> Adicionar Item ao Estoque</h3>
+                <h3><i class="fas fa-plus-circle"></i> Novo Item no Estoque</h3>
                 <button class="material-modal-close" onclick="this.closest('.material-modal').remove()">×</button>
             </div>
             <div class="material-modal-form-body">
                 <form onsubmit="adicionarItemEstoque(event)">
                     <div class="form-group">
-                        <label><i class="fas fa-tag"></i> Nome do item:</label>
-                        <input type="text" id="estoqueItemNome" placeholder="Ex: Cabo HDMI 10m" required>
+                        <label><i class="fas fa-tag"></i> Nome do Item: *</label>
+                        <input type="text" id="estoqueItemNome" placeholder="Ex: Amplificador" required>
                     </div>
                     <div class="form-group">
-                        <label><i class="fas fa-sort-numeric-up"></i> Quantidade:</label>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div>
+                                <label style="display:block;margin-bottom:4px;"><i class="fas fa-tag"></i> Marca:</label>
+                                <input type="text" id="estoqueItemMarca" placeholder="Ex: LL Audio" style="width:100%;box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block;margin-bottom:4px;"><i class="fas fa-microchip"></i> Modelo:</label>
+                                <input type="text" id="estoqueItemModelo" placeholder="Ex: 1600" style="width:100%;box-sizing:border-box;">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-ruler"></i> Unidade:</label>
+                        <select id="estoqueItemUnidade">
+                            <option value="un">Unidade (un)</option>
+                            <option value="kg">Quilograma (kg)</option>
+                            <option value="m">Metro (m)</option>
+                            <option value="m²">Metro Quadrado (m²)</option>
+                            <option value="l">Litro (l)</option>
+                            <option value="cx">Caixa (cx)</option>
+                            <option value="pc">Peça (pc)</option>
+                            <option value="rolo">Rolo</option>
+                            <option value="fardo">Fardo</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-sort-numeric-up"></i> Quantidade em Estoque:</label>
                         <input type="number" id="estoqueItemQtd" placeholder="0" min="0" value="0" required>
                     </div>
                     <div class="material-modal-buttons">
@@ -237,14 +310,24 @@ function abrirModalAdicionarEstoque() {
 function adicionarItemEstoque(event) {
     event.preventDefault();
     const nome = document.getElementById('estoqueItemNome').value.trim();
+    const marca = (document.getElementById('estoqueItemMarca') ? document.getElementById('estoqueItemMarca').value.trim() : '');
+    const modelo = (document.getElementById('estoqueItemModelo') ? document.getElementById('estoqueItemModelo').value.trim() : '');
+    const unidade = (document.getElementById('estoqueItemUnidade') ? document.getElementById('estoqueItemUnidade').value : 'un');
     const qtd = parseInt(document.getElementById('estoqueItemQtd').value, 10) || 0;
     if (!nome || qtd < 0) return;
 
     const idx = _encontrarItemEstoque(nome);
     if (idx >= 0) {
-        estoqueData.itens[idx].quantidade = (parseInt(estoqueData.itens[idx].quantidade, 10) || 0) + qtd;
+        const it = estoqueData.itens[idx];
+        it.quantidade = (parseInt(it.quantidade, 10) || 0) + qtd;
+        if (marca) it.marca = marca;
+        if (modelo) it.modelo = modelo;
+        it.unidade = unidade;
     } else {
-        estoqueData.itens.push({ nome, quantidade: qtd });
+        const novoItem = { nome, quantidade: qtd, unidade };
+        if (marca) novoItem.marca = marca;
+        if (modelo) novoItem.modelo = modelo;
+        estoqueData.itens.push(novoItem);
     }
     salvarDadosEstoque();
     renderizarAbaEstoque();
@@ -254,6 +337,10 @@ function adicionarItemEstoque(event) {
 function editarItemEstoque(index) {
     const item = estoqueData.itens[index];
     if (!item) return;
+
+    const un = item.unidade || 'un';
+    const opts = ['un','kg','m','m²','l','cx','pc','rolo','fardo']
+        .map(u => `<option value="${u}" ${un===u?'selected':''}>${u}</option>`).join('');
 
     const modal = document.createElement('div');
     modal.className = 'material-modal material-modal-small';
@@ -266,8 +353,24 @@ function editarItemEstoque(index) {
             <div class="material-modal-form-body">
                 <form onsubmit="salvarEdicaoEstoque(event, ${index})">
                     <div class="form-group">
-                        <label><i class="fas fa-tag"></i> Nome do item:</label>
-                        <input type="text" id="estoqueEditNome" value="${item.nome.replace(/"/g, '&quot;')}" required>
+                        <label><i class="fas fa-tag"></i> Nome do Item: *</label>
+                        <input type="text" id="estoqueEditNome" value="${(item.nome||'').replace(/"/g, '&quot;')}" required>
+                    </div>
+                    <div class="form-group">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div>
+                                <label style="display:block;margin-bottom:4px;"><i class="fas fa-tag"></i> Marca:</label>
+                                <input type="text" id="estoqueEditMarca" value="${(item.marca||'').replace(/"/g,'&quot;')}" placeholder="Ex: LL Audio" style="width:100%;box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block;margin-bottom:4px;"><i class="fas fa-microchip"></i> Modelo:</label>
+                                <input type="text" id="estoqueEditModelo" value="${(item.modelo||'').replace(/"/g,'&quot;')}" placeholder="Ex: 1600" style="width:100%;box-sizing:border-box;">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-ruler"></i> Unidade:</label>
+                        <select id="estoqueEditUnidade">${opts}</select>
                     </div>
                     <div class="form-group">
                         <label><i class="fas fa-sort-numeric-up"></i> Quantidade:</label>
@@ -282,15 +385,22 @@ function editarItemEstoque(index) {
         </div>
     `;
     document.body.appendChild(modal);
+    setTimeout(() => document.getElementById('estoqueEditNome').focus(), 100);
 }
 
 function salvarEdicaoEstoque(event, index) {
     event.preventDefault();
     const nome = document.getElementById('estoqueEditNome').value.trim();
+    const marca = (document.getElementById('estoqueEditMarca') ? document.getElementById('estoqueEditMarca').value.trim() : '');
+    const modelo = (document.getElementById('estoqueEditModelo') ? document.getElementById('estoqueEditModelo').value.trim() : '');
+    const unidade = (document.getElementById('estoqueEditUnidade') ? document.getElementById('estoqueEditUnidade').value : 'un');
     const qtd = parseInt(document.getElementById('estoqueEditQtd').value, 10) || 0;
     if (!nome || qtd < 0) return;
 
-    estoqueData.itens[index] = { nome, quantidade: qtd };
+    const itemAtualizado = { nome, quantidade: qtd, unidade };
+    if (marca) itemAtualizado.marca = marca;
+    if (modelo) itemAtualizado.modelo = modelo;
+    estoqueData.itens[index] = itemAtualizado;
     salvarDadosEstoque();
     renderizarAbaEstoque();
     event.target.closest('.material-modal').remove();
