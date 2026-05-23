@@ -175,6 +175,7 @@ function renderizarAbaEstoque() {
                                 <div style="font-size:11px;color:#aaa;">${unidade}</div>
                             </div>
                             <div style="display:flex;gap:6px;flex-shrink:0;" onclick="event.stopPropagation()">
+                                <button class="btn-secondary btn-icon" onclick="duplicarItemEstoque(${i})" title="Duplicar item" style="color:#2e7d32;border-color:#2e7d32;"><i class="fas fa-copy"></i></button>
                                 <button class="btn-secondary btn-icon" onclick="editarItemEstoque(${i})" title="Editar"><i class="fas fa-edit"></i></button>
                                 <button class="btn-danger btn-icon" onclick="removerItemEstoque(${i})" title="Remover"><i class="fas fa-trash"></i></button>
                             </div>
@@ -196,9 +197,11 @@ function abrirModalAdicionarAExistente() {
     const itens = obterItensEstoque();
     if (itens.length === 0) return;
 
-    const opts = itens.map((it, i) =>
-        `<option value="${i}">${(it.nome || '').replace(/"/g, '&quot;')} (${it.quantidade} un. atual)</option>`
-    ).join('');
+    const opts = itens.map((it, i) => {
+        const info = [it.marca, it.modelo].filter(Boolean).join(' — ');
+        const label = (it.nome || '') + (info ? ` (${info})` : '') + ` — ${it.quantidade} ${it.unidade||'un'} atual`;
+        return `<option value="${i}">${label.replace(/"/g,'&quot;')}</option>`;
+    }).join('');
 
     const modal = document.createElement('div');
     modal.className = 'material-modal material-modal-small';
@@ -406,6 +409,34 @@ function salvarEdicaoEstoque(event, index) {
     event.target.closest('.material-modal').remove();
 }
 
+// Abre o modal de novo item pré-preenchido com os dados de um existente (igual ao "Duplicar" do Gabriel)
+function duplicarItemEstoque(index) {
+    const origem = estoqueData.itens[index];
+    if (!origem) return;
+
+    // Abre o modal de adicionar e preenche os campos após a abertura
+    abrirModalAdicionarEstoque();
+    setTimeout(() => {
+        const nomeEl    = document.getElementById('estoqueItemNome');
+        const marcaEl   = document.getElementById('estoqueItemMarca');
+        const modeloEl  = document.getElementById('estoqueItemModelo');
+        const unidadeEl = document.getElementById('estoqueItemUnidade');
+        const qtdEl     = document.getElementById('estoqueItemQtd');
+
+        if (nomeEl)    nomeEl.value    = origem.nome || '';
+        if (marcaEl)   marcaEl.value   = origem.marca || '';
+        if (modeloEl)  modeloEl.value  = origem.modelo || '';
+        if (unidadeEl) unidadeEl.value = origem.unidade || 'un';
+        if (qtdEl)     qtdEl.value     = '0';
+
+        // Muda o título do modal para indicar duplicação
+        const titulo = document.querySelector('.material-modal-content-small .material-modal-header h3');
+        if (titulo) titulo.innerHTML = '<i class="fas fa-copy" style="margin-right:8px;"></i>Duplicar Item';
+
+        if (nomeEl) { nomeEl.select(); nomeEl.focus(); }
+    }, 120);
+}
+
 function removerItemEstoque(index) {
     if (!confirm('Remover este item do estoque?')) return;
     estoqueData.itens.splice(index, 1);
@@ -429,4 +460,5 @@ window.deduzirEstoque = deduzirEstoque;
 window.devolverEstoque = devolverEstoque;
 window.temEstoqueSuficiente = temEstoqueSuficiente;
 window.renderizarAbaEstoque = renderizarAbaEstoque;
+window.duplicarItemEstoque = duplicarItemEstoque;
 window.inicializarEstoque = inicializarEstoque;

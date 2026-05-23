@@ -315,10 +315,16 @@ function _previaAtualizarListaModal(chave) {
     materiais.forEach((mat, idx) => {
         const item = document.createElement('div');
         item.className = 'material-item';
+        const badgeMarca  = mat.marca  ? `<span style="font-size:11px;background:#e8eaf6;color:#3949ab;padding:2px 8px;border-radius:4px;font-weight:500;">${mat.marca}</span>`  : '';
+        const badgeModelo = mat.modelo ? `<span style="font-size:11px;background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:4px;font-weight:600;">${mat.modelo}</span>` : '';
+        const unidMat     = mat.unidade || 'un';
         item.innerHTML = `
             <div class="material-item-info" onclick="_previaEditarItem('${chave.replace(/'/g,"\\'")}', ${idx})" style="cursor:pointer;" title="Clique para editar">
                 <span class="material-item-nome"><i class="fas fa-box" style="margin-right:8px;color:var(--gradient-start);"></i>${mat.nome}</span>
-                <span class="material-item-qtd"><i class="fas fa-hashtag" style="margin-right:5px;"></i>Quantidade: ${mat.quantidade}</span>
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:3px;">
+                    ${badgeMarca}${badgeModelo}
+                    <span class="material-item-qtd"><i class="fas fa-hashtag" style="margin-right:5px;"></i>${mat.quantidade} ${unidMat}</span>
+                </div>
             </div>
             <button class="btn-danger" onclick="_previaRemoverItemModal('${chave.replace(/'/g,"\\'")}', ${idx})" title="Remover">
                 <i class="fas fa-trash"></i>
@@ -332,9 +338,14 @@ function _previaAtualizarListaModal(chave) {
 // ── Sub-modal: Adicionar Item (sem limite de estoque) ─────────────────────────
 window._previaAbrirAdicionarItem = function(chave) {
     const itensEstoque = typeof obterItensEstoque === 'function' ? obterItensEstoque() : [];
-    const optsEstoque  = itensEstoque.map(it =>
-        `<option value="${(it.nome || '').replace(/"/g,'&quot;')}">${it.nome} (${it.quantidade} disp.)</option>`
-    ).join('');
+    const optsEstoque  = itensEstoque.map(it => {
+        const info = [it.marca, it.modelo].filter(Boolean).join(' — ');
+        const label = it.nome + (info ? ` (${info})` : '') + ` — ${it.quantidade} disp.`;
+        return `<option value="${(it.nome||'').replace(/"/g,'&quot;')}"
+            data-marca="${(it.marca||'').replace(/"/g,'&quot;')}"
+            data-modelo="${(it.modelo||'').replace(/"/g,'&quot;')}"
+            data-unidade="${it.unidade||'un'}">${label.replace(/"/g,'&quot;')}</option>`;
+    }).join('');
     const temEstoque = optsEstoque.length > 0;
 
     const modal = document.createElement('div');
@@ -363,8 +374,34 @@ window._previaAbrirAdicionarItem = function(chave) {
                         </select>
                     </div>
                     <div class="form-group" id="previaGrupoLivre" style="${temEstoque ? 'display:none' : ''}">
-                        <label><i class="fas fa-tag"></i> Item:</label>
+                        <label><i class="fas fa-tag"></i> Nome do Item: *</label>
                         <input type="text" id="previaItemNome" placeholder="Ex: Cabo HDMI">
+                    </div>
+                    <div class="form-group" id="previaGrupoMarcaModelo" style="${temEstoque ? 'display:none' : ''}">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div>
+                                <label style="display:block;margin-bottom:4px;"><i class="fas fa-tag"></i> Marca:</label>
+                                <input type="text" id="previaItemMarca" placeholder="Ex: LL Audio" style="width:100%;box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block;margin-bottom:4px;"><i class="fas fa-microchip"></i> Modelo:</label>
+                                <input type="text" id="previaItemModelo" placeholder="Ex: 1600" style="width:100%;box-sizing:border-box;">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-ruler"></i> Unidade:</label>
+                        <select id="previaItemUnidade">
+                            <option value="un">Unidade (un)</option>
+                            <option value="kg">Quilograma (kg)</option>
+                            <option value="m">Metro (m)</option>
+                            <option value="m²">Metro Quadrado (m²)</option>
+                            <option value="l">Litro (l)</option>
+                            <option value="cx">Caixa (cx)</option>
+                            <option value="pc">Peça (pc)</option>
+                            <option value="rolo">Rolo</option>
+                            <option value="fardo">Fardo</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label for="previaItemQtd"><i class="fas fa-sort-numeric-up"></i> Quantidade necessária:</label>
@@ -388,20 +425,23 @@ window._previaAbrirAdicionarItem = function(chave) {
 };
 
 window._previaToggleOrigem = function(valor) {
-    const grupoEstoque = document.getElementById('previGrupoEstoque');
-    const grupoLivre   = document.getElementById('previaGrupoLivre');
-    const selEstoque   = document.getElementById('previaItemEstoqueSelect');
-    const inpLivre     = document.getElementById('previaItemNome');
+    const grupoEstoque    = document.getElementById('previGrupoEstoque');
+    const grupoLivre      = document.getElementById('previaGrupoLivre');
+    const grupoMarcaModelo= document.getElementById('previaGrupoMarcaModelo');
+    const selEstoque      = document.getElementById('previaItemEstoqueSelect');
+    const inpLivre        = document.getElementById('previaItemNome');
     if (valor === 'estoque') {
-        if (grupoEstoque) grupoEstoque.style.display = '';
-        if (grupoLivre)   grupoLivre.style.display   = 'none';
-        if (selEstoque)   { selEstoque.required = true;  selEstoque.focus(); }
-        if (inpLivre)     { inpLivre.required = false;   inpLivre.value = ''; }
+        if (grupoEstoque)     grupoEstoque.style.display     = '';
+        if (grupoLivre)       grupoLivre.style.display       = 'none';
+        if (grupoMarcaModelo) grupoMarcaModelo.style.display = 'none';
+        if (selEstoque)       { selEstoque.required = true;  selEstoque.focus(); }
+        if (inpLivre)         { inpLivre.required = false;   inpLivre.value = ''; }
     } else {
-        if (grupoEstoque) grupoEstoque.style.display = 'none';
-        if (grupoLivre)   grupoLivre.style.display   = '';
-        if (selEstoque)   { selEstoque.required = false; selEstoque.value = ''; }
-        if (inpLivre)     { inpLivre.required = true;    inpLivre.focus(); }
+        if (grupoEstoque)     grupoEstoque.style.display     = 'none';
+        if (grupoLivre)       grupoLivre.style.display       = '';
+        if (grupoMarcaModelo) grupoMarcaModelo.style.display = '';
+        if (selEstoque)       { selEstoque.required = false; selEstoque.value = ''; }
+        if (inpLivre)         { inpLivre.required = true;    inpLivre.focus(); }
     }
 };
 
@@ -412,12 +452,24 @@ window._previaConfirmarAdicionarItem = function(event, chave) {
     if (qtd < 1) return;
 
     let nome = '';
+    let marca = '';
+    let modelo = '';
+    let unidade = (document.getElementById('previaItemUnidade') ? document.getElementById('previaItemUnidade').value : 'un');
+
     if (origemEl && origemEl.value === 'estoque') {
         const sel = document.getElementById('previaItemEstoqueSelect');
         nome = sel ? sel.value.trim() : '';
+        if (sel && sel.selectedIndex >= 0) {
+            const opt = sel.options[sel.selectedIndex];
+            marca   = opt.getAttribute('data-marca')   || '';
+            modelo  = opt.getAttribute('data-modelo')  || '';
+            unidade = opt.getAttribute('data-unidade') || 'un';
+        }
     } else {
         const inp = document.getElementById('previaItemNome');
-        nome = inp ? inp.value.trim() : '';
+        nome    = inp ? inp.value.trim() : '';
+        marca   = (document.getElementById('previaItemMarca')  ? document.getElementById('previaItemMarca').value.trim()  : '');
+        modelo  = (document.getElementById('previaItemModelo') ? document.getElementById('previaItemModelo').value.trim() : '');
     }
     if (!nome) return;
 
@@ -425,8 +477,14 @@ window._previaConfirmarAdicionarItem = function(event, chave) {
     const existente = previaMateriais[chave].findIndex(i => i.nome.toLowerCase() === nome.toLowerCase());
     if (existente >= 0) {
         previaMateriais[chave][existente].quantidade = (parseInt(previaMateriais[chave][existente].quantidade, 10) || 0) + qtd;
+        if (marca)   previaMateriais[chave][existente].marca   = marca;
+        if (modelo)  previaMateriais[chave][existente].modelo  = modelo;
+        previaMateriais[chave][existente].unidade = unidade;
     } else {
-        previaMateriais[chave].push({ nome, quantidade: qtd });
+        const novoItem = { nome, quantidade: qtd, unidade };
+        if (marca)  novoItem.marca  = marca;
+        if (modelo) novoItem.modelo = modelo;
+        previaMateriais[chave].push(novoItem);
     }
 
     salvarPreviaMateriais();
@@ -452,8 +510,26 @@ window._previaEditarItem = function(chave, idx) {
             <div class="material-modal-form-body">
                 <form id="formPreviaEditarItem" onsubmit="_previaConfirmarEditar(event, '${chave.replace(/'/g,"\\'")}', ${idx})">
                     <div class="form-group">
-                        <label for="previaEditNome"><i class="fas fa-tag"></i> Item:</label>
-                        <input type="text" id="previaEditNome" value="${mat.nome}" placeholder="Ex: Cabo HDMI" required>
+                        <label for="previaEditNome"><i class="fas fa-tag"></i> Nome do Item: *</label>
+                        <input type="text" id="previaEditNome" value="${(mat.nome||'').replace(/"/g,'&quot;')}" placeholder="Ex: Cabo HDMI" required>
+                    </div>
+                    <div class="form-group">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div>
+                                <label style="display:block;margin-bottom:4px;"><i class="fas fa-tag"></i> Marca:</label>
+                                <input type="text" id="previaEditMarca" value="${(mat.marca||'').replace(/"/g,'&quot;')}" placeholder="Ex: LL Audio" style="width:100%;box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block;margin-bottom:4px;"><i class="fas fa-microchip"></i> Modelo:</label>
+                                <input type="text" id="previaEditModelo" value="${(mat.modelo||'').replace(/"/g,'&quot;')}" placeholder="Ex: 1600" style="width:100%;box-sizing:border-box;">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-ruler"></i> Unidade:</label>
+                        <select id="previaEditUnidade">
+                            ${['un','kg','m','m²','l','cx','pc','rolo','fardo'].map(u => `<option value="${u}" ${(mat.unidade||'un')===u?'selected':''}>${u}</option>`).join('')}
+                        </select>
                     </div>
                     <div class="form-group">
                         <label for="previaEditQtd"><i class="fas fa-sort-numeric-up"></i> Quantidade necessária:</label>
@@ -476,12 +552,18 @@ window._previaEditarItem = function(chave, idx) {
 
 window._previaConfirmarEditar = function(event, chave, idx) {
     event.preventDefault();
-    const nome = document.getElementById('previaEditNome').value.trim();
-    const qtd  = parseInt(document.getElementById('previaEditQtd').value, 10) || 0;
+    const nome    = document.getElementById('previaEditNome').value.trim();
+    const qtd     = parseInt(document.getElementById('previaEditQtd').value, 10) || 0;
+    const marca   = (document.getElementById('previaEditMarca')   ? document.getElementById('previaEditMarca').value.trim()   : '');
+    const modelo  = (document.getElementById('previaEditModelo')  ? document.getElementById('previaEditModelo').value.trim()  : '');
+    const unidade = (document.getElementById('previaEditUnidade') ? document.getElementById('previaEditUnidade').value        : 'un');
     if (!nome || qtd < 1) return;
 
     if (!previaMateriais[chave]) previaMateriais[chave] = [];
-    previaMateriais[chave][idx] = { nome, quantidade: qtd };
+    const itemEditado = { nome, quantidade: qtd, unidade };
+    if (marca)  itemEditado.marca  = marca;
+    if (modelo) itemEditado.modelo = modelo;
+    previaMateriais[chave][idx] = itemEditado;
 
     salvarPreviaMateriais();
     event.target.closest('.material-modal').remove();
