@@ -5042,7 +5042,14 @@
         var msg = (igreja.nome || '');
         if (id) msg += ' - ' + id;
         msg += '\n\n';
-        igreja.materiais.forEach(function(m) { msg += m.item + ' - ' + m.quantidade + '.\n'; });
+        igreja.materiais.forEach(function(m) {
+            var linha = m.quantidade + ' - ' + m.item;
+            var extras = [m.marca, m.modelo].filter(Boolean).join(' ');
+            if (extras) linha += ' (' + extras + ')';
+            var un = m.unidade || 'un';
+            if (un !== 'un') linha += ' [' + un + ']';
+            msg += linha + '\n';
+        });
         msg = msg.trim();
         var enc = encodeURIComponent(msg);
 
