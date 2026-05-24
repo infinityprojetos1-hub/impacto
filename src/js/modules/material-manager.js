@@ -99,9 +99,9 @@ function migrarDadosParaNF() {
 // Salva os dados no localStorage E integra com Notas Fiscais
 function salvarDadosMaterial() {
     try {
-        // Marca timestamp para resolver conflitos
+        // Marca timestamp para resolver conflitos e para a proteção "salvo há pouco" no firebase-config
         materialData._ts = Date.now();
-        if (typeof window !== 'undefined') window._materialSalvouTs = Date.now();
+        window._materialSalvouTs = materialData._ts;
 
         // Salva no localStorage próprio
         localStorage.setItem('materiaisIgrejas', JSON.stringify(materialData));

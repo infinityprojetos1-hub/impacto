@@ -5,7 +5,7 @@
 // IMPORTANTE: incremente CACHE_VERSION a cada deploy para forçar atualização.
 // ────────────────────────────────────────────────────────────────────────────
 
-const CACHE_VERSION = 'v2.67';
+const CACHE_VERSION = 'v2.68';
 const CACHE_NAME    = `orcamentos-inpacto-${CACHE_VERSION}`;
 const BASE_PATH     = '/inpacto';
 

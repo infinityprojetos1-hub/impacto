@@ -322,14 +322,25 @@ function iniciarSincronizacaoTempoReal() {
       const localTs = localMat ? (localMat._ts || 0) : 0;
       const remoteTs = dados._ts || 0;
       const mesmoMat = remoteTs === localTs && remoteTs > 0;
-      if (!mesmoMat && (remoteTs < localTs) && localStr) {
-        console.log('🛡️ Material: protegendo dados locais, enviando para Firebase');
+
+      // Proteção "salvo há pouco" — igual ao NF
+      const matSalvouHaPouco = window._materialSalvouTs && (Date.now() - window._materialSalvouTs < 30000);
+
+      // Proteção de regressão: conta total de igrejas em cada lado
+      const totalRemoto = (dados.pendentes||[]).length + (dados.enviadas||[]).length + (dados.pedidosSandro||[]).length;
+      const totalLocal  = localMat ? ((localMat.pendentes||[]).length + (localMat.enviadas||[]).length + (localMat.pedidosSandro||[]).length) : 0;
+      const remoteRegride = totalRemoto < totalLocal && totalLocal > 0;
+
+      if (!mesmoMat && (matSalvouHaPouco || remoteTs < localTs || remoteRegride) && localStr) {
+        console.log('🛡️ Material: protegendo dados locais, enviando para Firebase' +
+          (matSalvouHaPouco ? ' (salvo há pouco)' : '') +
+          (remoteRegride ? ` (local tem ${totalLocal} igrejas, remoto tem ${totalRemoto})` : ''));
         try {
           const local = localMat || JSON.parse(localStr);
           if (!local._ts) local._ts = Date.now();
           salvarNoDatabase('dados/materiais', local);
         } catch (e) { /* ignora */ }
-      } else {
+      } else if (!remoteRegride) {
         localStorage.setItem('materiaisIgrejas', JSON.stringify(dados));
         if (typeof materialData !== 'undefined') {
           materialData.pendentes     = Array.isArray(dados.pendentes)     ? dados.pendentes     : [];
@@ -343,6 +354,8 @@ function iniciarSincronizacaoTempoReal() {
           });
           console.log('🔄 Materiais atualizados do Firebase');
         }
+      } else {
+        console.warn('⚠️ Material Firebase ignorado: regressão de dados detectada (remoto regrediria de', totalLocal, 'para', totalRemoto, 'igrejas)');
       }
     } finally {
       window._fbReceivendo = false;
@@ -509,14 +522,25 @@ function iniciarSincronizacaoTempoReal() {
       const localTs = localChk ? (localChk._ts || 0) : 0;
       const remoteTs = dados._ts || 0;
       const mesmoChk = remoteTs === localTs && remoteTs > 0;
-      if (!mesmoChk && remoteTs < localTs && localStr) {
-        console.log('🛡️ Checklist: protegendo dados locais, enviando para Firebase');
+
+      // Proteção "salvo há pouco"
+      const chkSalvouHaPouco = window._checklistSalvouTs && (Date.now() - window._checklistSalvouTs < 30000);
+
+      // Proteção de regressão: compara total de igrejas
+      const totalRemotoChk = (dados.igrejas||[]).length + (dados.pedidosSandro||[]).length;
+      const totalLocalChk  = localChk ? ((localChk.igrejas||[]).length + (localChk.pedidosSandro||[]).length) : 0;
+      const chkRegride = totalRemotoChk < totalLocalChk && totalLocalChk > 0;
+
+      if (!mesmoChk && (chkSalvouHaPouco || remoteTs < localTs || chkRegride) && localStr) {
+        console.log('🛡️ Checklist: protegendo dados locais, enviando para Firebase' +
+          (chkSalvouHaPouco ? ' (salvo há pouco)' : '') +
+          (chkRegride ? ` (local tem ${totalLocalChk}, remoto tem ${totalRemotoChk})` : ''));
         try {
           const local = localChk || JSON.parse(localStr);
           if (!local._ts) local._ts = Date.now();
           salvarNoDatabase('dados/checklists', local);
         } catch (e) { /* ignora */ }
-      } else {
+      } else if (!chkRegride) {
         if (typeof window._restaurarAssinaturas === 'function') {
           window._restaurarAssinaturas([...(dados.igrejas || []), ...(dados.pedidosSandro || [])]);
         }
@@ -545,6 +569,8 @@ function iniciarSincronizacaoTempoReal() {
           });
           console.log('🔄 Checklists atualizados do Firebase');
         }
+      } else {
+        console.warn('⚠️ Checklist Firebase ignorado: regressão de dados detectada (remoto regrediria de', totalLocalChk, 'para', totalRemotoChk, 'igrejas)');
       }
     } finally {
       window._fbReceivendo = false;

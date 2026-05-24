@@ -117,8 +117,9 @@ function carregarDadosChecklist() {
 // Salva os dados no localStorage e no Firebase (incluindo assinaturas)
 function salvarDadosChecklist() {
     try {
-        // Marca timestamp
+        // Marca timestamp e sinaliza para a proteção "salvo há pouco" no firebase-config
         checklistData._ts = Date.now();
+        window._checklistSalvouTs = checklistData._ts;
 
         localStorage.setItem('checklistsIgrejas', JSON.stringify(checklistData));
         console.log('✅ Dados de checklist salvos localmente');
