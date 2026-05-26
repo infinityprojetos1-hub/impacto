@@ -429,6 +429,7 @@ window.atualizarListaIgrejas = atualizarListaIgrejas;
 // SISTEMA DE PEDIDOS PENDENTES
 // =============================================
 
+// Cada pedido: { numero: string, tipo: 'nome'|'orcamento', valor?: string }
 let pedidosPendentes = [];
 
 function carregarPedidosPendentes() {
@@ -436,6 +437,10 @@ function carregarPedidosPendentes() {
         const salvo = localStorage.getItem('pedidosPendentes');
         if (salvo) pedidosPendentes = JSON.parse(salvo);
         if (!Array.isArray(pedidosPendentes)) pedidosPendentes = [];
+        // Migração: converte strings antigas para objeto
+        pedidosPendentes = pedidosPendentes.map(p =>
+            typeof p === 'string' ? { numero: p, tipo: 'nome' } : p
+        );
     } catch (e) {
         pedidosPendentes = [];
     }
@@ -445,6 +450,10 @@ function salvarPedidosPendentes() {
     try {
         localStorage.setItem('pedidosPendentes', JSON.stringify(pedidosPendentes));
     } catch (e) {}
+}
+
+function _numeroPedido(p) {
+    return typeof p === 'object' ? (p.numero || '') : String(p || '');
 }
 
 function renderizarPedidosPendentes() {
@@ -457,12 +466,23 @@ function renderizarPedidosPendentes() {
     }
 
     container.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:8px;">` +
-        pedidosPendentes.map((num, idx) => `
-            <span style="display:inline-flex;align-items:center;gap:6px;background:#fff3e0;border:1px solid #f9a825;border-radius:20px;padding:4px 12px;font-size:13px;font-weight:bold;color:#e65100;">
-                ${num}
+        pedidosPendentes.map((p, idx) => {
+            const num = _numeroPedido(p);
+            const tipo = (typeof p === 'object' && p.tipo) || 'nome';
+            const valor = (typeof p === 'object' && p.valor) ? p.valor : null;
+            const isOrc = tipo === 'orcamento';
+            const label = isOrc
+                ? `${num} · R$ ${valor || '—'}`
+                : `${num} · Nome`;
+            const bg   = isOrc ? '#e8f5e9' : '#fff3e0';
+            const brd  = isOrc ? '#43a047' : '#f9a825';
+            const clr  = isOrc ? '#2e7d32' : '#e65100';
+            return `<span style="display:inline-flex;align-items:center;gap:6px;background:${bg};border:1px solid ${brd};border-radius:20px;padding:4px 12px;font-size:13px;font-weight:bold;color:${clr};">
+                ${label}
                 <button onclick="removerPedidoPendente(${idx})"
-                    style="background:none;border:none;cursor:pointer;color:#e65100;font-size:14px;line-height:1;padding:0;margin:0;">&times;</button>
-            </span>`).join('') +
+                    style="background:none;border:none;cursor:pointer;color:${clr};font-size:14px;line-height:1;padding:0;margin:0;">&times;</button>
+            </span>`;
+        }).join('') +
         `</div>`;
 }
 
@@ -471,18 +491,38 @@ window.abrirModalAdicionarPedido = function() {
     modal.className = 'material-modal';
     modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
     modal.innerHTML = `
-        <div style="background:#fff;border-radius:12px;width:95%;max-width:380px;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+        <div style="background:#fff;border-radius:12px;width:95%;max-width:400px;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
             <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #eee;">
                 <h3 style="margin:0;font-size:16px;"><i class="fas fa-list-ol"></i> Adicionar Pedido Pendente</h3>
                 <button onclick="this.closest('.material-modal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#666;">&times;</button>
             </div>
-            <div style="padding:20px;">
-                <div style="margin-bottom:16px;">
+            <div style="padding:20px;display:flex;flex-direction:column;gap:14px;">
+                <div>
                     <label style="display:block;font-size:13px;color:#555;margin-bottom:6px;">Número do Pedido</label>
                     <input type="text" id="inputNovoPedidoPendente" placeholder="Ex: OP-001"
                         style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;box-sizing:border-box;">
                 </div>
-                <div style="display:flex;justify-content:flex-end;gap:10px;">
+                <div>
+                    <label style="display:block;font-size:13px;color:#555;margin-bottom:6px;">Tipo</label>
+                    <div style="display:flex;gap:10px;">
+                        <label style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid #f9a825;border-radius:8px;cursor:pointer;background:#fff3e0;">
+                            <input type="radio" name="tipoPedido" value="nome" checked
+                                style="accent-color:#f57f17;" onchange="_pedidoTipoChange(this)">
+                            <span style="font-size:13px;font-weight:600;color:#e65100;">Passar nome</span>
+                        </label>
+                        <label style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid #ddd;border-radius:8px;cursor:pointer;">
+                            <input type="radio" name="tipoPedido" value="orcamento"
+                                style="accent-color:#43a047;" onchange="_pedidoTipoChange(this)">
+                            <span style="font-size:13px;font-weight:600;color:#555;">Orçamento</span>
+                        </label>
+                    </div>
+                </div>
+                <div id="campoPedidoValor" style="display:none;">
+                    <label style="display:block;font-size:13px;color:#555;margin-bottom:6px;">Valor do Orçamento</label>
+                    <input type="text" id="inputPedidoValor" placeholder="Ex: 1.500,00"
+                        style="width:100%;padding:10px 12px;border:1px solid #43a047;border-radius:6px;font-size:14px;box-sizing:border-box;">
+                </div>
+                <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:4px;">
                     <button onclick="this.closest('.material-modal').remove()"
                         style="background:#f0f0f0;color:#333;border:none;border-radius:6px;padding:10px 20px;cursor:pointer;">Cancelar</button>
                     <button onclick="_confirmarAdicionarPedido()"
@@ -499,6 +539,37 @@ window.abrirModalAdicionarPedido = function() {
             if (e.key === 'Enter') _confirmarAdicionarPedido();
         });
     }
+
+    // Estilo dinâmico nos radio buttons ao clicar
+    modal.querySelectorAll('label').forEach(lbl => {
+        lbl.addEventListener('click', () => {
+            modal.querySelectorAll('[name=tipoPedido]').forEach(r => {
+                const parentLabel = r.closest('label');
+                if (r.checked) {
+                    if (r.value === 'nome') {
+                        parentLabel.style.borderColor = '#f9a825';
+                        parentLabel.style.background  = '#fff3e0';
+                    } else {
+                        parentLabel.style.borderColor = '#43a047';
+                        parentLabel.style.background  = '#e8f5e9';
+                    }
+                } else {
+                    parentLabel.style.borderColor = '#ddd';
+                    parentLabel.style.background  = '#fff';
+                }
+            });
+        });
+    });
+};
+
+window._pedidoTipoChange = function(radio) {
+    const campo = document.getElementById('campoPedidoValor');
+    if (!campo) return;
+    campo.style.display = radio.value === 'orcamento' ? 'block' : 'none';
+    if (radio.value === 'orcamento') {
+        const v = document.getElementById('inputPedidoValor');
+        if (v) v.focus();
+    }
 };
 
 window._confirmarAdicionarPedido = function() {
@@ -506,11 +577,22 @@ window._confirmarAdicionarPedido = function() {
     if (!input) return;
     const numero = input.value.trim();
     if (!numero) { input.focus(); return; }
-    if (pedidosPendentes.includes(numero)) {
+
+    const tipoEl = document.querySelector('[name=tipoPedido]:checked');
+    const tipo = tipoEl ? tipoEl.value : 'nome';
+
+    if (pedidosPendentes.some(p => _numeroPedido(p).toLowerCase() === numero.toLowerCase())) {
         alert('Este número de pedido já está na lista.');
         return;
     }
-    pedidosPendentes.push(numero);
+
+    const novoPedido = { numero, tipo };
+    if (tipo === 'orcamento') {
+        const valEl = document.getElementById('inputPedidoValor');
+        novoPedido.valor = valEl ? valEl.value.trim() : '';
+    }
+
+    pedidosPendentes.push(novoPedido);
     salvarPedidosPendentes();
     renderizarPedidosPendentes();
     document.querySelector('.material-modal').remove();
@@ -523,11 +605,10 @@ window.removerPedidoPendente = function(idx) {
 };
 
 // Remove pedido da lista pelo número (chamado após geração de orçamento)
-// Compara o ID da igreja com cada pedido pendente (trim + case-insensitive)
 window.removerPedidoPendenteByNumero = function(numero) {
     if (!numero) return;
     const val = String(numero).trim().toLowerCase();
-    const idx = pedidosPendentes.findIndex(p => String(p).trim().toLowerCase() === val);
+    const idx = pedidosPendentes.findIndex(p => _numeroPedido(p).trim().toLowerCase() === val);
     if (idx >= 0) {
         pedidosPendentes.splice(idx, 1);
         salvarPedidosPendentes();
