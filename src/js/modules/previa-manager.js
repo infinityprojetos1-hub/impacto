@@ -9,7 +9,16 @@ let abaAtivaPrevia = 'pendentes';
 function carregarPreviaMateriais() {
     try {
         const salvo = localStorage.getItem('previaMateriais');
-        if (salvo) previaMateriais = JSON.parse(salvo);
+        if (!salvo) { previaMateriais = {}; return; }
+        const parsed = JSON.parse(salvo);
+        // Formato antigo: objeto direto  |  Formato novo: { dados: {}, _ts: N }
+        if (parsed && typeof parsed.dados === 'object' && !Array.isArray(parsed.dados)) {
+            previaMateriais = parsed.dados;
+        } else if (parsed && typeof parsed === 'object') {
+            previaMateriais = parsed;
+        } else {
+            previaMateriais = {};
+        }
     } catch (e) {
         previaMateriais = {};
     }
@@ -17,7 +26,15 @@ function carregarPreviaMateriais() {
 
 function salvarPreviaMateriais() {
     try {
-        localStorage.setItem('previaMateriais', JSON.stringify(previaMateriais));
+        const payload = { dados: previaMateriais, _ts: Date.now() };
+        window._previaSalvouTs = payload._ts;
+        localStorage.setItem('previaMateriais', JSON.stringify(payload));
+        if (typeof salvarNoDatabase === 'function' && typeof firebaseDisponivel !== 'undefined' && firebaseDisponivel) {
+            if (typeof window._piscarBadgeSync === 'function') window._piscarBadgeSync();
+            salvarNoDatabase('dados/previaMateriais', payload)
+                .then(() => { if (typeof window._fbMarcarEnviado === 'function') window._fbMarcarEnviado('previaMateriais', payload._ts); })
+                .catch(err => console.warn('⚠️ Prévia não salva no Firebase:', err));
+        }
     } catch (e) {
         console.error('[Prévia] Erro ao salvar:', e);
     }

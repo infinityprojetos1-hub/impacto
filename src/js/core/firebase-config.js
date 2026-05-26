@@ -577,6 +577,52 @@ function iniciarSincronizacaoTempoReal() {
     }
   });
 
+  // ── Prévia de Materiais ──────────────────────────────────────────
+  database.ref('dados/previaMateriais').on('value', (snapshot) => {
+    const dados = snapshot.val();
+
+    if (!dados) {
+      const localStr = localStorage.getItem('previaMateriais');
+      if (localStr) {
+        try {
+          const local = JSON.parse(localStr);
+          const payload = (local && local._ts) ? local : { dados: local, _ts: Date.now() };
+          salvarNoDatabase('dados/previaMateriais', payload);
+          console.log('📤 Prévia local enviada para Firebase');
+        } catch (e) { /* ignora */ }
+      }
+      return;
+    }
+
+    window._fbReceivendo = true;
+    try {
+      const localStr = localStorage.getItem('previaMateriais');
+      let localPrev = null;
+      try { localPrev = localStr ? JSON.parse(localStr) : null; } catch (_) {}
+      const localTs = localPrev ? (localPrev._ts || 0) : 0;
+      const remoteTs = dados._ts || 0;
+      const mesmoPrev = remoteTs === localTs && remoteTs > 0;
+      const prevSalvouHaPouco = window._previaSalvouTs && (Date.now() - window._previaSalvouTs < 30000);
+
+      if (!mesmoPrev && (prevSalvouHaPouco || remoteTs < localTs) && localStr) {
+        console.log('🛡️ Prévia: protegendo dados locais, enviando para Firebase');
+        try {
+          const payload = (localPrev && localPrev._ts) ? localPrev : { dados: localPrev, _ts: Date.now() };
+          salvarNoDatabase('dados/previaMateriais', payload);
+        } catch (e) { /* ignora */ }
+      } else if (!mesmoPrev) {
+        localStorage.setItem('previaMateriais', JSON.stringify(dados));
+        _fbDebouncedUI('previaMateriais', () => {
+          if (typeof carregarPreviaMateriais === 'function') carregarPreviaMateriais();
+          if (typeof _mostrarListaPrevia === 'function') _mostrarListaPrevia();
+        });
+        console.log('🔄 Prévia atualizada do Firebase');
+      }
+    } finally {
+      window._fbReceivendo = false;
+    }
+  });
+
   // ── Pedidos Pendentes ────────────────────────────────────────────
   database.ref('dados/pedidosPendentes').on('value', (snapshot) => {
     const dados = snapshot.val();
@@ -731,6 +777,7 @@ setInterval(() => {
     'configValoresIgreja': 'dados/valoresIgreja',
     'relatoriosData':    'dados/relatorios',
     'pedidosPendentes':  'dados/pedidosPendentes',
+    'previaMateriais':   'dados/previaMateriais',
   };
 
   let algumEnviado = false;
