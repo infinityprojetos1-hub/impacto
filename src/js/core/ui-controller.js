@@ -495,9 +495,10 @@ function renderizarPedidosPendentes() {
             const bg   = isOrc ? '#e8f5e9' : '#fff3e0';
             const brd  = isOrc ? '#43a047' : '#f9a825';
             const clr  = isOrc ? '#2e7d32' : '#e65100';
-            return `<span style="display:inline-flex;align-items:center;gap:6px;background:${bg};border:1px solid ${brd};border-radius:20px;padding:4px 12px;font-size:13px;font-weight:bold;color:${clr};">
+            return `<span style="display:inline-flex;align-items:center;gap:6px;background:${bg};border:1px solid ${brd};border-radius:20px;padding:4px 12px;font-size:13px;font-weight:bold;color:${clr};cursor:pointer;"
+                onclick="editarPedidoPendente(${idx})">
                 ${label}
-                <button onclick="removerPedidoPendente(${idx})"
+                <button onclick="event.stopPropagation();removerPedidoPendente(${idx})"
                     style="background:none;border:none;cursor:pointer;color:${clr};font-size:14px;line-height:1;padding:0;margin:0;">&times;</button>
             </span>`;
         }).join('') +
@@ -620,6 +621,99 @@ window.removerPedidoPendente = function(idx) {
     pedidosPendentes.splice(idx, 1);
     salvarPedidosPendentes();
     renderizarPedidosPendentes();
+};
+
+window.editarPedidoPendente = function(idx) {
+    const pedido = pedidosPendentes[idx];
+    if (!pedido) return;
+    const num   = _numeroPedido(pedido);
+    const tipo  = (typeof pedido === 'object' && pedido.tipo) || 'nome';
+    const valor = (typeof pedido === 'object' && pedido.valor) || '';
+    const isOrc = tipo === 'orcamento';
+
+    const modal = document.createElement('div');
+    modal.className = 'material-modal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML = `
+        <div style="background:#fff;border-radius:12px;width:95%;max-width:400px;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #eee;">
+                <h3 style="margin:0;font-size:16px;"><i class="fas fa-edit"></i> Editar Pedido Pendente</h3>
+                <button onclick="this.closest('.material-modal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#666;">&times;</button>
+            </div>
+            <div style="padding:20px;display:flex;flex-direction:column;gap:14px;">
+                <div>
+                    <label style="display:block;font-size:13px;color:#555;margin-bottom:6px;">Número do Pedido</label>
+                    <input type="text" id="inputEditarPedido" value="${num}"
+                        style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:13px;color:#555;margin-bottom:6px;">Tipo</label>
+                    <div style="display:flex;gap:10px;">
+                        <label id="lblEditNome" style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid ${!isOrc ? '#f9a825' : '#ddd'};border-radius:8px;cursor:pointer;background:${!isOrc ? '#fff3e0' : '#fff'};">
+                            <input type="radio" name="tipoEditPedido" value="nome" ${!isOrc ? 'checked' : ''}
+                                style="accent-color:#f57f17;" onchange="_pedidoEditTipoChange(this)">
+                            <span style="font-size:13px;font-weight:600;color:#e65100;">Passar nome</span>
+                        </label>
+                        <label id="lblEditOrc" style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid ${isOrc ? '#43a047' : '#ddd'};border-radius:8px;cursor:pointer;background:${isOrc ? '#e8f5e9' : '#fff'};">
+                            <input type="radio" name="tipoEditPedido" value="orcamento" ${isOrc ? 'checked' : ''}
+                                style="accent-color:#43a047;" onchange="_pedidoEditTipoChange(this)">
+                            <span style="font-size:13px;font-weight:600;color:#555;">Orçamento</span>
+                        </label>
+                    </div>
+                </div>
+                <div id="campoEditarValor" style="display:${isOrc ? 'block' : 'none'};">
+                    <label style="display:block;font-size:13px;color:#555;margin-bottom:6px;">Valor do Orçamento</label>
+                    <input type="text" id="inputEditarValor" value="${valor}" placeholder="Ex: 1.500,00"
+                        style="width:100%;padding:10px 12px;border:1px solid #43a047;border-radius:6px;font-size:14px;box-sizing:border-box;">
+                </div>
+                <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:4px;">
+                    <button onclick="this.closest('.material-modal').remove()"
+                        style="background:#f0f0f0;color:#333;border:none;border-radius:6px;padding:10px 20px;cursor:pointer;">Cancelar</button>
+                    <button onclick="_salvarEdicaoPedido(${idx})"
+                        style="background:#f57f17;color:#fff;border:none;border-radius:6px;padding:10px 20px;cursor:pointer;font-weight:bold;">Salvar</button>
+                </div>
+            </div>
+        </div>`;
+    document.body.appendChild(modal);
+    document.getElementById('inputEditarPedido').focus();
+};
+
+window._pedidoEditTipoChange = function(radio) {
+    const campo = document.getElementById('campoEditarValor');
+    if (!campo) return;
+    campo.style.display = radio.value === 'orcamento' ? 'block' : 'none';
+    const lblNome = document.getElementById('lblEditNome');
+    const lblOrc  = document.getElementById('lblEditOrc');
+    if (lblNome) { lblNome.style.borderColor = radio.value === 'nome' ? '#f9a825' : '#ddd'; lblNome.style.background = radio.value === 'nome' ? '#fff3e0' : '#fff'; }
+    if (lblOrc)  { lblOrc.style.borderColor  = radio.value === 'orcamento' ? '#43a047' : '#ddd'; lblOrc.style.background  = radio.value === 'orcamento' ? '#e8f5e9' : '#fff'; }
+    if (radio.value === 'orcamento') { const v = document.getElementById('inputEditarValor'); if (v) v.focus(); }
+};
+
+window._salvarEdicaoPedido = function(idx) {
+    const input = document.getElementById('inputEditarPedido');
+    if (!input) return;
+    const numero = input.value.trim();
+    if (!numero) { input.focus(); return; }
+
+    const tipoEl = document.querySelector('[name=tipoEditPedido]:checked');
+    const tipo   = tipoEl ? tipoEl.value : 'nome';
+
+    // Verifica duplicata ignorando o próprio índice
+    const duplicado = pedidosPendentes.some((p, i) =>
+        i !== idx && _numeroPedido(p).toLowerCase() === numero.toLowerCase()
+    );
+    if (duplicado) { alert('Já existe um pedido com esse número.'); return; }
+
+    const atualizado = { numero, tipo };
+    if (tipo === 'orcamento') {
+        const valEl = document.getElementById('inputEditarValor');
+        atualizado.valor = valEl ? valEl.value.trim() : '';
+    }
+
+    pedidosPendentes[idx] = atualizado;
+    salvarPedidosPendentes();
+    renderizarPedidosPendentes();
+    document.querySelector('.material-modal').remove();
 };
 
 // Remove pedido da lista pelo número (chamado após geração de orçamento)
