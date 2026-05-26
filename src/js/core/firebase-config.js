@@ -577,6 +577,64 @@ function iniciarSincronizacaoTempoReal() {
     }
   });
 
+  // ── Pedidos Pendentes ────────────────────────────────────────────
+  database.ref('dados/pedidosPendentes').on('value', (snapshot) => {
+    const dados = snapshot.val();
+
+    if (!dados) {
+      const localStr = localStorage.getItem('pedidosPendentes');
+      if (localStr) {
+        try {
+          const local = JSON.parse(localStr);
+          const lista = Array.isArray(local) ? local : (local.lista || []);
+          if (lista.length > 0) {
+            const payload = Array.isArray(local) ? { lista: local, _ts: Date.now() } : local;
+            if (!payload._ts) payload._ts = Date.now();
+            salvarNoDatabase('dados/pedidosPendentes', payload);
+            console.log('📤 Pedidos pendentes locais enviados para Firebase');
+          }
+        } catch (e) { /* ignora */ }
+      }
+      return;
+    }
+
+    window._fbReceivendo = true;
+    try {
+      const localStr = localStorage.getItem('pedidosPendentes');
+      let localPed = null;
+      try { localPed = localStr ? JSON.parse(localStr) : null; } catch (_) {}
+      const localTs = localPed ? (localPed._ts || 0) : 0;
+      const remoteTs = dados._ts || 0;
+      const mesmoPed = remoteTs === localTs && remoteTs > 0;
+
+      const listaLocal  = localPed ? (Array.isArray(localPed) ? localPed : (localPed.lista || [])) : [];
+      const listaRemota = Array.isArray(dados.lista) ? dados.lista : [];
+      const pedSalvouHaPouco = window._pedidosSalvouTs && (Date.now() - window._pedidosSalvouTs < 30000);
+      const pedRegride = listaRemota.length < listaLocal.length && listaLocal.length > 0;
+
+      if (!mesmoPed && (pedSalvouHaPouco || remoteTs < localTs || pedRegride) && localStr) {
+        console.log('🛡️ Pedidos pendentes: protegendo dados locais, enviando para Firebase');
+        try {
+          const payload = Array.isArray(localPed) ? { lista: localPed, _ts: Date.now() } : localPed;
+          if (!payload._ts) payload._ts = Date.now();
+          salvarNoDatabase('dados/pedidosPendentes', payload);
+        } catch (e) { /* ignora */ }
+      } else if (!pedRegride) {
+        localStorage.setItem('pedidosPendentes', JSON.stringify(dados));
+        // Atualiza array em memória e re-renderiza
+        if (!mesmoPed && typeof window !== 'undefined') {
+          _fbDebouncedUI('pedidosPendentes', () => {
+            if (typeof carregarPedidosPendentes === 'function') carregarPedidosPendentes();
+            if (typeof renderizarPedidosPendentes === 'function') renderizarPedidosPendentes();
+          });
+          console.log('🔄 Pedidos pendentes atualizados do Firebase');
+        }
+      }
+    } finally {
+      window._fbReceivendo = false;
+    }
+  });
+
   // ── Relatórios ───────────────────────────────────────────────────
   database.ref('dados/relatorios').on('value', (snapshot) => {
     const dados = snapshot.val();
@@ -672,6 +730,7 @@ setInterval(() => {
     'pagamentoData':     'dados/pagamento',
     'configValoresIgreja': 'dados/valoresIgreja',
     'relatoriosData':    'dados/relatorios',
+    'pedidosPendentes':  'dados/pedidosPendentes',
   };
 
   let algumEnviado = false;

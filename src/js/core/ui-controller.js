@@ -432,15 +432,24 @@ window.atualizarListaIgrejas = atualizarListaIgrejas;
 // Cada pedido: { numero: string, tipo: 'nome'|'orcamento', valor?: string }
 let pedidosPendentes = [];
 
+function _normalizarListaPedidos(raw) {
+    if (!Array.isArray(raw)) return [];
+    return raw.map(p => typeof p === 'string' ? { numero: p, tipo: 'nome' } : p);
+}
+
 function carregarPedidosPendentes() {
     try {
         const salvo = localStorage.getItem('pedidosPendentes');
-        if (salvo) pedidosPendentes = JSON.parse(salvo);
-        if (!Array.isArray(pedidosPendentes)) pedidosPendentes = [];
-        // Migração: converte strings antigas para objeto
-        pedidosPendentes = pedidosPendentes.map(p =>
-            typeof p === 'string' ? { numero: p, tipo: 'nome' } : p
-        );
+        if (!salvo) { pedidosPendentes = []; return; }
+        const parsed = JSON.parse(salvo);
+        // Formato antigo: array puro  |  Formato novo: { lista: [], _ts: N }
+        if (Array.isArray(parsed)) {
+            pedidosPendentes = _normalizarListaPedidos(parsed);
+        } else if (parsed && Array.isArray(parsed.lista)) {
+            pedidosPendentes = _normalizarListaPedidos(parsed.lista);
+        } else {
+            pedidosPendentes = [];
+        }
     } catch (e) {
         pedidosPendentes = [];
     }
@@ -448,7 +457,16 @@ function carregarPedidosPendentes() {
 
 function salvarPedidosPendentes() {
     try {
-        localStorage.setItem('pedidosPendentes', JSON.stringify(pedidosPendentes));
+        const payload = { lista: pedidosPendentes, _ts: Date.now() };
+        window._pedidosSalvouTs = payload._ts;
+        localStorage.setItem('pedidosPendentes', JSON.stringify(payload));
+        // Envia ao Firebase imediatamente (se disponível)
+        if (typeof salvarNoDatabase === 'function' && typeof firebaseDisponivel !== 'undefined' && firebaseDisponivel) {
+            if (typeof window._piscarBadgeSync === 'function') window._piscarBadgeSync();
+            salvarNoDatabase('dados/pedidosPendentes', payload)
+                .then(() => { if (typeof window._fbMarcarEnviado === 'function') window._fbMarcarEnviado('pedidosPendentes', payload._ts); })
+                .catch(err => console.warn('⚠️ Pedidos pendentes não salvos no Firebase:', err));
+        }
     } catch (e) {}
 }
 
