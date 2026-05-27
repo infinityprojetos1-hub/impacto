@@ -429,46 +429,88 @@ window.atualizarListaIgrejas = atualizarListaIgrejas;
 // SISTEMA DE PEDIDOS PENDENTES
 // =============================================
 
-// Cada pedido: { numero: string, tipo: 'nome'|'orcamento', valor?: string }
+// Cada pedido: { numero, tipo, valor?, _ts }
+// _deletados: { "numero": timestampDaDeleção }
 let pedidosPendentes = [];
+let _deletadosPedidos = {};   // tombstone para deleções entre dispositivos
 
+// ── helpers ────────────────────────────────────────────────────────
 function _normalizarListaPedidos(raw) {
     if (!Array.isArray(raw)) return [];
-    return raw.map(p => typeof p === 'string' ? { numero: p, tipo: 'nome' } : p);
+    return raw.map(p => {
+        if (typeof p === 'string') return { numero: p, tipo: 'nome', _ts: 0 };
+        if (!p._ts) p._ts = 0;
+        return p;
+    });
+}
+
+// Merge de dois conjuntos de pedidos: vence o item com _ts mais alto;
+// itens com numero no tombstone (e deletados depois de criados) são removidos.
+function _mesclarPedidos(listaA, delA, listaB, delB) {
+    // Combina tombstones: mantém a deleção mais recente por numero
+    const deletados = {};
+    [delA || {}, delB || {}].forEach(d => {
+        Object.entries(d).forEach(([num, ts]) => {
+            deletados[num] = Math.max(deletados[num] || 0, ts);
+        });
+    });
+
+    // Union dos itens: para mesmo numero, ganha o _ts mais alto
+    const mapa = {};
+    [..._normalizarListaPedidos(listaA), ..._normalizarListaPedidos(listaB)].forEach(p => {
+        const num = p.numero || '';
+        if (!num) return;
+        if (!mapa[num] || (p._ts || 0) > (mapa[num]._ts || 0)) mapa[num] = p;
+    });
+
+    // Filtra deletados (só remove se a deleção é posterior à criação do item)
+    const TRINTA_DIAS = 30 * 24 * 3600 * 1000;
+    const agora = Date.now();
+    const lista = Object.values(mapa).filter(p => {
+        const delTs = deletados[p.numero] || 0;
+        return delTs === 0 || (p._ts || 0) > delTs;
+    });
+
+    // Limpa tombstones mais antigos que 30 dias para não crescer indefinidamente
+    Object.keys(deletados).forEach(num => {
+        if (agora - deletados[num] > TRINTA_DIAS) delete deletados[num];
+    });
+
+    return { lista, _deletados: deletados };
 }
 
 function carregarPedidosPendentes() {
     try {
         const salvo = localStorage.getItem('pedidosPendentes');
-        if (!salvo) { pedidosPendentes = []; return; }
+        if (!salvo) { pedidosPendentes = []; _deletadosPedidos = {}; return; }
         const parsed = JSON.parse(salvo);
-        // Formato antigo: array puro  |  Formato novo: { lista: [], _ts: N }
         if (Array.isArray(parsed)) {
             pedidosPendentes = _normalizarListaPedidos(parsed);
-        } else if (parsed && Array.isArray(parsed.lista)) {
-            pedidosPendentes = _normalizarListaPedidos(parsed.lista);
+            _deletadosPedidos = {};
+        } else if (parsed && typeof parsed === 'object') {
+            pedidosPendentes = _normalizarListaPedidos(parsed.lista || []);
+            _deletadosPedidos = parsed._deletados || {};
         } else {
-            pedidosPendentes = [];
+            pedidosPendentes = []; _deletadosPedidos = {};
         }
     } catch (e) {
-        pedidosPendentes = [];
+        pedidosPendentes = []; _deletadosPedidos = {};
     }
 }
 
-function salvarPedidosPendentes() {
-    try {
-        const payload = { lista: pedidosPendentes, _ts: Date.now() };
-        window._pedidosSalvouTs = payload._ts;
-        localStorage.setItem('pedidosPendentes', JSON.stringify(payload));
-        // Envia ao Firebase imediatamente (se disponível)
-        if (typeof salvarNoDatabase === 'function' && typeof firebaseDisponivel !== 'undefined' && firebaseDisponivel) {
-            if (typeof window._piscarBadgeSync === 'function') window._piscarBadgeSync();
-            salvarNoDatabase('dados/pedidosPendentes', payload)
-                .then(() => { if (typeof window._fbMarcarEnviado === 'function') window._fbMarcarEnviado('pedidosPendentes', payload._ts); })
-                .catch(err => console.warn('⚠️ Pedidos pendentes não salvos no Firebase:', err));
-        }
-    } catch (e) {}
+function _persistirPedidos() {
+    const payload = { lista: pedidosPendentes, _deletados: _deletadosPedidos, _ts: Date.now() };
+    window._pedidosSalvouTs = payload._ts;
+    localStorage.setItem('pedidosPendentes', JSON.stringify(payload));
+    if (typeof salvarNoDatabase === 'function' && typeof firebaseDisponivel !== 'undefined' && firebaseDisponivel) {
+        if (typeof window._piscarBadgeSync === 'function') window._piscarBadgeSync();
+        salvarNoDatabase('dados/pedidosPendentes', payload)
+            .then(() => { if (typeof window._fbMarcarEnviado === 'function') window._fbMarcarEnviado('pedidosPendentes', payload._ts); })
+            .catch(err => console.warn('⚠️ Pedidos pendentes não salvos no Firebase:', err));
+    }
 }
+
+function salvarPedidosPendentes() { _persistirPedidos(); }
 
 function _numeroPedido(p) {
     return typeof p === 'object' ? (p.numero || '') : String(p || '');
@@ -605,11 +647,13 @@ window._confirmarAdicionarPedido = function() {
         return;
     }
 
-    const novoPedido = { numero, tipo };
+    const novoPedido = { numero, tipo, _ts: Date.now() };
     if (tipo === 'orcamento') {
         const valEl = document.getElementById('inputPedidoValor');
         novoPedido.valor = valEl ? valEl.value.trim() : '';
     }
+    // Remove tombstone caso o mesmo numero tenha sido deletado antes
+    delete _deletadosPedidos[numero];
 
     pedidosPendentes.push(novoPedido);
     salvarPedidosPendentes();
@@ -618,6 +662,11 @@ window._confirmarAdicionarPedido = function() {
 };
 
 window.removerPedidoPendente = function(idx) {
+    const pedido = pedidosPendentes[idx];
+    if (pedido) {
+        // Registra tombstone para que outros dispositivos também removam
+        _deletadosPedidos[pedido.numero] = Date.now();
+    }
     pedidosPendentes.splice(idx, 1);
     salvarPedidosPendentes();
     renderizarPedidosPendentes();
@@ -710,6 +759,13 @@ window._salvarEdicaoPedido = function(idx) {
         atualizado.valor = valEl ? valEl.value.trim() : '';
     }
 
+    atualizado._ts = Date.now();
+    // Se o numero mudou, registra tombstone do numero antigo
+    const numAntigo = _numeroPedido(pedidosPendentes[idx]);
+    if (numAntigo && numAntigo !== atualizado.numero) {
+        _deletadosPedidos[numAntigo] = Date.now();
+        delete _deletadosPedidos[atualizado.numero];
+    }
     pedidosPendentes[idx] = atualizado;
     salvarPedidosPendentes();
     renderizarPedidosPendentes();
@@ -722,6 +778,7 @@ window.removerPedidoPendenteByNumero = function(numero) {
     const val = String(numero).trim().toLowerCase();
     const idx = pedidosPendentes.findIndex(p => _numeroPedido(p).trim().toLowerCase() === val);
     if (idx >= 0) {
+        _deletadosPedidos[pedidosPendentes[idx].numero] = Date.now();
         pedidosPendentes.splice(idx, 1);
         salvarPedidosPendentes();
         renderizarPedidosPendentes();

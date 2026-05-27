@@ -623,19 +623,22 @@ function iniciarSincronizacaoTempoReal() {
     }
   });
 
-  // ── Pedidos Pendentes ────────────────────────────────────────────
+  // ── Pedidos Pendentes ─────────────────────────────────────────────
+  // Usa merge por item (não timestamp global) para suportar múltiplos dispositivos
   database.ref('dados/pedidosPendentes').on('value', (snapshot) => {
-    const dados = snapshot.val();
+    const remoto = snapshot.val();
 
-    if (!dados) {
+    if (!remoto) {
+      // Firebase vazio → sobe dados locais
       const localStr = localStorage.getItem('pedidosPendentes');
       if (localStr) {
         try {
           const local = JSON.parse(localStr);
           const lista = Array.isArray(local) ? local : (local.lista || []);
           if (lista.length > 0) {
-            const payload = Array.isArray(local) ? { lista: local, _ts: Date.now() } : local;
-            if (!payload._ts) payload._ts = Date.now();
+            const payload = Array.isArray(local)
+              ? { lista: local, _deletados: {}, _ts: Date.now() }
+              : { ...local, _ts: local._ts || Date.now() };
             salvarNoDatabase('dados/pedidosPendentes', payload);
             console.log('📤 Pedidos pendentes locais enviados para Firebase');
           }
@@ -649,33 +652,42 @@ function iniciarSincronizacaoTempoReal() {
       const localStr = localStorage.getItem('pedidosPendentes');
       let localPed = null;
       try { localPed = localStr ? JSON.parse(localStr) : null; } catch (_) {}
-      const localTs = localPed ? (localPed._ts || 0) : 0;
-      const remoteTs = dados._ts || 0;
-      const mesmoPed = remoteTs === localTs && remoteTs > 0;
 
       const listaLocal  = localPed ? (Array.isArray(localPed) ? localPed : (localPed.lista || [])) : [];
-      const listaRemota = Array.isArray(dados.lista) ? dados.lista : [];
-      const pedSalvouHaPouco = window._pedidosSalvouTs && (Date.now() - window._pedidosSalvouTs < 30000);
-      const pedRegride = listaRemota.length < listaLocal.length && listaLocal.length > 0;
+      const delLocal    = (localPed && !Array.isArray(localPed)) ? (localPed._deletados || {}) : {};
+      const listaRemota = Array.isArray(remoto.lista) ? remoto.lista : [];
+      const delRemoto   = remoto._deletados || {};
 
-      if (!mesmoPed && (pedSalvouHaPouco || remoteTs < localTs || pedRegride) && localStr) {
-        console.log('🛡️ Pedidos pendentes: protegendo dados locais, enviando para Firebase');
-        try {
-          const payload = Array.isArray(localPed) ? { lista: localPed, _ts: Date.now() } : localPed;
-          if (!payload._ts) payload._ts = Date.now();
-          salvarNoDatabase('dados/pedidosPendentes', payload);
-        } catch (e) { /* ignora */ }
-      } else if (!pedRegride) {
-        localStorage.setItem('pedidosPendentes', JSON.stringify(dados));
-        // Atualiza array em memória e re-renderiza
-        if (!mesmoPed && typeof window !== 'undefined') {
-          _fbDebouncedUI('pedidosPendentes', () => {
-            if (typeof carregarPedidosPendentes === 'function') carregarPedidosPendentes();
-            if (typeof renderizarPedidosPendentes === 'function') renderizarPedidosPendentes();
-          });
-          console.log('🔄 Pedidos pendentes atualizados do Firebase');
-        }
+      // Merge: união de ambos os lados aplicando tombstones
+      const merged = typeof _mesclarPedidos === 'function'
+        ? _mesclarPedidos(listaLocal, delLocal, listaRemota, delRemoto)
+        : { lista: listaRemota, _deletados: delRemoto };
+
+      const payload = { lista: merged.lista, _deletados: merged._deletados, _ts: Date.now() };
+
+      // Atualiza memória
+      if (typeof pedidosPendentes !== 'undefined') {
+        pedidosPendentes.length = 0;
+        merged.lista.forEach(p => pedidosPendentes.push(p));
       }
+      if (typeof _deletadosPedidos !== 'undefined') {
+        Object.keys(_deletadosPedidos).forEach(k => delete _deletadosPedidos[k]);
+        Object.assign(_deletadosPedidos, merged._deletados);
+      }
+
+      // Persiste localmente
+      window._pedidosSalvouTs = payload._ts;
+      localStorage.setItem('pedidosPendentes', JSON.stringify(payload));
+
+      // Sobe o resultado mergeado de volta (garante que Firebase também tem o merge)
+      salvarNoDatabase('dados/pedidosPendentes', payload)
+        .then(() => { if (typeof window._fbMarcarEnviado === 'function') window._fbMarcarEnviado('pedidosPendentes', payload._ts); })
+        .catch(() => {});
+
+      _fbDebouncedUI('pedidosPendentes', () => {
+        if (typeof renderizarPedidosPendentes === 'function') renderizarPedidosPendentes();
+      });
+      console.log('🔄 Pedidos pendentes mergeados do Firebase:', merged.lista.length, 'itens');
     } finally {
       window._fbReceivendo = false;
     }
