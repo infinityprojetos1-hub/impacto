@@ -43,17 +43,17 @@ Seu site PWA está **ONLINE** e funcionando!
 
 ### 🌍 **Site Online:**
 ```
-https://infinityprojetos1-hub.github.io/inpacto/
+https://infinityprojetos1-hub.github.io/impacto/
 ```
 
 ### 📂 **Repositório GitHub:**
 ```
-https://github.com/infinityprojetos1-hub/inpacto
+https://github.com/infinityprojetos1-hub/impacto
 ```
 
 ### 🔥 **Firebase Console:**
 ```
-https://console.firebase.google.com/project/inpacto-9e38c
+https://console.firebase.google.com/project/impacto-9e38c
 ```
 
 ---
@@ -64,7 +64,7 @@ https://console.firebase.google.com/project/inpacto-9e38c
 
 **IMPORTANTE:** Sem isso, o Firebase não vai funcionar!
 
-1. **Abra:** https://console.firebase.google.com/project/inpacto-9e38c/database/inpacto-9e38c-default-rtdb/rules
+1. **Abra:** https://console.firebase.google.com/project/impacto-9e38c/database/impacto-9e38c-default-rtdb/rules
 
 2. **Veja que está assim (bloqueado):**
    ```json
@@ -96,7 +96,7 @@ https://console.firebase.google.com/project/inpacto-9e38c
 
 1. Abra no Chrome/Safari:
    ```
-   https://infinityprojetos1-hub.github.io/inpacto/
+   https://infinityprojetos1-hub.github.io/impacto/
    ```
 
 2. Menu (⋮ ou 􀉐) → **"Adicionar à tela inicial"**
@@ -160,7 +160,7 @@ git push origin main
 
 ### Ver Status do Deploy:
 ```bash
-gh api repos/infinityprojetos1-hub/inpacto/pages/builds/latest
+gh api repos/infinityprojetos1-hub/impacto/pages/builds/latest
 ```
 
 ### Ver Repositório no Navegador:
@@ -169,7 +169,7 @@ gh repo view --web
 ```
 
 ### Ver Dados no Firebase:
-https://console.firebase.google.com/project/inpacto-9e38c/database/data
+https://console.firebase.google.com/project/impacto-9e38c/database/data
 
 ---
 
@@ -191,11 +191,11 @@ https://console.firebase.google.com/project/inpacto-9e38c/database/data
 
 ## 🆘 LINKS ÚTEIS:
 
-- **Site:** https://infinityprojetos1-hub.github.io/inpacto/
-- **Repo:** https://github.com/infinityprojetos1-hub/inpacto
-- **Firebase:** https://console.firebase.google.com/project/inpacto-9e38c
-- **Pages Settings:** https://github.com/infinityprojetos1-hub/inpacto/settings/pages
-- **Database Rules:** https://console.firebase.google.com/project/inpacto-9e38c/database/inpacto-9e38c-default-rtdb/rules
+- **Site:** https://infinityprojetos1-hub.github.io/impacto/
+- **Repo:** https://github.com/infinityprojetos1-hub/impacto
+- **Firebase:** https://console.firebase.google.com/project/impacto-9e38c
+- **Pages Settings:** https://github.com/infinityprojetos1-hub/impacto/settings/pages
+- **Database Rules:** https://console.firebase.google.com/project/impacto-9e38c/database/impacto-9e38c-default-rtdb/rules
 
 ---
 

@@ -850,7 +850,7 @@ function gerarImagemPagamento() {
         ctx.font = '11px Arial';
         ctx.fillStyle = 'rgba(150,150,200,0.35)';
         ctx.textAlign = 'center';
-        ctx.fillText('Gerado em ' + new Date().toLocaleDateString('pt-BR') + ' · Inpacto Sistema de Gestão', LARGURA / 2, altura - 12);
+        ctx.fillText('Gerado em ' + new Date().toLocaleDateString('pt-BR') + ' · Impacto Sistema de Gestão', LARGURA / 2, altura - 12);
 
         ctx.restore();
 

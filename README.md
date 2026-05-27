@@ -1,4 +1,4 @@
-# 🚀 Gerador de Orçamentos - Inpacto
+# 🚀 Gerador de Orçamentos - Impacto
 
 Sistema automatizado PWA para geração de orçamentos personalizados com checklists técnicos.
 
@@ -8,7 +8,7 @@ Sistema automatizado PWA para geração de orçamentos personalizados com checkl
 
 ## 🌐 Demo Online
 
-**Acesse:** https://infinityprojetos1-hub.github.io/inpacto/
+**Acesse:** https://infinityprojetos1-hub.github.io/impacto/
 
 ## ✨ Funcionalidades
 
@@ -46,7 +46,7 @@ Este sistema funciona como um aplicativo nativo:
 ## 🚀 Como Usar
 
 ### 1️⃣ Acesse o site
-https://infinityprojetos1-hub.github.io/inpacto/
+https://infinityprojetos1-hub.github.io/impacto/
 
 ### 2️⃣ Instale como App (Opcional)
 
@@ -69,10 +69,10 @@ https://infinityprojetos1-hub.github.io/inpacto/
 
 ```bash
 # Clone o repositório
-git clone https://github.com/infinityprojetos1-hub/inpacto.git
+git clone https://github.com/infinityprojetos1-hub/impacto.git
 
 # Entre na pasta
-cd inpacto
+cd impacto
 
 # Abra o index.html no navegador
 # Ou use um servidor local:
@@ -83,7 +83,7 @@ python -m http.server 8000
 ## 📂 Estrutura do Projeto
 
 ```
-inpacto/
+impacto/
 ├── index.html              # Página principal
 ├── manifest.json           # PWA Manifest
 ├── sw.js                   # Service Worker
@@ -110,7 +110,7 @@ inpacto/
 ### Estrutura dos Dados:
 
 ```
-inpacto-9e38c-default-rtdb/
+impacto-9e38c-default-rtdb/
 ├── igrejas/
 ├── checklists/
 ├── configuracoes/
@@ -119,7 +119,7 @@ inpacto-9e38c-default-rtdb/
 
 ### Configurar Regras:
 
-1. Acesse: [Firebase Console](https://console.firebase.google.com/project/inpacto-9e38c/database/rules)
+1. Acesse: [Firebase Console](https://console.firebase.google.com/project/impacto-9e38c/database/rules)
 2. Cole as regras:
 
 ```json
@@ -154,7 +154,7 @@ Edite as variáveis CSS em `index.html`:
 
 ## 📝 Licença
 
-Este projeto é privado e de propriedade da **Inpacto**.
+Este projeto é privado e de propriedade da **Impacto**.
 
 ## 👤 Autor
 

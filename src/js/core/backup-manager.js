@@ -51,7 +51,7 @@ function executarBackupCompleto() {
 
     const json = JSON.stringify(backup, null, 2);
     const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
-    const nome = `backup-inpacto-${new Date().toISOString().slice(0, 10)}.json`;
+    const nome = `backup-impacto-${new Date().toISOString().slice(0, 10)}.json`;
 
     if (typeof saveAs !== 'undefined') {
       saveAs(blob, nome);

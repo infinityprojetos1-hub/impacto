@@ -4,14 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-    <title>Gerador de Orçamentos - Inpacto</title>
+    <title>Gerador de Orçamentos - Impacto</title>
     
     <!-- PWA Meta Tags -->
     <meta name="description" content="Sistema automatizado para geração de orçamentos personalizados com checklists técnicos">
     <meta name="theme-color" content="#667eea">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Inpacto">
+    <meta name="apple-mobile-web-app-title" content="Impacto">
 
     <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
@@ -4889,7 +4889,7 @@
         gap: 14px;
         font-family: inherit;">
         <div style="flex:1">
-            <div style="font-weight:700; font-size:0.95em;">Instalar Inpacto</div>
+            <div style="font-weight:700; font-size:0.95em;">Instalar Impacto</div>
             <div style="font-size:0.8em; opacity:0.88; margin-top:2px;">Adicione à tela inicial para acesso rápido</div>
         </div>
         <button id="pwaInstallBtn" style="
@@ -4931,7 +4931,7 @@
             });
 
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/inpacto/sw.js')
+                navigator.serviceWorker.register('/impacto/sw.js')
                     .then(registration => {
                         console.log('✅ SW registrado:', registration.scope);
 
@@ -4979,7 +4979,7 @@
                 const banner = document.getElementById('pwaInstallBanner');
                 const installBtn = document.getElementById('pwaInstallBtn');
                 if (banner && installBtn) {
-                    banner.querySelector('div > div:first-child').textContent = 'Instalar Inpacto';
+                    banner.querySelector('div > div:first-child').textContent = 'Instalar Impacto';
                     banner.querySelector('div > div:last-child').textContent = 'Toque em   e "Adicionar à Tela de Início"';
                     installBtn.style.display = 'none';
                     banner.style.display = 'flex';

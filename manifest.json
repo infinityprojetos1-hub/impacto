@@ -1,9 +1,9 @@
 {
-  "name": "Inpacto – Gestão de Igrejas",
-  "short_name": "Inpacto",
+  "name": "Impacto – Gestão de Igrejas",
+  "short_name": "Impacto",
   "description": "Sistema de gestão de orçamentos, materiais, checklists e notas fiscais para igrejas",
-  "start_url": "/inpacto/",
-  "scope": "/inpacto/",
+  "start_url": "/impacto/",
+  "scope": "/impacto/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#667eea",
@@ -11,23 +11,23 @@
   "lang": "pt-BR",
   "icons": [
     {
-      "src": "/inpacto/favicon.png",
+      "src": "/impacto/favicon.png",
       "sizes": "32x32",
       "type": "image/png"
     },
     {
-      "src": "/inpacto/icon-180.png",
+      "src": "/impacto/icon-180.png",
       "sizes": "180x180",
       "type": "image/png"
     },
     {
-      "src": "/inpacto/icon-192.png",
+      "src": "/impacto/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/inpacto/icon-512.png",
+      "src": "/impacto/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
