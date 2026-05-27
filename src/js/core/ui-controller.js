@@ -548,7 +548,9 @@ function renderizarPedidosPendentes() {
 }
 
 window.abrirModalAdicionarPedido = function() {
+    document.getElementById('modalPedidoPendente')?.remove();
     const modal = document.createElement('div');
+    modal.id = 'modalPedidoPendente';
     modal.className = 'material-modal';
     modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
     modal.innerHTML = `
@@ -658,7 +660,7 @@ window._confirmarAdicionarPedido = function() {
     pedidosPendentes.push(novoPedido);
     salvarPedidosPendentes();
     renderizarPedidosPendentes();
-    document.querySelector('.material-modal').remove();
+    document.getElementById('modalPedidoPendente')?.remove();
 };
 
 window.removerPedidoPendente = function(idx) {
@@ -680,7 +682,9 @@ window.editarPedidoPendente = function(idx) {
     const valor = (typeof pedido === 'object' && pedido.valor) || '';
     const isOrc = tipo === 'orcamento';
 
+    document.getElementById('modalPedidoPendente')?.remove();
     const modal = document.createElement('div');
+    modal.id = 'modalPedidoPendente';
     modal.className = 'material-modal';
     modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
     modal.innerHTML = `
@@ -769,7 +773,7 @@ window._salvarEdicaoPedido = function(idx) {
     pedidosPendentes[idx] = atualizado;
     salvarPedidosPendentes();
     renderizarPedidosPendentes();
-    document.querySelector('.material-modal').remove();
+    document.getElementById('modalPedidoPendente')?.remove();
 };
 
 // Remove pedido da lista pelo número (chamado após geração de orçamento)
