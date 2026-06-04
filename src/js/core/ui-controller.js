@@ -792,6 +792,19 @@ window.removerPedidoPendenteByNumero = function(numero) {
 function inicializarPedidosPendentes() {
     carregarPedidosPendentes();
     renderizarPedidosPendentes();
+    // Solicita permissão de notificação na primeira interação do usuário
+    // (dispara apenas uma vez — o navegador lembra da escolha)
+    const _pedirPermissao = () => {
+        if (typeof window._solicitarPermissaoNotificacoes === 'function') {
+            window._solicitarPermissaoNotificacoes();
+        }
+        document.removeEventListener('click', _pedirPermissao);
+        document.removeEventListener('touchend', _pedirPermissao);
+    };
+    if ('Notification' in window && Notification.permission === 'default') {
+        document.addEventListener('click', _pedirPermissao, { once: true });
+        document.addEventListener('touchend', _pedirPermissao, { once: true });
+    }
 }
 
 window.obterPedidosPendentes = function() { return pedidosPendentes; };

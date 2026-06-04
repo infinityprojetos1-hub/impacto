@@ -195,6 +195,42 @@ async function buscarArquivoBase64(caminho) {
   }
 }
 
+// ===== NOTIFICAÇÕES DO NAVEGADOR =====
+
+// Envia notificação via service worker (funciona em segundo plano no celular)
+function _notificarPedido(pedido) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const num   = (typeof pedido === 'object' ? pedido.numero : pedido) || '?';
+  const tipo  = (typeof pedido === 'object' && pedido.tipo) || 'nome';
+  const valor = (typeof pedido === 'object' && pedido.valor) ? pedido.valor : null;
+  const detalhe = tipo === 'orcamento' ? `Orçamento · R$ ${valor || '—'}` : 'Passar nome';
+  const body  = `${num} · ${detalhe}`;
+
+  if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({
+      type: 'SHOW_NOTIFICATION',
+      title: '📋 Novo Pedido Pendente',
+      body,
+      tag: 'pedido-' + num
+    });
+  } else if (Notification.permission === 'granted') {
+    new Notification('📋 Novo Pedido Pendente', {
+      body,
+      icon: '/impacto/icon-192.png'
+    });
+  }
+}
+
+// Solicita permissão assim que o usuário interagir pela primeira vez
+window._solicitarPermissaoNotificacoes = function() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    Notification.requestPermission().then(perm => {
+      console.log('🔔 Permissão de notificação:', perm);
+    });
+  }
+};
+
 // ===== SINCRONIZAÇÃO BIDIRECIONAL =====
 
 // Flag global para evitar loop: quando recebendo do Firebase, não salva de volta
@@ -658,6 +694,9 @@ function iniciarSincronizacaoTempoReal() {
       const listaRemota = Array.isArray(remoto.lista) ? remoto.lista : [];
       const delRemoto   = remoto._deletados || {};
 
+      // Captura números existentes ANTES do merge para detectar novidades
+      const numerosAntesDoMerge = new Set(listaLocal.map(p => (typeof p === 'object' ? p.numero : p) || ''));
+
       // Merge: união de ambos os lados aplicando tombstones
       const merged = typeof _mesclarPedidos === 'function'
         ? _mesclarPedidos(listaLocal, delLocal, listaRemota, delRemoto)
@@ -688,6 +727,17 @@ function iniciarSincronizacaoTempoReal() {
         if (typeof renderizarPedidosPendentes === 'function') renderizarPedidosPendentes();
       });
       console.log('🔄 Pedidos pendentes mergeados do Firebase:', merged.lista.length, 'itens');
+
+      // Notifica itens novos que vieram de outro dispositivo
+      // (só após a inicialização e apenas itens que não existiam antes)
+      if (window._pedidosInicializado) {
+        const novos = merged.lista.filter(p => {
+          const num = (typeof p === 'object' ? p.numero : p) || '';
+          return num && !numerosAntesDoMerge.has(num);
+        });
+        novos.forEach(p => _notificarPedido(p));
+      }
+      window._pedidosInicializado = true;
     } finally {
       window._fbReceivendo = false;
     }

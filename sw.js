@@ -5,7 +5,7 @@
 // IMPORTANTE: incremente CACHE_VERSION a cada deploy para forçar atualização.
 // ────────────────────────────────────────────────────────────────────────────
 
-const CACHE_VERSION = 'v2.75';
+const CACHE_VERSION = 'v2.76';
 const CACHE_NAME    = `orcamentos-impacto-${CACHE_VERSION}`;
 const BASE_PATH     = '/impacto';
 
@@ -86,7 +86,7 @@ self.addEventListener('fetch', event => {
   }
 });
 
-// ── Mensagem da página para forçar atualização ou consultar versão ───────────
+// ── Mensagem da página para forçar atualização, consultar versão ou notificar ─
 self.addEventListener('message', event => {
   if (event.data === 'SKIP_WAITING') {
     self.skipWaiting();
@@ -94,6 +94,31 @@ self.addEventListener('message', event => {
   if (event.data && event.data.type === 'GET_CACHE_VERSION' && event.ports && event.ports[0]) {
     event.ports[0].postMessage({ cacheVersion: CACHE_VERSION });
   }
+  // Notificação enviada pela página (funciona mesmo com app em segundo plano)
+  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+    const { title, body, tag } = event.data;
+    self.registration.showNotification(title || 'Impacto', {
+      body: body || '',
+      icon:  `${BASE_PATH}/icon-192.png`,
+      badge: `${BASE_PATH}/icon-192.png`,
+      tag:   tag || 'impacto-notif',
+      renotify: true,
+      vibrate: [200, 100, 200]
+    });
+  }
+});
+
+// Ao clicar na notificação: abre ou foca a aba do app
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+      const appUrl = self.registration.scope;
+      const existing = clients.find(c => c.url.startsWith(appUrl));
+      if (existing) return existing.focus();
+      return self.clients.openWindow(appUrl);
+    })
+  );
 });
 
 console.log(`🚀 Service Worker ${CACHE_VERSION} carregado!`);
