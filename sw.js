@@ -5,7 +5,7 @@
 //   • Isso evita pressão de memória em dispositivos Android
 // ────────────────────────────────────────────────────────────────────────────
 
-const CACHE_VERSION = 'v2.82';
+const CACHE_VERSION = 'v2.83';
 const CACHE_NAME    = `impacto-shell-${CACHE_VERSION}`;
 const BASE_PATH     = '/impacto';
 
@@ -91,15 +91,16 @@ self.addEventListener('message', event => {
   }
   if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
     const { title, body, tag } = event.data;
+    const iconUrl = new URL(`${BASE_PATH}/icon-192.png`, self.location.origin).href;
     event.waitUntil(
       self.registration.showNotification(title || 'Impacto', {
         body:     body || '',
-        icon:     `${BASE_PATH}/icon-192.png`,
-        badge:    `${BASE_PATH}/icon-192.png`,
+        icon:     iconUrl,
+        badge:    iconUrl,
         tag:      tag || 'impacto-notif',
         renotify: true,
         vibrate:  [200, 100, 200],
-      }).catch(() => {})
+      }).catch(err => console.warn('SW showNotification erro:', err))
     );
   }
 });

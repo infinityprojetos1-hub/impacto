@@ -197,45 +197,82 @@ async function buscarArquivoBase64(caminho) {
 
 // ===== NOTIFICAÇÕES DO NAVEGADOR =====
 
+// Detecta pedidos que existem no remoto mas ainda não no local (outro dispositivo adicionou)
+function _pedidosNovosNoRemoto(listaLocal, listaRemota, delRemoto) {
+  const locais = new Set((listaLocal || []).map(p => {
+    const n = (typeof p === 'object' ? p.numero : p) || '';
+    return String(n).trim().toLowerCase();
+  }).filter(Boolean));
+  const novos = [];
+  (listaRemota || []).forEach(p => {
+    const num = String((typeof p === 'object' ? p.numero : p) || '').trim();
+    const key = num.toLowerCase();
+    if (!key || locais.has(key)) return;
+    const delTs = (delRemoto && (delRemoto[num] || delRemoto[key])) || 0;
+    if (delTs && (p._ts || 0) <= delTs) return;
+    novos.push(p);
+  });
+  return novos;
+}
+
 // Envia notificação via service worker (funciona em segundo plano no celular)
 function _notificarPedido(pedido) {
-  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  if (!('Notification' in window)) {
+    console.warn('🔔 Notificações não suportadas neste navegador');
+    return;
+  }
+  if (Notification.permission !== 'granted') {
+    console.warn('🔔 Permissão de notificação não concedida:', Notification.permission);
+    return;
+  }
   const num   = (typeof pedido === 'object' ? pedido.numero : pedido) || '?';
   const tipo  = (typeof pedido === 'object' && pedido.tipo) || 'nome';
   const valor = (typeof pedido === 'object' && pedido.valor) ? pedido.valor : null;
   const detalhe = tipo === 'orcamento' ? `Orçamento · R$ ${valor || '—'}` : 'Passar nome';
   const body  = `${num} · ${detalhe}`;
-  const opts = {
-    body,
-    icon: '/impacto/icon-192.png',
-    badge: '/impacto/icon-192.png',
-    tag: 'pedido-' + num,
-    renotify: true,
-    vibrate: [200, 100, 200],
-  };
+  const iconUrl = (location.origin || '') + '/impacto/icon-192.png';
+  const title = '📋 Novo Pedido Pendente';
+  const tag = 'pedido-' + String(num).replace(/\s/g, '_');
 
-  // Service worker: funciona com app em segundo plano (aba/PWA aberta em background)
-  const enviar = (reg) => {
-    if (reg && reg.showNotification) {
-      reg.showNotification('📋 Novo Pedido Pendente', opts).catch(() => {});
-    } else if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({
-        type: 'SHOW_NOTIFICATION',
-        title: '📋 Novo Pedido Pendente',
-        body,
-        tag: 'pedido-' + num,
+  const mostrarViaSw = (reg) => {
+    if (!reg) {
+      new Notification(title, { body, icon: iconUrl, tag });
+      return;
+    }
+    if (reg.showNotification) {
+      reg.showNotification(title, {
+        body, icon: iconUrl, badge: iconUrl, tag, renotify: true, vibrate: [200, 100, 200],
+      }).catch(err => {
+        console.warn('🔔 showNotification falhou, tentando postMessage:', err);
+        _notificarPedidoViaPostMessage(reg, title, body, tag);
       });
     } else {
-      new Notification('📋 Novo Pedido Pendente', opts);
+      _notificarPedidoViaPostMessage(reg, title, body, tag);
     }
   };
 
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.ready.then(enviar).catch(() => new Notification('📋 Novo Pedido Pendente', opts));
-  } else {
-    new Notification('📋 Novo Pedido Pendente', opts);
+  function _notificarPedidoViaPostMessage(reg, title, body, tag) {
+    const sw = reg.active || reg.waiting || reg.installing || navigator.serviceWorker.controller;
+    if (sw) {
+      sw.postMessage({ type: 'SHOW_NOTIFICATION', title, body, tag });
+    } else {
+      new Notification(title, { body, icon: iconUrl, tag });
+    }
   }
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready
+      .then(mostrarViaSw)
+      .catch(err => {
+        console.warn('🔔 SW não pronto:', err);
+        new Notification(title, { body, icon: iconUrl, tag });
+      });
+  } else {
+    new Notification(title, { body, icon: iconUrl, tag });
+  }
+  console.log('🔔 Notificação enviada:', num);
 }
+window._notificarPedido = _notificarPedido;
 
 // Atualiza o texto do status nas Configurações
 window._atualizarStatusNotificacoesUI = function() {
@@ -286,10 +323,11 @@ window._ativarNotificacoesApp = async function() {
   if ('serviceWorker' in navigator) {
     try {
       const reg = await navigator.serviceWorker.ready;
+      const iconUrl = (location.origin || '') + '/impacto/icon-192.png';
       await reg.showNotification('🔔 Impacto', {
         body: 'Notificações ativadas! Você será avisado quando houver novo pedido pendente.',
-        icon: '/impacto/icon-192.png',
-        badge: '/impacto/icon-192.png',
+        icon: iconUrl,
+        badge: iconUrl,
         tag: 'impacto-teste',
       });
     } catch (e) {
@@ -782,17 +820,21 @@ function iniciarSincronizacaoTempoReal() {
       const listaRemota = Array.isArray(remoto.lista) ? remoto.lista : [];
       const delRemoto   = remoto._deletados || {};
 
+      // Primeira leitura do Firebase = sincronização inicial (sem notificar pedidos antigos)
+      const ehPrimeiraLeituraFb = !window._pedidosFbConectou;
+      const novosParaNotificar = ehPrimeiraLeituraFb
+        ? []
+        : _pedidosNovosNoRemoto(listaLocal, listaRemota, delRemoto);
+
       const hashAntes   = _hashPedidos(listaLocal, delLocal);
       const hashRemoto  = _hashPedidos(listaRemota, delRemoto);
 
-      // Dados remotos idênticos ao local — nada a fazer
+      // Dados remotos idênticos ao local — nada a fazer (exceto marcar conectado)
       if (hashAntes === hashRemoto) {
         if (typeof window._fbMarcarEnviado === 'function') window._fbMarcarEnviado('pedidosPendentes', remoto._ts || 0);
-        window._pedidosInicializado = true;
+        window._pedidosFbConectou = true;
         return;
       }
-
-      const numerosAntesDoMerge = new Set(listaLocal.map(p => (typeof p === 'object' ? p.numero : p) || ''));
 
       const merged = typeof _mesclarPedidos === 'function'
         ? _mesclarPedidos(listaLocal, delLocal, listaRemota, delRemoto)
@@ -803,7 +845,7 @@ function iniciarSincronizacaoTempoReal() {
       const precisaSubir = hashMerged !== hashRemoto;
 
       if (!mudouLocal && !precisaSubir) {
-        window._pedidosInicializado = true;
+        window._pedidosFbConectou = true;
         return;
       }
 
@@ -836,13 +878,13 @@ function iniciarSincronizacaoTempoReal() {
         });
       }
 
-      if (window._pedidosInicializado && mudouLocal) {
-        merged.lista.filter(p => {
-          const num = (typeof p === 'object' ? p.numero : p) || '';
-          return num && !numerosAntesDoMerge.has(num);
-        }).forEach(p => _notificarPedido(p));
+      // Notifica pedidos que chegaram de outro aparelho (após a 1ª sincronização)
+      if (novosParaNotificar.length > 0) {
+        console.log('🔔 Novos pedidos de outro dispositivo:', novosParaNotificar.map(p => p.numero).join(', '));
+        novosParaNotificar.forEach(p => _notificarPedido(p));
       }
-      window._pedidosInicializado = true;
+
+      window._pedidosFbConectou = true;
       console.log('🔄 Pedidos:', merged.lista.length, 'itens', precisaSubir ? '(sync)' : '(local)');
     } finally {
       window._fbReceivendo = false;

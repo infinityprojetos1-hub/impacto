@@ -478,6 +478,7 @@ function _mesclarPedidos(listaA, delA, listaB, delB) {
 
     return { lista, _deletados: deletados };
 }
+window._mesclarPedidos = _mesclarPedidos;
 
 function carregarPedidosPendentes() {
     try {
