@@ -497,17 +497,11 @@ function carregarPedidosPendentes() {
     } catch (e) {
         pedidosPendentes = []; _deletadosPedidos = {};
     }
-    if (typeof window._pedidosSyncSnapshotLocal === 'function') {
-        window._pedidosSyncSnapshotLocal(pedidosPendentes);
-    }
 }
 
 function _persistirPedidos() {
     const payload = { lista: pedidosPendentes, _deletados: _deletadosPedidos, _ts: Date.now() };
     window._pedidosSalvouTs = payload._ts;
-    if (typeof window._pedidosSyncSnapshotLocal === 'function') {
-        window._pedidosSyncSnapshotLocal(pedidosPendentes);
-    }
     localStorage.setItem('pedidosPendentes', JSON.stringify(payload));
     // Marca como enviado antes do Firebase responder (evita eco no listener)
     if (typeof window._fbMarcarEnviado === 'function') {
@@ -527,6 +521,8 @@ function _numeroPedido(p) {
 }
 
 function renderizarPedidosPendentes() {
+    const secao = document.getElementById('secaoPedidosPendentes');
+    if (secao && secao.style.display === 'none') return;
     const container = document.getElementById('listaPedidosPendentes');
     if (!container) return;
 
@@ -802,8 +798,6 @@ window.removerPedidoPendenteByNumero = function(numero) {
 function inicializarPedidosPendentes() {
     carregarPedidosPendentes();
     renderizarPedidosPendentes();
-    // Permissão de notificação: solicitada apenas pelo botão nas configurações
-    // (não pede automaticamente para não interferir com o primeiro toque no Android)
 }
 
 window.obterPedidosPendentes = function() { return pedidosPendentes; };

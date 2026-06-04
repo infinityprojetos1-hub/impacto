@@ -195,201 +195,6 @@ async function buscarArquivoBase64(caminho) {
   }
 }
 
-// ===== NOTIFICAÇÕES DO NAVEGADOR =====
-
-// Números ativos na lista remota (ignora tombstones)
-function _pedidosNumerosAtivos(lista, deletados) {
-  const set = new Set();
-  (lista || []).forEach(p => {
-    const num = String((typeof p === 'object' ? p.numero : p) || '').trim().toLowerCase();
-    if (!num) return;
-    const delTs = (deletados && (deletados[num] || deletados[p.numero])) || 0;
-    if (delTs && (p._ts || 0) <= delTs) return;
-    set.add(num);
-  });
-  return set;
-}
-
-// Compara snapshot remoto ANTERIOR vs ATUAL (não depende do local — funciona em Opera/Chrome)
-function _pedidosDetectarNovosSnapshot(listaRemota, delRemoto) {
-  const prev = window._pedidosSnapNumeros;
-  if (!prev) return [];
-  const novos = [];
-  (listaRemota || []).forEach(p => {
-    const num = String((typeof p === 'object' ? p.numero : p) || '').trim().toLowerCase();
-    if (!num || prev.has(num)) return;
-    const delTs = (delRemoto && (delRemoto[num] || delRemoto[p.numero])) || 0;
-    if (delTs && (p._ts || 0) <= delTs) return;
-    novos.push(p);
-  });
-  return novos;
-}
-
-function _pedidosAtualizarSnapshotRemoto(listaRemota, delRemoto) {
-  window._pedidosSnapNumeros = _pedidosNumerosAtivos(listaRemota, delRemoto);
-}
-
-// Atualiza snapshot com lista local (evita notificar o próprio aparelho que salvou)
-window._pedidosSyncSnapshotLocal = function(lista) {
-  const arr = lista || (typeof pedidosPendentes !== 'undefined' ? pedidosPendentes : []);
-  window._pedidosSnapNumeros = new Set(
-    arr.map(p => String((typeof p === 'object' ? p.numero : p) || '').trim().toLowerCase()).filter(Boolean)
-  );
-};
-
-// Banner na tela + notificação do sistema
-function _bannerNovoPedido(pedido) {
-  const num = (typeof pedido === 'object' ? pedido.numero : pedido) || '?';
-  const tipo = (typeof pedido === 'object' && pedido.tipo) || 'nome';
-  const valor = (typeof pedido === 'object' && pedido.valor) ? pedido.valor : '';
-  const detalhe = tipo === 'orcamento' ? `Orçamento · R$ ${valor || '—'}` : 'Passar nome';
-  let el = document.getElementById('alertaNovoPedido');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'alertaNovoPedido';
-    el.style.cssText = 'position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:10001;' +
-      'max-width:360px;width:calc(100% - 24px);background:#1a237e;color:#fff;padding:14px 18px;' +
-      'border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,0.35);display:flex;align-items:center;gap:12px;' +
-      'animation:slideDown 0.35s ease;font-size:14px;';
-    document.body.appendChild(el);
-  }
-  el.innerHTML = `<div style="flex:1;"><strong>📋 Novo pedido pendente</strong><br><span style="opacity:0.9">${num} · ${detalhe}</span></div>` +
-    `<button onclick="this.parentElement.remove()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:8px;padding:8px 12px;cursor:pointer;">OK</button>`;
-  clearTimeout(window._alertaPedidoTimer);
-  window._alertaPedidoTimer = setTimeout(() => { if (el.parentElement) el.remove(); }, 12000);
-}
-
-window._alertarNovoPedido = function(pedido) {
-  _bannerNovoPedido(pedido);
-  _notificarPedido(pedido);
-};
-
-// Envia notificação via service worker (funciona em segundo plano no celular)
-function _notificarPedido(pedido) {
-  if (!('Notification' in window)) {
-    console.warn('🔔 Notificações não suportadas neste navegador');
-    return;
-  }
-  if (Notification.permission !== 'granted') {
-    console.warn('🔔 Permissão de notificação não concedida:', Notification.permission);
-    return;
-  }
-  const num   = (typeof pedido === 'object' ? pedido.numero : pedido) || '?';
-  const tipo  = (typeof pedido === 'object' && pedido.tipo) || 'nome';
-  const valor = (typeof pedido === 'object' && pedido.valor) ? pedido.valor : null;
-  const detalhe = tipo === 'orcamento' ? `Orçamento · R$ ${valor || '—'}` : 'Passar nome';
-  const body  = `${num} · ${detalhe}`;
-  const iconUrl = (location.origin || '') + '/impacto/icon-192.png';
-  const title = '📋 Novo Pedido Pendente';
-  const tag = 'pedido-' + String(num).replace(/\s/g, '_');
-
-  const mostrarViaSw = (reg) => {
-    if (!reg) {
-      new Notification(title, { body, icon: iconUrl, tag });
-      return;
-    }
-    if (reg.showNotification) {
-      reg.showNotification(title, {
-        body, icon: iconUrl, badge: iconUrl, tag, renotify: true, vibrate: [200, 100, 200],
-      }).catch(err => {
-        console.warn('🔔 showNotification falhou, tentando postMessage:', err);
-        _notificarPedidoViaPostMessage(reg, title, body, tag);
-      });
-    } else {
-      _notificarPedidoViaPostMessage(reg, title, body, tag);
-    }
-  };
-
-  function _notificarPedidoViaPostMessage(reg, title, body, tag) {
-    const sw = reg.active || reg.waiting || reg.installing || navigator.serviceWorker.controller;
-    if (sw) {
-      sw.postMessage({ type: 'SHOW_NOTIFICATION', title, body, tag });
-    } else {
-      new Notification(title, { body, icon: iconUrl, tag });
-    }
-  }
-
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.ready
-      .then(mostrarViaSw)
-      .catch(err => {
-        console.warn('🔔 SW não pronto:', err);
-        new Notification(title, { body, icon: iconUrl, tag });
-      });
-  } else {
-    new Notification(title, { body, icon: iconUrl, tag });
-  }
-  console.log('🔔 Notificação enviada:', num);
-}
-window._notificarPedido = _notificarPedido;
-
-// Atualiza o texto do status nas Configurações
-window._atualizarStatusNotificacoesUI = function() {
-  const el = document.getElementById('notifStatusLabel');
-  const btn = document.getElementById('btnAtivarNotificacoes');
-  if (!el) return;
-  if (!('Notification' in window)) {
-    el.textContent = 'Não suportado neste navegador';
-    el.style.color = '#c62828';
-    if (btn) btn.disabled = true;
-    return;
-  }
-  const p = Notification.permission;
-  if (p === 'granted') {
-    el.textContent = '✅ Ativadas — você receberá avisos de novos pedidos';
-    el.style.color = '#2e7d32';
-    if (btn) { btn.textContent = 'Testar notificação'; btn.disabled = false; }
-  } else if (p === 'denied') {
-    el.textContent = '❌ Bloqueadas — libere nas configurações do Chrome (ícone de cadeado na barra de endereço → Notificações)';
-    el.style.color = '#c62828';
-    if (btn) { btn.textContent = 'Como liberar'; btn.disabled = false; }
-  } else {
-    el.textContent = 'Desativadas — toque no botão para ativar';
-    el.style.color = '#e65100';
-    if (btn) { btn.textContent = 'Ativar notificações'; btn.disabled = false; }
-  }
-};
-
-// Ativa ou testa notificações (botão nas Configurações)
-window._ativarNotificacoesApp = async function() {
-  if (!('Notification' in window)) {
-    alert('Seu navegador não suporta notificações.');
-    return;
-  }
-  if (Notification.permission === 'denied') {
-    alert('As notificações foram bloqueadas.\n\n1. Toque no cadeado ou ⋮ na barra de endereço\n2. Configurações do site → Notificações → Permitir\n3. Volte ao app e toque em "Ativar" de novo\n\nNo Opera: Configurações → Sites → Notificações → permitir este site.');
-    return;
-  }
-  if (Notification.permission === 'default') {
-    const perm = await Notification.requestPermission();
-    window._atualizarStatusNotificacoesUI();
-    if (perm !== 'granted') {
-      alert(perm === 'denied' ? 'Permissão negada. Você pode liberar depois nas configurações do site.' : 'Permissão não concedida.');
-      return;
-    }
-  }
-  // Garante que o service worker está ativo (necessário para notificar em segundo plano)
-  if ('serviceWorker' in navigator) {
-    try {
-      const reg = await navigator.serviceWorker.ready;
-      const iconUrl = (location.origin || '') + '/impacto/icon-192.png';
-      await reg.showNotification('🔔 Impacto', {
-        body: 'Notificações ativadas! Você será avisado quando houver novo pedido pendente.',
-        icon: iconUrl,
-        badge: iconUrl,
-        tag: 'impacto-teste',
-      });
-    } catch (e) {
-      new Notification('🔔 Impacto', { body: 'Notificações ativadas!', icon: '/impacto/icon-192.png' });
-    }
-  }
-  window._atualizarStatusNotificacoesUI();
-};
-
-window._solicitarPermissaoNotificacoes = function() {
-  window._ativarNotificacoesApp();
-};
-
 // ===== SINCRONIZAÇÃO BIDIRECIONAL =====
 
 // Flag global para evitar loop: quando recebendo do Firebase, não salva de volta
@@ -852,15 +657,8 @@ function iniciarSincronizacaoTempoReal() {
       return;
     }
 
-    const listaRemota = Array.isArray(remoto.lista) ? remoto.lista : [];
-    const delRemoto   = remoto._deletados || {};
-
-    // Detecta novos ANTES de merge (compara snapshot remoto anterior → atual)
-    const novosSnapshot = _pedidosDetectarNovosSnapshot(listaRemota, delRemoto);
-
     const ecoLocal = window._pedidosSalvouTs && (Date.now() - window._pedidosSalvouTs < 4000);
     if (ecoLocal && remoto._ts && remoto._ts === window._pedidosSalvouTs) {
-      _pedidosAtualizarSnapshotRemoto(listaRemota, delRemoto);
       return;
     }
 
@@ -872,6 +670,8 @@ function iniciarSincronizacaoTempoReal() {
 
       const listaLocal  = localPed ? (Array.isArray(localPed) ? localPed : (localPed.lista || [])) : [];
       const delLocal    = (localPed && !Array.isArray(localPed)) ? (localPed._deletados || {}) : {};
+      const listaRemota = Array.isArray(remoto.lista) ? remoto.lista : [];
+      const delRemoto   = remoto._deletados || {};
 
       const hashAntes   = _hashPedidos(listaLocal, delLocal);
       const hashRemoto  = _hashPedidos(listaRemota, delRemoto);
@@ -920,46 +720,8 @@ function iniciarSincronizacaoTempoReal() {
       }
     } finally {
       window._fbReceivendo = false;
-      _pedidosAtualizarSnapshotRemoto(listaRemota, delRemoto);
-      if (novosSnapshot.length > 0) {
-        console.log('🔔 Novo(s) pedido(s):', novosSnapshot.map(p => p.numero).join(', '));
-        novosSnapshot.forEach(p => window._alertarNovoPedido(p));
-      }
     }
   });
-
-  // Backup a cada 12s: Opera pode não disparar o listener em tempo real
-  setInterval(() => {
-    if (!firebaseDisponivel || !database || document.visibilityState === 'hidden') return;
-    if (!window._pedidosSnapNumeros) return;
-    database.ref('dados/pedidosPendentes').once('value').then(snap => {
-      const remoto = snap.val();
-      if (!remoto) return;
-      const listaRemota = Array.isArray(remoto.lista) ? remoto.lista : [];
-      const delRemoto = remoto._deletados || {};
-      const novos = _pedidosDetectarNovosSnapshot(listaRemota, delRemoto);
-      _pedidosAtualizarSnapshotRemoto(listaRemota, delRemoto);
-      if (novos.length === 0) return;
-      console.log('🔔 [poll] Novo(s) pedido(s):', novos.map(p => p.numero).join(', '));
-      novos.forEach(p => window._alertarNovoPedido(p));
-      try {
-        if (typeof window._mesclarPedidos === 'function') {
-          const raw = localStorage.getItem('pedidosPendentes');
-          const localPed = raw ? JSON.parse(raw) : {};
-          const listaLocal = Array.isArray(localPed) ? localPed : (localPed.lista || []);
-          const delLocal = localPed._deletados || {};
-          const merged = window._mesclarPedidos(listaLocal, delLocal, listaRemota, delRemoto);
-          const payload = { lista: merged.lista, _deletados: merged._deletados, _ts: remoto._ts || Date.now() };
-          localStorage.setItem('pedidosPendentes', JSON.stringify(payload));
-          if (typeof pedidosPendentes !== 'undefined') {
-            pedidosPendentes.length = 0;
-            merged.lista.forEach(p => pedidosPendentes.push(p));
-          }
-          if (typeof renderizarPedidosPendentes === 'function') renderizarPedidosPendentes();
-        }
-      } catch (_) {}
-    }).catch(() => {});
-  }, 12000);
 
   // ── Relatórios ───────────────────────────────────────────────────
   database.ref('dados/relatorios').on('value', (snapshot) => {

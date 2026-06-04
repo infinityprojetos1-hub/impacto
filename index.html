@@ -4197,8 +4197,8 @@
         </div>
 
         <div id="home" class="tab-content active">
-            <!-- Pedidos Pendentes -->
-            <div style="padding: 16px 20px 0;">
+            <!-- Pedidos Pendentes (oculto — lógica mantida para sync/orçamentos) -->
+            <div id="secaoPedidosPendentes" style="display: none; padding: 16px 20px 0;">
                 <div style="background: #fffde7; border: 1px solid #f9a825; border-radius: 10px; padding: 14px 16px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <h3 style="margin: 0; color: #f57f17; font-size: 14px;"><i class="fas fa-list-ol"></i> Pedidos Pendentes</h3>
@@ -4674,26 +4674,6 @@
                     </button>
                 </div>
 
-                <!-- Seção NOTIFICAÇÕES -->
-                <div style="margin-bottom: 30px; padding: 20px; background: var(--bg-light); border-radius: 12px;">
-                    <h4 style="color: var(--primary-color); margin-bottom: 16px;">
-                        <i class="fas fa-bell"></i> Notificações
-                    </h4>
-                    <p style="color: var(--text-muted); margin-bottom: 12px; font-size: 0.95em;">
-                        Aviso quando outro aparelho adicionar um <strong>pedido pendente</strong>.
-                        Funciona com o app em segundo plano se o Chrome não estiver fechado forçadamente.
-                    </p>
-                    <p id="notifStatusLabel" style="font-size: 0.9em; margin-bottom: 14px; font-weight: 600;">Verificando…</p>
-                    <button type="button" id="btnAtivarNotificacoes" class="btn-primary" onclick="_ativarNotificacoesApp()">
-                        <i class="fas fa-bell"></i> Ativar notificações
-                    </button>
-                    <p style="color: var(--text-muted); margin-top: 14px; font-size: 0.8em; line-height: 1.5;">
-                        <strong>Recomendado:</strong> use o <strong>Chrome</strong> no celular (Opera pode não avisar em segundo plano).
-                        Instale na tela inicial (PWA) e libere bateria sem restrições para o navegador.
-                        Ative em cada aparelho que deve receber avisos. Mesmo sem notificação do sistema, aparece um <strong>alerta azul no topo</strong> do app.
-                    </p>
-                </div>
-
                 <!-- Seção BACKUP -->
                 <div style="margin-bottom: 30px; padding: 20px; background: var(--bg-light); border-radius: 12px;">
                     <h4 style="color: var(--primary-color); margin-bottom: 16px;">
@@ -4757,7 +4737,6 @@
             document.getElementById('btnConfiguracoes').addEventListener('click', function() {
                 modalConfig.style.display = 'flex';
                 if (typeof carregarConfigValores === 'function') carregarConfigValores();
-                if (typeof window._atualizarStatusNotificacoesUI === 'function') window._atualizarStatusNotificacoesUI();
                 this.style.transform = 'rotate(180deg)';
                 setTimeout(() => { this.style.transform = 'rotate(0deg)'; }, 300);
             });
