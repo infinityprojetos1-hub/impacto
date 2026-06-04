@@ -205,30 +205,102 @@ function _notificarPedido(pedido) {
   const valor = (typeof pedido === 'object' && pedido.valor) ? pedido.valor : null;
   const detalhe = tipo === 'orcamento' ? `Orçamento · R$ ${valor || '—'}` : 'Passar nome';
   const body  = `${num} · ${detalhe}`;
+  const opts = {
+    body,
+    icon: '/impacto/icon-192.png',
+    badge: '/impacto/icon-192.png',
+    tag: 'pedido-' + num,
+    renotify: true,
+    vibrate: [200, 100, 200],
+  };
 
-  if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-    navigator.serviceWorker.controller.postMessage({
-      type: 'SHOW_NOTIFICATION',
-      title: '📋 Novo Pedido Pendente',
-      body,
-      tag: 'pedido-' + num
-    });
-  } else if (Notification.permission === 'granted') {
-    new Notification('📋 Novo Pedido Pendente', {
-      body,
-      icon: '/impacto/icon-192.png'
-    });
+  // Service worker: funciona com app em segundo plano (aba/PWA aberta em background)
+  const enviar = (reg) => {
+    if (reg && reg.showNotification) {
+      reg.showNotification('📋 Novo Pedido Pendente', opts).catch(() => {});
+    } else if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'SHOW_NOTIFICATION',
+        title: '📋 Novo Pedido Pendente',
+        body,
+        tag: 'pedido-' + num,
+      });
+    } else {
+      new Notification('📋 Novo Pedido Pendente', opts);
+    }
+  };
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(enviar).catch(() => new Notification('📋 Novo Pedido Pendente', opts));
+  } else {
+    new Notification('📋 Novo Pedido Pendente', opts);
   }
 }
 
-// Solicita permissão assim que o usuário interagir pela primeira vez
-window._solicitarPermissaoNotificacoes = function() {
-  if (!('Notification' in window)) return;
-  if (Notification.permission === 'default') {
-    Notification.requestPermission().then(perm => {
-      console.log('🔔 Permissão de notificação:', perm);
-    });
+// Atualiza o texto do status nas Configurações
+window._atualizarStatusNotificacoesUI = function() {
+  const el = document.getElementById('notifStatusLabel');
+  const btn = document.getElementById('btnAtivarNotificacoes');
+  if (!el) return;
+  if (!('Notification' in window)) {
+    el.textContent = 'Não suportado neste navegador';
+    el.style.color = '#c62828';
+    if (btn) btn.disabled = true;
+    return;
   }
+  const p = Notification.permission;
+  if (p === 'granted') {
+    el.textContent = '✅ Ativadas — você receberá avisos de novos pedidos';
+    el.style.color = '#2e7d32';
+    if (btn) { btn.textContent = 'Testar notificação'; btn.disabled = false; }
+  } else if (p === 'denied') {
+    el.textContent = '❌ Bloqueadas — libere nas configurações do Chrome (ícone de cadeado na barra de endereço → Notificações)';
+    el.style.color = '#c62828';
+    if (btn) { btn.textContent = 'Como liberar'; btn.disabled = false; }
+  } else {
+    el.textContent = 'Desativadas — toque no botão para ativar';
+    el.style.color = '#e65100';
+    if (btn) { btn.textContent = 'Ativar notificações'; btn.disabled = false; }
+  }
+};
+
+// Ativa ou testa notificações (botão nas Configurações)
+window._ativarNotificacoesApp = async function() {
+  if (!('Notification' in window)) {
+    alert('Seu navegador não suporta notificações.');
+    return;
+  }
+  if (Notification.permission === 'denied') {
+    alert('As notificações foram bloqueadas.\n\nNo Chrome Android:\n1. Toque no ícone de cadeado ou ⋮ na barra de endereço\n2. Configurações do site → Notificações → Permitir\n3. Volte ao app e toque em "Ativar" de novo');
+    return;
+  }
+  if (Notification.permission === 'default') {
+    const perm = await Notification.requestPermission();
+    window._atualizarStatusNotificacoesUI();
+    if (perm !== 'granted') {
+      alert(perm === 'denied' ? 'Permissão negada. Você pode liberar depois nas configurações do site.' : 'Permissão não concedida.');
+      return;
+    }
+  }
+  // Garante que o service worker está ativo (necessário para notificar em segundo plano)
+  if ('serviceWorker' in navigator) {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      await reg.showNotification('🔔 Impacto', {
+        body: 'Notificações ativadas! Você será avisado quando houver novo pedido pendente.',
+        icon: '/impacto/icon-192.png',
+        badge: '/impacto/icon-192.png',
+        tag: 'impacto-teste',
+      });
+    } catch (e) {
+      new Notification('🔔 Impacto', { body: 'Notificações ativadas!', icon: '/impacto/icon-192.png' });
+    }
+  }
+  window._atualizarStatusNotificacoesUI();
+};
+
+window._solicitarPermissaoNotificacoes = function() {
+  window._ativarNotificacoesApp();
 };
 
 // ===== SINCRONIZAÇÃO BIDIRECIONAL =====
