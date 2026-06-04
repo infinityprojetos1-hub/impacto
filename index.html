@@ -4876,6 +4876,26 @@
     </script>
 
     <!-- Banner de instalação PWA -->
+    <!-- Banner de atualização disponível -->
+    <div id="swUpdateBanner" style="display:none;position:fixed;bottom:80px;left:50%;
+        transform:translateX(-50%);background:#1a1a2e;color:#fff;padding:12px 18px;
+        border-radius:14px;box-shadow:0 6px 24px rgba(0,0,0,0.35);z-index:10000;
+        max-width:340px;width:calc(100% - 40px);align-items:center;gap:12px;
+        border:1px solid rgba(255,255,255,0.1);">
+        <div style="flex:1;">
+            <div style="font-weight:700;font-size:13px;">🆕 Atualização disponível</div>
+            <div style="font-size:11px;opacity:0.75;margin-top:2px;">Toque para carregar a nova versão</div>
+        </div>
+        <button onclick="_aplicarAtualizacaoSW()"
+            style="background:#667eea;color:#fff;border:none;border-radius:8px;
+            padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">
+            Atualizar
+        </button>
+        <button onclick="this.closest('#swUpdateBanner').style.display='none'"
+            style="background:none;border:none;color:#fff;opacity:0.6;font-size:18px;
+            cursor:pointer;padding:0;line-height:1;">&times;</button>
+    </div>
+
     <div id="pwaInstallBanner" style="
         display: none;
         position: fixed;
@@ -4925,23 +4945,16 @@
     <script>
         // ── Service Worker ────────────────────────────────────────────────────
         if ('serviceWorker' in navigator) {
-            let _swRefreshing = false;
-            let _swRegistration = null;
+            let _swWaiting = null;
 
-            // Recarrega UMA VEZ quando o controller muda (novo SW assumiu controle)
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                if (!_swRefreshing) {
-                    _swRefreshing = true;
-                    console.log('🔄 SW atualizado, recarregando...');
-                    // Pequeno delay para o SW terminar de se instalar
-                    setTimeout(() => window.location.reload(), 300);
-                }
-            });
+            function _mostrarBannerAtualizacao() {
+                const banner = document.getElementById('swUpdateBanner');
+                if (banner) banner.style.display = 'flex';
+            }
 
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/impacto/sw.js')
                     .then(registration => {
-                        _swRegistration = registration;
                         console.log('✅ SW registrado:', registration.scope);
 
                         // Exibe versão do cache ativo no badge discreto
@@ -4957,40 +4970,49 @@
                             _sw.postMessage({ type: 'GET_CACHE_VERSION' }, [msgCh.port2]);
                         }
 
-                        // Se já há um SW aguardando (update instalado mas não ativo), ativa agora
+                        // Se já há SW aguardando (update baixado), mostra banner
                         if (registration.waiting) {
-                            registration.waiting.postMessage('SKIP_WAITING');
+                            _swWaiting = registration.waiting;
+                            _mostrarBannerAtualizacao();
                         }
 
-                        // Quando encontrar atualização: instala e ativa imediatamente
+                        // Detecta novo SW sendo baixado
                         registration.addEventListener('updatefound', () => {
                             const newWorker = registration.installing;
                             if (!newWorker) return;
                             newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed' && !_swRefreshing) {
-                                    newWorker.postMessage('SKIP_WAITING');
+                                if (newWorker.state === 'installed') {
+                                    _swWaiting = newWorker;
+                                    _mostrarBannerAtualizacao();
                                 }
                             });
                         });
 
-                        // Verifica atualização ao abrir o app
+                        // Verifica atualização ao abrir
                         registration.update().catch(() => {});
                     })
                     .catch(err => console.warn('⚠️ Erro ao registrar SW:', err));
             });
 
-            // Verifica atualização quando volta ao foco (app em background → primeiro plano)
-            // Usa sessionStorage para não verificar mais de uma vez por sessão
-            document.addEventListener('visibilitychange', () => {
-                if (document.visibilityState === 'visible' && _swRegistration
-                    && !sessionStorage.getItem('_swChecked')) {
-                    sessionStorage.setItem('_swChecked', '1');
-                    _swRegistration.update().catch(() => {});
+            // Quando o novo SW assume controle: recarrega APENAS se o usuário pediu
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (window._swAtualizandoManualmente) {
+                    window.location.href = window.location.href;
                 }
             });
         }
 
-        // Botão de atualização forçada (limpa caches e recarrega)
+        // Usuário toca "Atualizar" no banner → ativa o SW novo e recarrega
+        window._aplicarAtualizacaoSW = function() {
+            if (window._swWaiting) {
+                window._swAtualizandoManualmente = true;
+                window._swWaiting.postMessage('SKIP_WAITING');
+            } else {
+                window._forcarAtualizacaoApp();
+            }
+        };
+
+        // Botão ↺ no cabeçalho: desregistra SW e limpa cache (nuclear option)
         window._forcarAtualizacaoApp = function() {
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.getRegistrations()
@@ -4998,10 +5020,10 @@
                     .then(() => 'caches' in window
                         ? caches.keys().then(names => Promise.all(names.map(n => caches.delete(n))))
                         : Promise.resolve())
-                    .then(() => window.location.reload(true))
-                    .catch(() => window.location.reload(true));
+                    .then(() => { window.location.href = window.location.href; })
+                    .catch(() => { window.location.href = window.location.href; });
             } else {
-                window.location.reload(true);
+                window.location.href = window.location.href;
             }
         };
 
