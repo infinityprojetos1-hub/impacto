@@ -5,7 +5,7 @@
 //   • Isso evita pressão de memória em dispositivos Android
 // ────────────────────────────────────────────────────────────────────────────
 
-const CACHE_VERSION = 'v2.80';
+const CACHE_VERSION = 'v2.81';
 const CACHE_NAME    = `impacto-shell-${CACHE_VERSION}`;
 const BASE_PATH     = '/impacto';
 

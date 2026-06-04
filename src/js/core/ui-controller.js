@@ -502,10 +502,13 @@ function _persistirPedidos() {
     const payload = { lista: pedidosPendentes, _deletados: _deletadosPedidos, _ts: Date.now() };
     window._pedidosSalvouTs = payload._ts;
     localStorage.setItem('pedidosPendentes', JSON.stringify(payload));
+    // Marca como enviado antes do Firebase responder (evita eco no listener)
+    if (typeof window._fbMarcarEnviado === 'function') {
+        window._fbMarcarEnviado('pedidosPendentes', payload._ts);
+    }
     if (typeof salvarNoDatabase === 'function' && typeof firebaseDisponivel !== 'undefined' && firebaseDisponivel) {
         if (typeof window._piscarBadgeSync === 'function') window._piscarBadgeSync();
         salvarNoDatabase('dados/pedidosPendentes', payload)
-            .then(() => { if (typeof window._fbMarcarEnviado === 'function') window._fbMarcarEnviado('pedidosPendentes', payload._ts); })
             .catch(err => console.warn('⚠️ Pedidos pendentes não salvos no Firebase:', err));
     }
 }

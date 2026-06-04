@@ -238,7 +238,7 @@ window._fbReceivendo = false;
 
 // Debounce de UI: evita re-render constante quando dois dispositivos estão abertos
 const _fbDebounceTimers = {};
-const _fbDebounceMs = 150;
+const _fbDebounceMs = 300;
 function _fbDebouncedUI(tipo, fn) {
   if (_fbDebounceTimers[tipo]) clearTimeout(_fbDebounceTimers[tipo]);
   _fbDebounceTimers[tipo] = setTimeout(() => {
@@ -660,12 +660,22 @@ function iniciarSincronizacaoTempoReal() {
   });
 
   // ── Pedidos Pendentes ─────────────────────────────────────────────
-  // Usa merge por item (não timestamp global) para suportar múltiplos dispositivos
+  // Merge por item — NUNCA reescreve o Firebase se os dados já são iguais
+  // (evita loop de sync que travava Android com vários dispositivos abertos)
   database.ref('dados/pedidosPendentes').on('value', (snapshot) => {
     const remoto = snapshot.val();
 
+    function _hashPedidos(lista, deletados) {
+      const norm = (lista || []).map(p => ({
+        n: (typeof p === 'object' ? p.numero : p) || '',
+        t: (typeof p === 'object' && p.tipo) || 'nome',
+        v: (typeof p === 'object' && p.valor) || '',
+        ts: (typeof p === 'object' && p._ts) || 0
+      })).sort((a, b) => a.n.localeCompare(b.n));
+      return JSON.stringify({ lista: norm, del: deletados || {} });
+    }
+
     if (!remoto) {
-      // Firebase vazio → sobe dados locais
       const localStr = localStorage.getItem('pedidosPendentes');
       if (localStr) {
         try {
@@ -683,6 +693,12 @@ function iniciarSincronizacaoTempoReal() {
       return;
     }
 
+    // Eco do próprio save local — não processa (evita loop)
+    const ecoLocal = window._pedidosSalvouTs && (Date.now() - window._pedidosSalvouTs < 4000);
+    if (ecoLocal && remoto._ts && remoto._ts === window._pedidosSalvouTs) {
+      return;
+    }
+
     window._fbReceivendo = true;
     try {
       const localStr = localStorage.getItem('pedidosPendentes');
@@ -694,17 +710,34 @@ function iniciarSincronizacaoTempoReal() {
       const listaRemota = Array.isArray(remoto.lista) ? remoto.lista : [];
       const delRemoto   = remoto._deletados || {};
 
-      // Captura números existentes ANTES do merge para detectar novidades
+      const hashAntes   = _hashPedidos(listaLocal, delLocal);
+      const hashRemoto  = _hashPedidos(listaRemota, delRemoto);
+
+      // Dados remotos idênticos ao local — nada a fazer
+      if (hashAntes === hashRemoto) {
+        if (typeof window._fbMarcarEnviado === 'function') window._fbMarcarEnviado('pedidosPendentes', remoto._ts || 0);
+        window._pedidosInicializado = true;
+        return;
+      }
+
       const numerosAntesDoMerge = new Set(listaLocal.map(p => (typeof p === 'object' ? p.numero : p) || ''));
 
-      // Merge: união de ambos os lados aplicando tombstones
       const merged = typeof _mesclarPedidos === 'function'
         ? _mesclarPedidos(listaLocal, delLocal, listaRemota, delRemoto)
         : { lista: listaRemota, _deletados: delRemoto };
 
-      const payload = { lista: merged.lista, _deletados: merged._deletados, _ts: Date.now() };
+      const hashMerged = _hashPedidos(merged.lista, merged._deletados);
+      const mudouLocal = hashMerged !== hashAntes;
+      const precisaSubir = hashMerged !== hashRemoto;
 
-      // Atualiza memória
+      if (!mudouLocal && !precisaSubir) {
+        window._pedidosInicializado = true;
+        return;
+      }
+
+      const novoTs = precisaSubir ? Date.now() : (remoto._ts || Date.now());
+      const payload = { lista: merged.lista, _deletados: merged._deletados, _ts: novoTs };
+
       if (typeof pedidosPendentes !== 'undefined') {
         pedidosPendentes.length = 0;
         merged.lista.forEach(p => pedidosPendentes.push(p));
@@ -714,30 +747,31 @@ function iniciarSincronizacaoTempoReal() {
         Object.assign(_deletadosPedidos, merged._deletados);
       }
 
-      // Persiste localmente
-      window._pedidosSalvouTs = payload._ts;
       localStorage.setItem('pedidosPendentes', JSON.stringify(payload));
 
-      // Sobe o resultado mergeado de volta (garante que Firebase também tem o merge)
-      salvarNoDatabase('dados/pedidosPendentes', payload)
-        .then(() => { if (typeof window._fbMarcarEnviado === 'function') window._fbMarcarEnviado('pedidosPendentes', payload._ts); })
-        .catch(() => {});
+      // Só envia ao Firebase se o merge produziu dados diferentes do remoto
+      if (precisaSubir && !ecoLocal) {
+        salvarNoDatabase('dados/pedidosPendentes', payload)
+          .then(() => { if (typeof window._fbMarcarEnviado === 'function') window._fbMarcarEnviado('pedidosPendentes', payload._ts); })
+          .catch(() => {});
+      } else if (typeof window._fbMarcarEnviado === 'function') {
+        window._fbMarcarEnviado('pedidosPendentes', remoto._ts || 0);
+      }
 
-      _fbDebouncedUI('pedidosPendentes', () => {
-        if (typeof renderizarPedidosPendentes === 'function') renderizarPedidosPendentes();
-      });
-      console.log('🔄 Pedidos pendentes mergeados do Firebase:', merged.lista.length, 'itens');
+      if (mudouLocal) {
+        _fbDebouncedUI('pedidosPendentes', () => {
+          if (typeof renderizarPedidosPendentes === 'function') renderizarPedidosPendentes();
+        });
+      }
 
-      // Notifica itens novos que vieram de outro dispositivo
-      // (só após a inicialização e apenas itens que não existiam antes)
-      if (window._pedidosInicializado) {
-        const novos = merged.lista.filter(p => {
+      if (window._pedidosInicializado && mudouLocal) {
+        merged.lista.filter(p => {
           const num = (typeof p === 'object' ? p.numero : p) || '';
           return num && !numerosAntesDoMerge.has(num);
-        });
-        novos.forEach(p => _notificarPedido(p));
+        }).forEach(p => _notificarPedido(p));
       }
       window._pedidosInicializado = true;
+      console.log('🔄 Pedidos:', merged.lista.length, 'itens', precisaSubir ? '(sync)' : '(local)');
     } finally {
       window._fbReceivendo = false;
     }
