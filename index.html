@@ -4152,6 +4152,12 @@
                 <i class="fas fa-layer-group" style="font-size:0.85em;"></i>
                 <span id="cacheVersionLabel">—</span>
             </div>
+            <button onclick="_forcarAtualizacaoApp()" title="Forçar atualização do app"
+                style="margin-top:6px;margin-left:4px;padding:2px 8px;border-radius:20px;
+                font-size:0.7em;font-weight:600;background:transparent;color:#999;
+                border:1px solid #e0e0e0;opacity:0.6;cursor:pointer;">
+                <i class="fas fa-sync-alt"></i>
+            </button>
         </header>
 
         <div class="tabs">
@@ -4919,9 +4925,10 @@
     <script>
         // ── Service Worker ────────────────────────────────────────────────────
         if ('serviceWorker' in navigator) {
-            // controllerchange DEVE ser registrado ANTES do load event
-            // para não perder o evento caso o SW ative muito rápido
             let _swRefreshing = false;
+            let _swRegistration = null;
+
+            // Recarrega quando o controller mudar (novo SW assumiu controle)
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 if (!_swRefreshing) {
                     _swRefreshing = true;
@@ -4930,9 +4937,19 @@
                 }
             });
 
+            // Recebe mensagem do SW informando que foi ativado
+            navigator.serviceWorker.addEventListener('message', event => {
+                if (event.data && event.data.type === 'SW_ATUALIZADO' && !_swRefreshing) {
+                    _swRefreshing = true;
+                    console.log('🔄 SW_ATUALIZADO recebido, recarregando...', event.data.version);
+                    window.location.reload();
+                }
+            });
+
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/impacto/sw.js')
                     .then(registration => {
+                        _swRegistration = registration;
                         console.log('✅ SW registrado:', registration.scope);
 
                         // Exibe versão do cache ativo no badge discreto
@@ -4961,10 +4978,31 @@
                                 }
                             });
                         });
+
+                        // Verifica atualização imediatamente ao abrir
+                        registration.update().catch(() => {});
                     })
                     .catch(err => console.warn('⚠️ Erro ao registrar SW:', err));
             });
+
+            // Força verificação de atualização sempre que o app volta ao foco
+            // (essencial para PWA instalado no Android que fica em background)
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible' && _swRegistration) {
+                    _swRegistration.update().catch(() => {});
+                }
+            });
         }
+
+        // Botão de atualização forçada (limpa caches e recarrega)
+        window._forcarAtualizacaoApp = function() {
+            if ('caches' in window) {
+                caches.keys().then(names => Promise.all(names.map(n => caches.delete(n))))
+                    .then(() => window.location.reload(true));
+            } else {
+                window.location.reload(true);
+            }
+        };
 
         // ── Prompt de instalação PWA ──────────────────────────────────────────
         const _pwaInstallKey = 'pwaInstallDismissed_v2';

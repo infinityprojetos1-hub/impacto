@@ -5,7 +5,7 @@
 // IMPORTANTE: incremente CACHE_VERSION a cada deploy para forçar atualização.
 // ────────────────────────────────────────────────────────────────────────────
 
-const CACHE_VERSION = 'v2.76';
+const CACHE_VERSION = 'v2.77';
 const CACHE_NAME    = `orcamentos-impacto-${CACHE_VERSION}`;
 const BASE_PATH     = '/impacto';
 
@@ -28,7 +28,7 @@ self.addEventListener('install', event => {
   );
 });
 
-// ── Activate: apaga todos os caches antigos ───────────────────────────────────
+// ── Activate: apaga caches antigos e avisa as abas para recarregar ───────────
 self.addEventListener('activate', event => {
   console.log(`✅ SW ${CACHE_VERSION}: Ativando, limpando caches antigos...`);
   event.waitUntil(
@@ -41,7 +41,15 @@ self.addEventListener('activate', event => {
             return caches.delete(name);
           })
       ))
-      .then(() => self.clients.claim()) // Assume controle de todas as abas abertas
+      .then(() => self.clients.claim())
+      .then(() => {
+        // Avisa todas as abas abertas para recarregar com a nova versão
+        return self.clients.matchAll({ type: 'window' }).then(clients => {
+          clients.forEach(client => {
+            client.postMessage({ type: 'SW_ATUALIZADO', version: CACHE_VERSION });
+          });
+        });
+      })
   );
 });
 
