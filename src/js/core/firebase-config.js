@@ -197,23 +197,72 @@ async function buscarArquivoBase64(caminho) {
 
 // ===== NOTIFICAÇÕES DO NAVEGADOR =====
 
-// Detecta pedidos que existem no remoto mas ainda não no local (outro dispositivo adicionou)
-function _pedidosNovosNoRemoto(listaLocal, listaRemota, delRemoto) {
-  const locais = new Set((listaLocal || []).map(p => {
-    const n = (typeof p === 'object' ? p.numero : p) || '';
-    return String(n).trim().toLowerCase();
-  }).filter(Boolean));
+// Números ativos na lista remota (ignora tombstones)
+function _pedidosNumerosAtivos(lista, deletados) {
+  const set = new Set();
+  (lista || []).forEach(p => {
+    const num = String((typeof p === 'object' ? p.numero : p) || '').trim().toLowerCase();
+    if (!num) return;
+    const delTs = (deletados && (deletados[num] || deletados[p.numero])) || 0;
+    if (delTs && (p._ts || 0) <= delTs) return;
+    set.add(num);
+  });
+  return set;
+}
+
+// Compara snapshot remoto ANTERIOR vs ATUAL (não depende do local — funciona em Opera/Chrome)
+function _pedidosDetectarNovosSnapshot(listaRemota, delRemoto) {
+  const prev = window._pedidosSnapNumeros;
+  if (!prev) return [];
   const novos = [];
   (listaRemota || []).forEach(p => {
-    const num = String((typeof p === 'object' ? p.numero : p) || '').trim();
-    const key = num.toLowerCase();
-    if (!key || locais.has(key)) return;
-    const delTs = (delRemoto && (delRemoto[num] || delRemoto[key])) || 0;
+    const num = String((typeof p === 'object' ? p.numero : p) || '').trim().toLowerCase();
+    if (!num || prev.has(num)) return;
+    const delTs = (delRemoto && (delRemoto[num] || delRemoto[p.numero])) || 0;
     if (delTs && (p._ts || 0) <= delTs) return;
     novos.push(p);
   });
   return novos;
 }
+
+function _pedidosAtualizarSnapshotRemoto(listaRemota, delRemoto) {
+  window._pedidosSnapNumeros = _pedidosNumerosAtivos(listaRemota, delRemoto);
+}
+
+// Atualiza snapshot com lista local (evita notificar o próprio aparelho que salvou)
+window._pedidosSyncSnapshotLocal = function(lista) {
+  const arr = lista || (typeof pedidosPendentes !== 'undefined' ? pedidosPendentes : []);
+  window._pedidosSnapNumeros = new Set(
+    arr.map(p => String((typeof p === 'object' ? p.numero : p) || '').trim().toLowerCase()).filter(Boolean)
+  );
+};
+
+// Banner na tela + notificação do sistema
+function _bannerNovoPedido(pedido) {
+  const num = (typeof pedido === 'object' ? pedido.numero : pedido) || '?';
+  const tipo = (typeof pedido === 'object' && pedido.tipo) || 'nome';
+  const valor = (typeof pedido === 'object' && pedido.valor) ? pedido.valor : '';
+  const detalhe = tipo === 'orcamento' ? `Orçamento · R$ ${valor || '—'}` : 'Passar nome';
+  let el = document.getElementById('alertaNovoPedido');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'alertaNovoPedido';
+    el.style.cssText = 'position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:10001;' +
+      'max-width:360px;width:calc(100% - 24px);background:#1a237e;color:#fff;padding:14px 18px;' +
+      'border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,0.35);display:flex;align-items:center;gap:12px;' +
+      'animation:slideDown 0.35s ease;font-size:14px;';
+    document.body.appendChild(el);
+  }
+  el.innerHTML = `<div style="flex:1;"><strong>📋 Novo pedido pendente</strong><br><span style="opacity:0.9">${num} · ${detalhe}</span></div>` +
+    `<button onclick="this.parentElement.remove()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:8px;padding:8px 12px;cursor:pointer;">OK</button>`;
+  clearTimeout(window._alertaPedidoTimer);
+  window._alertaPedidoTimer = setTimeout(() => { if (el.parentElement) el.remove(); }, 12000);
+}
+
+window._alertarNovoPedido = function(pedido) {
+  _bannerNovoPedido(pedido);
+  _notificarPedido(pedido);
+};
 
 // Envia notificação via service worker (funciona em segundo plano no celular)
 function _notificarPedido(pedido) {
@@ -308,7 +357,7 @@ window._ativarNotificacoesApp = async function() {
     return;
   }
   if (Notification.permission === 'denied') {
-    alert('As notificações foram bloqueadas.\n\nNo Chrome Android:\n1. Toque no ícone de cadeado ou ⋮ na barra de endereço\n2. Configurações do site → Notificações → Permitir\n3. Volte ao app e toque em "Ativar" de novo');
+    alert('As notificações foram bloqueadas.\n\n1. Toque no cadeado ou ⋮ na barra de endereço\n2. Configurações do site → Notificações → Permitir\n3. Volte ao app e toque em "Ativar" de novo\n\nNo Opera: Configurações → Sites → Notificações → permitir este site.');
     return;
   }
   if (Notification.permission === 'default') {
@@ -803,9 +852,15 @@ function iniciarSincronizacaoTempoReal() {
       return;
     }
 
-    // Eco do próprio save local — não processa (evita loop)
+    const listaRemota = Array.isArray(remoto.lista) ? remoto.lista : [];
+    const delRemoto   = remoto._deletados || {};
+
+    // Detecta novos ANTES de merge (compara snapshot remoto anterior → atual)
+    const novosSnapshot = _pedidosDetectarNovosSnapshot(listaRemota, delRemoto);
+
     const ecoLocal = window._pedidosSalvouTs && (Date.now() - window._pedidosSalvouTs < 4000);
     if (ecoLocal && remoto._ts && remoto._ts === window._pedidosSalvouTs) {
+      _pedidosAtualizarSnapshotRemoto(listaRemota, delRemoto);
       return;
     }
 
@@ -817,79 +872,94 @@ function iniciarSincronizacaoTempoReal() {
 
       const listaLocal  = localPed ? (Array.isArray(localPed) ? localPed : (localPed.lista || [])) : [];
       const delLocal    = (localPed && !Array.isArray(localPed)) ? (localPed._deletados || {}) : {};
-      const listaRemota = Array.isArray(remoto.lista) ? remoto.lista : [];
-      const delRemoto   = remoto._deletados || {};
-
-      // Primeira leitura do Firebase = sincronização inicial (sem notificar pedidos antigos)
-      const ehPrimeiraLeituraFb = !window._pedidosFbConectou;
-      const novosParaNotificar = ehPrimeiraLeituraFb
-        ? []
-        : _pedidosNovosNoRemoto(listaLocal, listaRemota, delRemoto);
 
       const hashAntes   = _hashPedidos(listaLocal, delLocal);
       const hashRemoto  = _hashPedidos(listaRemota, delRemoto);
 
-      // Dados remotos idênticos ao local — nada a fazer (exceto marcar conectado)
       if (hashAntes === hashRemoto) {
         if (typeof window._fbMarcarEnviado === 'function') window._fbMarcarEnviado('pedidosPendentes', remoto._ts || 0);
-        window._pedidosFbConectou = true;
-        return;
+      } else {
+        const merged = typeof window._mesclarPedidos === 'function'
+          ? window._mesclarPedidos(listaLocal, delLocal, listaRemota, delRemoto)
+          : { lista: listaRemota, _deletados: delRemoto };
+
+        const hashMerged = _hashPedidos(merged.lista, merged._deletados);
+        const mudouLocal = hashMerged !== hashAntes;
+        const precisaSubir = hashMerged !== hashRemoto;
+
+        if (mudouLocal || precisaSubir) {
+          const novoTs = precisaSubir ? Date.now() : (remoto._ts || Date.now());
+          const payload = { lista: merged.lista, _deletados: merged._deletados, _ts: novoTs };
+
+          if (typeof pedidosPendentes !== 'undefined') {
+            pedidosPendentes.length = 0;
+            merged.lista.forEach(p => pedidosPendentes.push(p));
+          }
+          if (typeof _deletadosPedidos !== 'undefined') {
+            Object.keys(_deletadosPedidos).forEach(k => delete _deletadosPedidos[k]);
+            Object.assign(_deletadosPedidos, merged._deletados);
+          }
+
+          localStorage.setItem('pedidosPendentes', JSON.stringify(payload));
+
+          if (precisaSubir && !ecoLocal) {
+            salvarNoDatabase('dados/pedidosPendentes', payload)
+              .then(() => { if (typeof window._fbMarcarEnviado === 'function') window._fbMarcarEnviado('pedidosPendentes', payload._ts); })
+              .catch(() => {});
+          } else if (typeof window._fbMarcarEnviado === 'function') {
+            window._fbMarcarEnviado('pedidosPendentes', remoto._ts || 0);
+          }
+
+          if (mudouLocal) {
+            _fbDebouncedUI('pedidosPendentes', () => {
+              if (typeof renderizarPedidosPendentes === 'function') renderizarPedidosPendentes();
+            });
+          }
+          console.log('🔄 Pedidos:', merged.lista.length, 'itens', precisaSubir ? '(sync)' : '(local)');
+        }
       }
-
-      const merged = typeof _mesclarPedidos === 'function'
-        ? _mesclarPedidos(listaLocal, delLocal, listaRemota, delRemoto)
-        : { lista: listaRemota, _deletados: delRemoto };
-
-      const hashMerged = _hashPedidos(merged.lista, merged._deletados);
-      const mudouLocal = hashMerged !== hashAntes;
-      const precisaSubir = hashMerged !== hashRemoto;
-
-      if (!mudouLocal && !precisaSubir) {
-        window._pedidosFbConectou = true;
-        return;
-      }
-
-      const novoTs = precisaSubir ? Date.now() : (remoto._ts || Date.now());
-      const payload = { lista: merged.lista, _deletados: merged._deletados, _ts: novoTs };
-
-      if (typeof pedidosPendentes !== 'undefined') {
-        pedidosPendentes.length = 0;
-        merged.lista.forEach(p => pedidosPendentes.push(p));
-      }
-      if (typeof _deletadosPedidos !== 'undefined') {
-        Object.keys(_deletadosPedidos).forEach(k => delete _deletadosPedidos[k]);
-        Object.assign(_deletadosPedidos, merged._deletados);
-      }
-
-      localStorage.setItem('pedidosPendentes', JSON.stringify(payload));
-
-      // Só envia ao Firebase se o merge produziu dados diferentes do remoto
-      if (precisaSubir && !ecoLocal) {
-        salvarNoDatabase('dados/pedidosPendentes', payload)
-          .then(() => { if (typeof window._fbMarcarEnviado === 'function') window._fbMarcarEnviado('pedidosPendentes', payload._ts); })
-          .catch(() => {});
-      } else if (typeof window._fbMarcarEnviado === 'function') {
-        window._fbMarcarEnviado('pedidosPendentes', remoto._ts || 0);
-      }
-
-      if (mudouLocal) {
-        _fbDebouncedUI('pedidosPendentes', () => {
-          if (typeof renderizarPedidosPendentes === 'function') renderizarPedidosPendentes();
-        });
-      }
-
-      // Notifica pedidos que chegaram de outro aparelho (após a 1ª sincronização)
-      if (novosParaNotificar.length > 0) {
-        console.log('🔔 Novos pedidos de outro dispositivo:', novosParaNotificar.map(p => p.numero).join(', '));
-        novosParaNotificar.forEach(p => _notificarPedido(p));
-      }
-
-      window._pedidosFbConectou = true;
-      console.log('🔄 Pedidos:', merged.lista.length, 'itens', precisaSubir ? '(sync)' : '(local)');
     } finally {
       window._fbReceivendo = false;
+      _pedidosAtualizarSnapshotRemoto(listaRemota, delRemoto);
+      if (novosSnapshot.length > 0) {
+        console.log('🔔 Novo(s) pedido(s):', novosSnapshot.map(p => p.numero).join(', '));
+        novosSnapshot.forEach(p => window._alertarNovoPedido(p));
+      }
     }
   });
+
+  // Backup a cada 12s: Opera pode não disparar o listener em tempo real
+  setInterval(() => {
+    if (!firebaseDisponivel || !database || document.visibilityState === 'hidden') return;
+    if (!window._pedidosSnapNumeros) return;
+    database.ref('dados/pedidosPendentes').once('value').then(snap => {
+      const remoto = snap.val();
+      if (!remoto) return;
+      const listaRemota = Array.isArray(remoto.lista) ? remoto.lista : [];
+      const delRemoto = remoto._deletados || {};
+      const novos = _pedidosDetectarNovosSnapshot(listaRemota, delRemoto);
+      _pedidosAtualizarSnapshotRemoto(listaRemota, delRemoto);
+      if (novos.length === 0) return;
+      console.log('🔔 [poll] Novo(s) pedido(s):', novos.map(p => p.numero).join(', '));
+      novos.forEach(p => window._alertarNovoPedido(p));
+      try {
+        if (typeof window._mesclarPedidos === 'function') {
+          const raw = localStorage.getItem('pedidosPendentes');
+          const localPed = raw ? JSON.parse(raw) : {};
+          const listaLocal = Array.isArray(localPed) ? localPed : (localPed.lista || []);
+          const delLocal = localPed._deletados || {};
+          const merged = window._mesclarPedidos(listaLocal, delLocal, listaRemota, delRemoto);
+          const payload = { lista: merged.lista, _deletados: merged._deletados, _ts: remoto._ts || Date.now() };
+          localStorage.setItem('pedidosPendentes', JSON.stringify(payload));
+          if (typeof pedidosPendentes !== 'undefined') {
+            pedidosPendentes.length = 0;
+            merged.lista.forEach(p => pedidosPendentes.push(p));
+          }
+          if (typeof renderizarPedidosPendentes === 'function') renderizarPedidosPendentes();
+        }
+      } catch (_) {}
+    }).catch(() => {});
+  }, 12000);
 
   // ── Relatórios ───────────────────────────────────────────────────
   database.ref('dados/relatorios').on('value', (snapshot) => {

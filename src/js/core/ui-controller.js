@@ -497,11 +497,17 @@ function carregarPedidosPendentes() {
     } catch (e) {
         pedidosPendentes = []; _deletadosPedidos = {};
     }
+    if (typeof window._pedidosSyncSnapshotLocal === 'function') {
+        window._pedidosSyncSnapshotLocal(pedidosPendentes);
+    }
 }
 
 function _persistirPedidos() {
     const payload = { lista: pedidosPendentes, _deletados: _deletadosPedidos, _ts: Date.now() };
     window._pedidosSalvouTs = payload._ts;
+    if (typeof window._pedidosSyncSnapshotLocal === 'function') {
+        window._pedidosSyncSnapshotLocal(pedidosPendentes);
+    }
     localStorage.setItem('pedidosPendentes', JSON.stringify(payload));
     // Marca como enviado antes do Firebase responder (evita eco no listener)
     if (typeof window._fbMarcarEnviado === 'function') {
