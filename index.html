@@ -4928,21 +4928,13 @@
             let _swRefreshing = false;
             let _swRegistration = null;
 
-            // Recarrega quando o controller mudar (novo SW assumiu controle)
+            // Recarrega UMA VEZ quando o controller muda (novo SW assumiu controle)
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 if (!_swRefreshing) {
                     _swRefreshing = true;
                     console.log('🔄 SW atualizado, recarregando...');
-                    window.location.reload();
-                }
-            });
-
-            // Recebe mensagem do SW informando que foi ativado
-            navigator.serviceWorker.addEventListener('message', event => {
-                if (event.data && event.data.type === 'SW_ATUALIZADO' && !_swRefreshing) {
-                    _swRefreshing = true;
-                    console.log('🔄 SW_ATUALIZADO recebido, recarregando...', event.data.version);
-                    window.location.reload();
+                    // Pequeno delay para o SW terminar de se instalar
+                    setTimeout(() => window.location.reload(), 300);
                 }
             });
 
@@ -4965,30 +4957,34 @@
                             _sw.postMessage({ type: 'GET_CACHE_VERSION' }, [msgCh.port2]);
                         }
 
-                        // Se já há um SW aguardando, força ativação imediata
+                        // Se já há um SW aguardando (update instalado mas não ativo), ativa agora
                         if (registration.waiting) {
                             registration.waiting.postMessage('SKIP_WAITING');
                         }
 
+                        // Quando encontrar atualização: instala e ativa imediatamente
                         registration.addEventListener('updatefound', () => {
                             const newWorker = registration.installing;
+                            if (!newWorker) return;
                             newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed') {
+                                if (newWorker.state === 'installed' && !_swRefreshing) {
                                     newWorker.postMessage('SKIP_WAITING');
                                 }
                             });
                         });
 
-                        // Verifica atualização imediatamente ao abrir
+                        // Verifica atualização ao abrir o app
                         registration.update().catch(() => {});
                     })
                     .catch(err => console.warn('⚠️ Erro ao registrar SW:', err));
             });
 
-            // Força verificação de atualização sempre que o app volta ao foco
-            // (essencial para PWA instalado no Android que fica em background)
+            // Verifica atualização quando volta ao foco (app em background → primeiro plano)
+            // Usa sessionStorage para não verificar mais de uma vez por sessão
             document.addEventListener('visibilitychange', () => {
-                if (document.visibilityState === 'visible' && _swRegistration) {
+                if (document.visibilityState === 'visible' && _swRegistration
+                    && !sessionStorage.getItem('_swChecked')) {
+                    sessionStorage.setItem('_swChecked', '1');
                     _swRegistration.update().catch(() => {});
                 }
             });
@@ -4996,9 +4992,14 @@
 
         // Botão de atualização forçada (limpa caches e recarrega)
         window._forcarAtualizacaoApp = function() {
-            if ('caches' in window) {
-                caches.keys().then(names => Promise.all(names.map(n => caches.delete(n))))
-                    .then(() => window.location.reload(true));
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations()
+                    .then(regs => Promise.all(regs.map(r => r.unregister())))
+                    .then(() => 'caches' in window
+                        ? caches.keys().then(names => Promise.all(names.map(n => caches.delete(n))))
+                        : Promise.resolve())
+                    .then(() => window.location.reload(true))
+                    .catch(() => window.location.reload(true));
             } else {
                 window.location.reload(true);
             }
