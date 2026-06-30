@@ -640,8 +640,12 @@ function adicionarItem(event, tipo, igrejaIndex) {
         const sel = document.getElementById('itemEstoqueSelect');
         item = sel ? sel.value.trim() : '';
         if (!item) return;
-        if (typeof temEstoqueSuficiente === 'function' && !temEstoqueSuficiente(item, quantidade)) {
-            alert('Quantidade insuficiente no estoque.');
+        // Usa data-qtd do próprio option (mais confiável que buscar por nome)
+        const optSel = sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
+        const qtdDisp = optSel ? (parseInt(optSel.getAttribute('data-qtd'), 10) || 0) : -1;
+        const qtdPedida = parseInt(quantidade, 10) || 0;
+        if (qtdDisp >= 0 && qtdPedida > qtdDisp) {
+            alert(`Quantidade insuficiente no estoque. Disponível: ${qtdDisp}`);
             return;
         }
     } else {
