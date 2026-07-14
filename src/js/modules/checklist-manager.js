@@ -344,7 +344,6 @@ function abrirModalChecklist(tipo, igrejaIndex) {
     const responsavel = checklistExistente.responsavel || {};
     const respostas = checklistExistente.respostas || {};
     const equipamentosTrocados = checklistExistente.equipamentosTrocados || [];
-    const acompanhante = checklistExistente.acompanhante || {};
 
     const modal = document.createElement('div');
     modal.className = 'material-modal';
@@ -420,7 +419,7 @@ function abrirModalChecklist(tipo, igrejaIndex) {
                     <div class="checklist-form-section">
                         <h4><i class="fas fa-exchange-alt"></i> Equipamentos Trocados</h4>
                         <p style="font-size:0.9em;color:#64748b;margin:0 0 12px;">
-                            Liste os equipamentos que foram trocados no serviço. Quem acompanhou deve assinar confirmando a troca.
+                            Informe o nome e a quantidade de cada equipamento trocado no serviço.
                         </p>
                         <div id="listaEquipamentosTrocados" class="equipamentos-trocados-lista">
                             ${_htmlLinhasEquipamentosTrocados(equipamentosTrocados)}
@@ -428,27 +427,16 @@ function abrirModalChecklist(tipo, igrejaIndex) {
                         <button type="button" class="btn-secondary" style="margin-top:8px;" onclick="adicionarLinhaEquipamento()">
                             <i class="fas fa-plus"></i> Adicionar equipamento
                         </button>
-
-                        <h4 style="margin-top:20px;"><i class="fas fa-user-check"></i> Confirmação do Acompanhante</h4>
-                        <div class="form-group">
-                            <label for="acompanhanteNome"><i class="fas fa-user"></i> Nome de quem acompanhou o serviço:</label>
-                            <input type="text" id="acompanhanteNome" value="${acompanhante.nome || ''}" placeholder="Digite o nome completo">
-                        </div>
-                        <div class="signature-canvas-wrapper">
-                            <p style="font-size:0.85em;color:#64748b;margin:0 0 8px;">Assinatura confirmando que os equipamentos acima foram trocados:</p>
-                            <canvas id="signatureCanvasAcompanhante" class="signature-canvas" width="600" height="200"></canvas>
-                            <div class="signature-buttons">
-                                <button type="button" class="btn-warning" onclick="limparAssinaturaAcompanhante()">
-                                    <i class="fas fa-eraser"></i> Limpar
-                                </button>
-                            </div>
-                        </div>
                     </div>
 
-                    <!-- Assinatura Digital -->
+                    <!-- Declaração e Assinatura -->
                     <div class="checklist-form-section">
-                        <h4><i class="fas fa-signature"></i> Assinatura Digital</h4>
+                        <h4><i class="fas fa-file-signature"></i> Declaração e Assinatura</h4>
+                        <div id="textoDeclaracaoChecklist" class="checklist-declaracao-texto" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;font-size:0.9em;line-height:1.5;color:#334155;margin-bottom:16px;">
+                            ${_textoDeclaracao(responsavel, igreja.nome)}
+                        </div>
                         <div class="signature-canvas-wrapper">
+                            <p style="font-size:0.85em;color:#64748b;margin:0 0 8px;">Assinatura de quem acompanhou e aprova o serviço:</p>
                             <canvas id="signatureCanvas" class="signature-canvas" width="600" height="200"></canvas>
                             <div class="signature-buttons">
                                 <button type="button" class="btn-warning" onclick="limparAssinatura()">
@@ -468,19 +456,38 @@ function abrirModalChecklist(tipo, igrejaIndex) {
     `;
 
     document.body.appendChild(modal);
-    
-    // Inicializa os canvas de assinatura
+
+    const _atualizarDeclaracao = () => {
+        const respAtual = {};
+        perguntasChecklist.responsavel.forEach(campo => {
+            respAtual[campo.id] = document.getElementById(`resp_${campo.id}`)?.value.trim() || '';
+        });
+        const el = document.getElementById('textoDeclaracaoChecklist');
+        if (el) el.textContent = _textoDeclaracao(respAtual, igreja.nome);
+    };
+
+    perguntasChecklist.responsavel.forEach(campo => {
+        document.getElementById(`resp_${campo.id}`)?.addEventListener('input', _atualizarDeclaracao);
+    });
+
     setTimeout(() => {
         inicializarCanvasAssinatura('signatureCanvas', checklistExistente.assinatura, c => { canvasAssinatura = c; });
-        inicializarCanvasAssinatura('signatureCanvasAcompanhante', acompanhante.assinatura, c => { canvasAssinaturaAcompanhante = c; });
     }, 100);
 }
 
+function _textoDeclaracao(responsavel, nomeIgreja) {
+    const nome = (responsavel && responsavel.aprovadoPor) || '________________';
+    const cpf = (responsavel && responsavel.cpf) || '________________';
+    const igreja = nomeIgreja || '________________';
+    return `Eu, ${nome}, portador(a) do CPF ${cpf}, declaro que o serviço técnico foi realizado na igreja ${igreja}, que a igreja encontra-se em pleno funcionamento e que os equipamentos informados neste checklist foram efetivamente trocados e instalados no local.`;
+}
+
 function _htmlLinhasEquipamentosTrocados(equipamentos) {
-    const lista = (equipamentos && equipamentos.length) ? equipamentos : [{ item: '' }];
-    return lista.map((eq, idx) => `
+    const lista = (equipamentos && equipamentos.length) ? equipamentos : [{ item: '', quantidade: '' }];
+    return lista.map(eq => `
         <div class="equipamento-trocado-linha" style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">
-            <input type="text" class="equip-item-input" value="${(eq.item || '').replace(/"/g, '&quot;')}" placeholder="Ex.: Amplificador, Microfone, Caixa..." style="flex:1;">
+            <input type="text" class="equip-item-input" value="${(eq.item || '').replace(/"/g, '&quot;')}" placeholder="Nome do equipamento" style="flex:1;">
+            <input type="number" class="equip-qtd-input" min="1" value="${eq.quantidade != null && eq.quantidade !== '' ? eq.quantidade : ''}" placeholder="Qtd" style="width:80px;">
             <button type="button" class="btn-icon btn-danger" onclick="removerLinhaEquipamento(this)" title="Remover">
                 <i class="fas fa-trash"></i>
             </button>
@@ -495,7 +502,8 @@ function adicionarLinhaEquipamento() {
     linha.className = 'equipamento-trocado-linha';
     linha.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;align-items:center;';
     linha.innerHTML = `
-        <input type="text" class="equip-item-input" placeholder="Ex.: Amplificador, Microfone, Caixa..." style="flex:1;">
+        <input type="text" class="equip-item-input" placeholder="Nome do equipamento" style="flex:1;">
+        <input type="number" class="equip-qtd-input" min="1" placeholder="Qtd" style="width:80px;">
         <button type="button" class="btn-icon btn-danger" onclick="removerLinhaEquipamento(this)" title="Remover">
             <i class="fas fa-trash"></i>
         </button>
@@ -510,7 +518,9 @@ function removerLinhaEquipamento(btn) {
     const linhas = container.querySelectorAll('.equipamento-trocado-linha');
     if (linhas.length <= 1) {
         const input = linhas[0].querySelector('.equip-item-input');
+        const qtd = linhas[0].querySelector('.equip-qtd-input');
         if (input) input.value = '';
+        if (qtd) qtd.value = '';
         return;
     }
     btn.closest('.equipamento-trocado-linha').remove();
@@ -518,9 +528,12 @@ function removerLinhaEquipamento(btn) {
 
 function _coletarEquipamentosTrocados() {
     const equipamentos = [];
-    document.querySelectorAll('#listaEquipamentosTrocados .equip-item-input').forEach(input => {
-        const item = input.value.trim();
-        if (item) equipamentos.push({ item });
+    document.querySelectorAll('#listaEquipamentosTrocados .equipamento-trocado-linha').forEach(linha => {
+        const item = linha.querySelector('.equip-item-input')?.value.trim();
+        const quantidade = linha.querySelector('.equip-qtd-input')?.value.trim();
+        if (item) {
+            equipamentos.push({ item, quantidade: quantidade || '1' });
+        }
     });
     return equipamentos;
 }
@@ -539,7 +552,6 @@ function _canvasEstaVazio(canvas) {
 
 // Canvas de assinatura
 let canvasAssinatura = null;
-let canvasAssinaturaAcompanhante = null;
 
 function inicializarCanvasAssinatura(canvasId, assinaturaExistente, onReady) {
     const canvas = document.getElementById(canvasId);
@@ -633,10 +645,6 @@ function limparAssinatura() {
     _limparCanvas(canvasAssinatura);
 }
 
-function limparAssinaturaAcompanhante() {
-    _limparCanvas(canvasAssinaturaAcompanhante);
-}
-
 // Salva o checklist
 async function salvarChecklist(event, tipo, igrejaIndex) {
     event.preventDefault();
@@ -659,30 +667,20 @@ async function salvarChecklist(event, tipo, igrejaIndex) {
         }
     });
 
-    // Coleta equipamentos trocados e confirmação do acompanhante
     const equipamentosTrocados = _coletarEquipamentosTrocados();
-    const acompanhanteNome = (document.getElementById('acompanhanteNome')?.value || '').trim();
-    const assinaturaAcompanhante = canvasAssinaturaAcompanhante ? canvasAssinaturaAcompanhante.toDataURL() : null;
-    const assinaturaAcompanhanteValida = assinaturaAcompanhante && !_canvasEstaVazio(canvasAssinaturaAcompanhante);
 
-    if (equipamentosTrocados.length > 0) {
-        if (!acompanhanteNome) {
-            alert('Informe o nome de quem acompanhou o serviço para confirmar os equipamentos trocados.');
-            return;
-        }
-        if (!assinaturaAcompanhanteValida) {
-            alert('A pessoa que acompanhou o serviço precisa assinar confirmando os equipamentos trocados.');
+    for (const eq of equipamentosTrocados) {
+        if (!eq.quantidade || Number(eq.quantidade) < 1) {
+            alert(`Informe a quantidade do equipamento "${eq.item}".`);
             return;
         }
     }
 
-    if (acompanhanteNome && !assinaturaAcompanhanteValida) {
-        alert('Informe a assinatura de quem acompanhou o serviço.');
+    const assinatura = canvasAssinatura ? canvasAssinatura.toDataURL() : null;
+    if (!assinatura || _canvasEstaVazio(canvasAssinatura)) {
+        alert('A assinatura de quem acompanhou o serviço é obrigatória.');
         return;
     }
-
-    // Coleta assinatura
-    const assinatura = canvasAssinatura ? canvasAssinatura.toDataURL() : null;
 
     // Salva assinatura em storage separado (isolado do Firebase sync)
     if (assinatura) _salvarAssinatura(igreja.nome, igreja.id, assinatura);
@@ -692,10 +690,7 @@ async function salvarChecklist(event, tipo, igrejaIndex) {
         responsavel,
         respostas,
         equipamentosTrocados,
-        acompanhante: {
-            nome: acompanhanteNome,
-            assinatura: assinaturaAcompanhanteValida ? assinaturaAcompanhante : null
-        },
+        declaracao: _textoDeclaracao(responsavel, igreja.nome),
         assinatura,
         dataPreenchimento: new Date().toISOString()
     };
@@ -774,7 +769,7 @@ async function _gerarPDFChecklist(tipo, igrejaIndex) {
     const respostas   = igreja.checklist.respostas   || {};
     const assinatura  = igreja.checklist.assinatura  || null;
     const equipamentosTrocados = igreja.checklist.equipamentosTrocados || [];
-    const acompanhante = igreja.checklist.acompanhante || {};
+    const declaracao = igreja.checklist.declaracao || _textoDeclaracao(responsavel, igreja.nome);
 
     let y = 20;
 
@@ -830,54 +825,35 @@ async function _gerarPDFChecklist(tipo, igrejaIndex) {
         pdf.setFontSize(9);
         equipamentosTrocados.forEach((eq, index) => {
             if (y > 270) { pdf.addPage(); y = 20; }
-            pdf.text(`${index + 1}. ${eq.item || 'N/A'}`, 25, y);
+            const qtd = eq.quantidade != null && eq.quantidade !== '' ? eq.quantidade : '1';
+            pdf.text(`${index + 1}. ${eq.item || 'N/A'} — Qtd: ${qtd}`, 25, y);
             y += 6;
         });
-
-        if (acompanhante.nome) {
-            y += 4;
-            pdf.setFont('helvetica', 'bold');
-            pdf.text(`Confirmado por: ${acompanhante.nome}`, 20, y);
-            y += 8;
-        }
-
-        if (acompanhante.assinatura) {
-            if (y > 230) { pdf.addPage(); y = 20; }
-            pdf.setFont('helvetica', 'bold');
-            pdf.setFontSize(10);
-            pdf.text('Assinatura do Acompanhante:', 20, y);
-            y += 6;
-
-            try {
-                await new Promise((resolve) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        try {
-                            pdf.addImage(img, 'PNG', 20, y, 120, 45);
-                        } catch (e) {
-                            try { pdf.addImage(acompanhante.assinatura, 20, y, 120, 45); } catch (_) {}
-                        }
-                        resolve();
-                    };
-                    img.onerror = () => resolve();
-                    img.src = acompanhante.assinatura;
-                });
-                y += 50;
-            } catch (e) {
-                console.error('Erro ao processar assinatura do acompanhante:', e);
-            }
-        }
-
-        pdf.setFont('helvetica', 'normal');
         y += 6;
     }
 
+    if (y > 230) { pdf.addPage(); y = 20; }
+    y += 6;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.text('Declaração', 20, y);
+    y += 8;
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9);
+    const linhasDeclaracao = pdf.splitTextToSize(declaracao, 170);
+    linhasDeclaracao.forEach(linha => {
+        if (y > 270) { pdf.addPage(); y = 20; }
+        pdf.text(linha, 20, y);
+        y += 5;
+    });
+    y += 8;
+
     if (assinatura) {
         if (y > 240) { pdf.addPage(); y = 20; }
-        y += 10;
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(12);
-        pdf.text('Assinatura Digital:', 20, y);
+        pdf.text('Assinatura:', 20, y);
         y += 8;
 
         // Pré-carrega a imagem num elemento para garantir compatibilidade com jsPDF
@@ -889,7 +865,6 @@ async function _gerarPDFChecklist(tipo, igrejaIndex) {
                         pdf.addImage(img, 'PNG', 20, y, 120, 45);
                     } catch (e) {
                         console.error('Erro ao adicionar assinatura (Image):', e);
-                        // fallback: tenta direto com data URL
                         try { pdf.addImage(assinatura, 20, y, 120, 45); } catch (_) {}
                     }
                     resolve();
@@ -980,7 +955,6 @@ window.salvarChecklist = salvarChecklist;
 window.visualizarChecklist = visualizarChecklist;
 window.downloadChecklistPDF = downloadChecklistPDF;
 window.limparAssinatura = limparAssinatura;
-window.limparAssinaturaAcompanhante = limparAssinaturaAcompanhante;
 window.adicionarLinhaEquipamento = adicionarLinhaEquipamento;
 window.removerLinhaEquipamento = removerLinhaEquipamento;
 window.sincronizarIgrejasChecklistNF = sincronizarIgrejasChecklistNF;
