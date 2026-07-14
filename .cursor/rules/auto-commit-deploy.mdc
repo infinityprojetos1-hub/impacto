@@ -1,0 +1,15 @@
+---
+description: Commit e deploy automáticos após mudanças no projeto Impacto
+alwaysApply: true
+---
+
+# Commit e deploy automáticos
+
+Sempre que fizer alterações neste repositório (`impacto`):
+
+1. Faça **commit** ao concluir a tarefa (sem esperar o usuário pedir), exceto se ele disser explicitamente para não commitar.
+2. Faça **push** para `origin/main` em seguida.
+3. Aguarde o GitHub Pages concluir o deploy e confirme ao usuário que a versão está no ar.
+4. Sempre incremente `CACHE_VERSION` em `sw.js` quando houver mudanças que afetem o app.
+
+URL de produção: https://infinityprojetos1-hub.github.io/impacto/
