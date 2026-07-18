@@ -4366,55 +4366,6 @@
             </div>
         </div>
 
-        <!-- Modal para Gerar Relatório -->
-        <div id="modalRelatorio" class="modal-overlay" style="display: none;">
-            <div class="modal-content" style="max-width: 600px;">
-                <div class="modal-header">
-                    <h3 id="modalRelatorioTitulo">Gerar Relatório - IGREJA</h3>
-                    <button class="modal-close" onclick="fecharModalRelatorio()">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="modalTipoRelatorio">Tipo de Relatório:</label>
-                        <select id="modalTipoRelatorio">
-                            <option value="manutencao">MANUTENÇÃO</option>
-                            <option value="igreja_nova">IGREJA NOVA</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Imagens do Relatório (até 5 imagens, em ordem)</label>
-                        <input type="file" id="modalImagensRelatorio" accept="image/*" multiple>
-                        <small style="color: #666;">Selecione as imagens na ordem que devem aparecer no
-                            relatório</small>
-                    </div>
-                    <div class="form-group">
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                            <input type="checkbox" id="modalUsarTextoPersonalizado"
-                                onchange="toggleTextoPersonalizadoModal()">
-                            <span>Usar texto personalizado no relatório</span>
-                        </label>
-                        <textarea id="modalTextoPersonalizado" rows="6"
-                            placeholder="Cole aqui o texto que deseja usar no relatório..."
-                            style="display: none; margin-top: 10px; width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;"></textarea>
-                    </div>
-                    <div class="form-group"
-                        style="margin-top: 15px; padding: 10px; background: #f0f8ff; border-radius: 5px;">
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                            <input type="checkbox" id="modalSalvarPastaImprimir" checked>
-                            <span>Salvar automaticamente na pasta IMPRIMIR</span>
-                        </label>
-                    </div>
-                </div>
-                <div class="modal-footer"
-                    style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
-                    <button class="btn-secondary" onclick="fecharModalRelatorio()">Cancelar</button>
-                    <button class="btn-success" onclick="gerarRelatorioDoModal()">
-                        <i class="fas fa-file-pdf"></i> Gerar Relatório
-                    </button>
-                </div>
-            </div>
-        </div>
-
         <div id="logos" class="tab-content">
             <div class="section">
                 <h2>Logos das Empresas</h2>
@@ -4614,6 +4565,55 @@
                 <h2><i class="fas fa-clipboard-list"></i> Prévia de Material por Igreja</h2>
                 <p>Defina os materiais iniciais necessários para cada igreja e compare com o estoque atual para saber o que precisa pedir ao fornecedor.</p>
                 <div id="previaContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Gerar Relatório (fora do .container para position:fixed funcionar) -->
+    <div id="modalRelatorio" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3 id="modalRelatorioTitulo">Gerar Relatório - IGREJA</h3>
+                <button class="modal-close" onclick="fecharModalRelatorio()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="modalTipoRelatorio">Tipo de Relatório:</label>
+                    <select id="modalTipoRelatorio">
+                        <option value="manutencao">MANUTENÇÃO</option>
+                        <option value="igreja_nova">IGREJA NOVA</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Imagens do Relatório (até 5 imagens, em ordem)</label>
+                    <input type="file" id="modalImagensRelatorio" accept="image/*" multiple>
+                    <small style="color: #666;">Selecione as imagens na ordem que devem aparecer no
+                        relatório</small>
+                </div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" id="modalUsarTextoPersonalizado"
+                            onchange="toggleTextoPersonalizadoModal()">
+                        <span>Usar texto personalizado no relatório</span>
+                    </label>
+                    <textarea id="modalTextoPersonalizado" rows="6"
+                        placeholder="Cole aqui o texto que deseja usar no relatório..."
+                        style="display: none; margin-top: 10px; width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;"></textarea>
+                </div>
+                <div class="form-group"
+                    style="margin-top: 15px; padding: 10px; background: #f0f8ff; border-radius: 5px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" id="modalSalvarPastaImprimir" checked>
+                        <span>Salvar automaticamente na pasta IMPRIMIR</span>
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer"
+                style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button class="btn-secondary" onclick="fecharModalRelatorio()">Cancelar</button>
+                <button class="btn-success" onclick="gerarRelatorioDoModal()">
+                    <i class="fas fa-file-pdf"></i> Gerar Relatório
+                </button>
             </div>
         </div>
     </div>

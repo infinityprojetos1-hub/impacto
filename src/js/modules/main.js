@@ -958,7 +958,7 @@ function atualizarListaRelatoriosNovo() {
                         <span class="relatorio-status ${statusClass}">${statusText}</span>
                     </div>
                     <div class="relatorio-col-acoes">
-                        <button class="btn-relatorio btn-relatorio-gerar" onclick="abrirModalRelatorio('${igreja.nome}', '${igreja.id || ''}', ${index}, '${abaAtivaRelatorio}')">
+                        <button class="btn-relatorio btn-relatorio-gerar" onclick="abrirModalRelatorio(${JSON.stringify(igreja.nome)}, ${JSON.stringify(igreja.id || '')}, ${index}, ${JSON.stringify(abaAtivaRelatorio)})">
                             <i class="fas fa-file-pdf"></i> Gerar
                         </button>
                         ${abaAtivaRelatorio !== 'pendentes' ? `
@@ -1026,8 +1026,13 @@ function abrirModalRelatorio(nome, id, index, tipoOrigem = 'pendentes') {
     document.getElementById('modalTextoPersonalizado').style.display = 'none';
     document.getElementById('modalSalvarPastaImprimir').checked = true;
 
+    const modalEl = document.getElementById('modalRelatorio');
+    if (modalEl && modalEl.parentElement !== document.body) {
+        document.body.appendChild(modalEl);
+    }
+
     // Mostra o modal
-    document.getElementById('modalRelatorio').style.display = 'flex';
+    modalEl.style.display = 'flex';
 }
 
 // Fecha o modal de relatório
