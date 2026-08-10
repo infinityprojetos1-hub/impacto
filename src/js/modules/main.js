@@ -875,9 +875,36 @@ function moverParaSandroRelatorio(tipoOrigem, index) {
 
 // Evita re-render desnecessário (mantém hover, reduz custo)
 let _relatorioLastRenderHash = '';
+
+function _initRelatorioListaDelegation() {
+    const container = document.getElementById('relatorioIgrejasList');
+    if (!container || container.dataset.delegationInit) return;
+    container.dataset.delegationInit = '1';
+
+    container.addEventListener('click', (e) => {
+        const btnGerar = e.target.closest('.btn-relatorio-gerar');
+        if (btnGerar) {
+            const index = parseInt(btnGerar.dataset.index, 10);
+            const tipo = btnGerar.dataset.tipo;
+            const igreja = relatoriosData[tipo]?.[index];
+            if (igreja) abrirModalRelatorio(igreja.nome, igreja.id || '', index, tipo);
+            return;
+        }
+
+        const btnDownload = e.target.closest('.btn-relatorio-download');
+        if (btnDownload) {
+            const index = parseInt(btnDownload.dataset.index, 10);
+            const tipo = btnDownload.dataset.tipo;
+            const igreja = relatoriosData[tipo]?.[index];
+            if (igreja) baixarRelatorioIndividual(`${igreja.nome}_${igreja.id}`);
+        }
+    });
+}
+
 function atualizarListaRelatoriosNovo() {
     const container = document.getElementById('relatorioIgrejasList');
     if (!container) return;
+    _initRelatorioListaDelegation();
     // Sincroniza com NF antes de exibir
     sincronizarIgrejasRelatorio();
     const hash = (relatoriosData._ts || 0) + '-' + (relatoriosData.pendentes||[]).length + ':' + (relatoriosData.gerados||[]).length + ':' + (relatoriosData.pedidosSandro||[]).length + '-' + abaAtivaRelatorio;
@@ -958,7 +985,7 @@ function atualizarListaRelatoriosNovo() {
                         <span class="relatorio-status ${statusClass}">${statusText}</span>
                     </div>
                     <div class="relatorio-col-acoes">
-                        <button class="btn-relatorio btn-relatorio-gerar" onclick="abrirModalRelatorio(${JSON.stringify(igreja.nome)}, ${JSON.stringify(igreja.id || '')}, ${index}, ${JSON.stringify(abaAtivaRelatorio)})">
+                        <button class="btn-relatorio btn-relatorio-gerar" data-index="${index}" data-tipo="${abaAtivaRelatorio}" type="button">
                             <i class="fas fa-file-pdf"></i> Gerar
                         </button>
                         ${abaAtivaRelatorio !== 'pendentes' ? `
@@ -977,7 +1004,7 @@ function atualizarListaRelatoriosNovo() {
                             </button>
                         ` : ''}
                         ${pdfsRelatoriosGerados[chave] ? `
-                            <button class="btn-relatorio btn-relatorio-download" onclick="baixarRelatorioIndividual('${chave}')" title="Baixar PDF">
+                            <button class="btn-relatorio btn-relatorio-download" data-index="${index}" data-tipo="${abaAtivaRelatorio}" type="button" title="Baixar PDF">
                                 <i class="fas fa-download"></i>
                             </button>
                         ` : ''}
@@ -1027,17 +1054,25 @@ function abrirModalRelatorio(nome, id, index, tipoOrigem = 'pendentes') {
     document.getElementById('modalSalvarPastaImprimir').checked = true;
 
     const modalEl = document.getElementById('modalRelatorio');
-    if (modalEl && modalEl.parentElement !== document.body) {
+    if (!modalEl) {
+        console.error('Elemento #modalRelatorio não encontrado');
+        alert('Erro ao abrir o modal. Atualize a página e tente novamente.');
+        return;
+    }
+    if (modalEl.parentElement !== document.body) {
         document.body.appendChild(modalEl);
     }
 
     // Mostra o modal
     modalEl.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
 }
 
 // Fecha o modal de relatório
 function fecharModalRelatorio() {
-    document.getElementById('modalRelatorio').style.display = 'none';
+    const modalEl = document.getElementById('modalRelatorio');
+    if (modalEl) modalEl.style.display = 'none';
+    document.body.style.overflow = '';
     igrejaAtualRelatorio = null;
 }
 
