@@ -1572,20 +1572,21 @@ function _classificarItemEscopo(texto) {
 function _reescreverItemCompleto(item, variante) {
     const { texto, fatos } = _protegerFatosOrcamento(item);
     const v0 = [
-        [/montagem da estrutura met[aá]lica para paredes(?: em drywall)?/gi, 'Montagem e nivelamento da estrutura metalica destinada as paredes'],
-        [/instala[cç][aã]o e fixa[cç][aã]o das placas de drywall/gi, 'Fixacao e instalacao das placas de drywall'],
-        [/prepara[cç][aã]o e execu[cç][aã]o dos v[aã]os para porta e janela/gi, 'Confeccao dos vaos destinados a porta e a janela'],
-        [/execu[cç][aã]o dos refor[cç]os estruturais necess[aá]rios para sustenta[cç][aã]o e fixa[cç][aã]o da porta e da janela/gi, 'Execucao dos reforcos internos necessarios para garantir a estabilidade e a correta fixacao da porta e da janela'],
-        [/tratamento das juntas,?\s*aplica[cç][aã]o de fita e massa espec[ií]fica para drywall/gi, 'Tratamento das emendas e juntas das placas, com aplicacao de fita e massa apropriada'],
-        [/acabamentos necess[aá]rios ap[oó]s a montagem/gi, 'Realizacao dos arremates e acabamentos decorrentes da execucao'],
-        [/organiza[cç][aã]o e limpeza da [aá]rea ap[oó]s a conclus[aã]o dos servi[cç]os/gi, 'Retirada de residuos, organizacao e limpeza do local ao termino dos trabalhos'],
-        [/fornecimento e instala[cç][aã]o de janela medindo/gi, 'Fornecimento e instalacao de janela com dimensoes de'],
-        [/medindo\s+/gi, 'com dimensoes de '],
-        [/espec[ií]fica para/gi, 'apropriada para'],
-        [/ap[oó]s a conclus[aã]o/gi, 'ao termino'],
-        [/para paredes em/gi, 'destinada as paredes em'],
-        [/foi confeccionada e preparada especificamente para/gi, 'sera entregue ja adequada para'],
-        [/fabrica[cç][aã]o e implementa[cç][aã]o no local/gi, 'producao e instalacao em campo'],
+        [/montagem da estrutura met[aá]lica para paredes(?: em drywall)?/gi, 'Composicao e aprumo dos perfis metalicos que recebem o revestimento'],
+        [/instala[cç][aã]o e fixa[cç][aã]o das placas de drywall/gi, 'Revestimento das faces com placas de gesso acartonado'],
+        [/prepara[cç][aã]o e execu[cç][aã]o dos v[aã]os para porta e janela/gi, 'Abertura dos vaos nos pontos de porta e janela'],
+        [/execu[cç][aã]o dos refor[cç]os estruturais necess[aá]rios para sustenta[cç][aã]o e fixa[cç][aã]o da porta e da janela/gi, 'Reforco dos perfis nos pontos de apoio da porta e da janela'],
+        [/tratamento das juntas,?\s*aplica[cç][aã]o de fita e massa espec[ií]fica para drywall/gi, 'Emassamento das juntas com fita e composto proprio de gesso acartonado'],
+        [/acabamentos necess[aá]rios ap[oó]s a montagem/gi, 'Arremates visuais apos o revestimento'],
+        [/organiza[cç][aã]o e limpeza da [aá]rea ap[oó]s a conclus[aã]o dos servi[cç]os/gi, 'Recolhimento de sobras, arrumacao da area e liberacao do local'],
+        [/fornecimento e instala[cç][aã]o de janela medindo/gi, 'Inclusao e colocacao de 1 janela nas medidas'],
+        [/instala[cç][aã]o da porta/gi, 'Colocacao da folha de porta no vao preparado'],
+        [/medindo\s+/gi, 'nas medidas '],
+        [/espec[ií]fica para/gi, 'propria de'],
+        [/foi confeccionada e preparada especificamente para/gi, 'chega pronta para receber'],
+        [/fabrica[cç][aã]o e implementa[cç][aã]o no local/gi, 'producao e montagem em campo'],
+        [/m[aã]o de obra especializada/gi, 'equipe tecnica contratada'],
+        [/montagem e instala[cç][aã]o/gi, 'implantacao'],
     ];
     const v1 = [
         [/montagem da estrutura met[aá]lica para paredes(?: em drywall)?/gi, 'Instalacao da estrutura metalica'],
@@ -1609,11 +1610,11 @@ function _reescreverItemCompleto(item, variante) {
 
 function _tituloVariante(info, variante) {
     if (variante % 2 === 0) {
-        if (info.drywall) return 'ORCAMENTO DE EXECUCAO - SISTEMA DRYWALL';
-        if (info.tenda) return 'ORCAMENTO DE EXECUCAO - TENDA E INFRAESTRUTURA';
-        if (info.forro) return 'ORCAMENTO DE EXECUCAO - FORRO';
-        if (info.vidro) return 'ORCAMENTO DE EXECUCAO - ESQUADRIAS E VIDROS';
-        return 'ORCAMENTO DE EXECUCAO';
+        if (info.drywall) return 'ESPECIFICACAO TECNICA DE SERVICOS\n\nParede em drywall com porta e janela';
+        if (info.tenda) return 'ESPECIFICACAO TECNICA DE SERVICOS\n\nTenda e infraestrutura no local';
+        if (info.forro) return 'ESPECIFICACAO TECNICA DE SERVICOS\n\nExecucao de forro';
+        if (info.vidro) return 'ESPECIFICACAO TECNICA DE SERVICOS\n\nEsquadrias e vidros';
+        return 'ESPECIFICACAO TECNICA DE SERVICOS';
     }
     if (info.drywall) return 'PROPOSTA DE SERVICOS\n\nMONTAGEM DE PAREDE EM DRYWALL';
     if (info.tenda) return 'PROPOSTA DE SERVICOS\n\nLOCACAO DE TENDA E INFRAESTRUTURA';
@@ -1623,29 +1624,33 @@ function _tituloVariante(info, variante) {
 }
 
 function _introVariante(info, variante) {
-    const alvo = info.drywall
-        ? (variante % 2 === 0 ? 'montagem de paredes em sistema drywall' : 'implantacao de estrutura em drywall')
-        : info.tenda
-            ? (variante % 2 === 0 ? 'locacao e montagem de tenda e infraestrutura' : 'fornecimento de tenda e infraestrutura no local')
-            : 'execucao dos servicos previstos no pedido';
-    const extras = [];
-    if (info.porta && info.janela) {
-        extras.push(variante % 2 === 0
-            ? 'a preparacao dos ambientes e dos elementos necessarios para instalacao de porta e janela'
-            : 'a montagem do sistema, preparacao das aberturas e instalacao dos elementos previstos');
-    } else if (info.porta) {
-        extras.push('a instalacao da porta prevista');
-    } else if (info.janela) {
-        extras.push('a instalacao da janela prevista');
-    }
     let txt;
     if (variante % 2 === 0) {
-        txt = 'Execucao de mao de obra especializada para ' + alvo;
-        if (extras.length) txt += ', incluindo ' + extras.join(' e ');
-        txt += '.';
+        if (info.drywall) {
+            txt = 'Trata-se da contratacao de equipe especializada para implantar o sistema de gesso acartonado no ambiente indicado';
+            if (info.porta && info.janela) txt += ', com abertura e colocacao dos esquadros de porta e janela previstos';
+            else if (info.porta) txt += ', com colocacao da porta prevista';
+            else if (info.janela) txt += ', com colocacao da janela prevista';
+            txt += '. O trabalho segue em etapas, da estruturacao ate a liberacao do local.';
+        } else if (info.tenda) {
+            txt = 'Contrato de fornecimento e montagem de tenda com a infraestrutura descrita, organizado por etapas de campo.';
+        } else {
+            txt = 'Contrato de execucao tecnica organizado por etapas, cobrindo o mesmo escopo, medidas e pecas informados no pedido.';
+        }
     } else {
+        const alvo = info.drywall
+            ? 'implantacao de estrutura em drywall'
+            : info.tenda
+                ? 'fornecimento de tenda e infraestrutura no local'
+                : 'execucao dos servicos previstos no pedido';
         txt = 'Apresentamos proposta para execucao completa dos servicos relacionados a ' + alvo;
-        if (extras.length) txt += ', contemplando ' + extras.join(', ');
+        if (info.porta && info.janela) {
+            txt += ', contemplando a montagem do sistema, preparacao das aberturas e instalacao dos elementos previstos';
+        } else if (info.porta) {
+            txt += ', contemplando a instalacao da porta prevista';
+        } else if (info.janela) {
+            txt += ', contemplando a instalacao da janela prevista';
+        }
         txt += '.';
     }
     if (info.datas.length >= 2) txt += ' Periodo: ' + info.datas[0] + ' a ' + info.datas[1] + '.';
@@ -1660,10 +1665,10 @@ function _fechamentoVariante(info, variante) {
         ? 'fornecimento da janela de ' + dimJanela
         : (info.incluiJanela ? 'fornecimento da janela prevista' : '');
     if (variante % 2 === 0) {
-        let a = 'O valor apresentado corresponde a execucao da mao de obra referente aos servicos acima especificados';
-        if (janelaTxt) a += ' e inclui tambem o ' + janelaTxt;
+        let a = 'A composicao de preco cobre a equipe de execucao de todas as etapas';
+        if (janelaTxt) a += ' e a peca de janela' + (dimJanela ? ' nas medidas ' + dimJanela : '');
         a += '.';
-        return a + '\n\nOs servicos serao realizados conforme as condicoes verificadas no local e de acordo com as necessidades tecnicas da instalacao.';
+        return a + '\n\nO atendimento e integral, conforme a situacao encontrada em campo, sem alterar as medidas, pecas e quantitativos do pedido.';
     }
     let a = 'O orcamento contempla a mao de obra especializada para todos os servicos relacionados acima';
     if (janelaTxt) a += ', incluindo o fornecimento e instalacao da janela' + (dimJanela ? ' de ' + dimJanela : '');
@@ -1679,9 +1684,31 @@ function _montarTextoConcorrente(info, variante) {
     const fecha = _fechamentoVariante(info, variante);
 
     if (variante % 2 === 0) {
-        const bloco = [titulo, '', 'Objeto do servico', '', intro, '', 'Escopo da execucao', ''];
-        itens.forEach((item) => bloco.push('- ' + item));
-        bloco.push('', 'Condicoes do orcamento', '', fecha);
+        const etapas = [
+            { chave: 'estrutura', titulo: 'Etapa 1 - Preparo e estruturacao' },
+            { chave: 'aberturas', titulo: 'Etapa 2 - Aberturas e reforcos' },
+            { chave: 'instalacoes', titulo: 'Etapa 3 - Esquadros e pecas' },
+            { chave: 'acabamento', titulo: 'Etapa 4 - Tratamento superficial' },
+            { chave: 'finalizacao', titulo: 'Etapa 5 - Entrega do ambiente' },
+            { chave: 'outros', titulo: 'Etapa complementar' }
+        ];
+        const buckets = {};
+        etapas.forEach((e) => { buckets[e.chave] = []; });
+        itens.forEach((item, i) => {
+            const chave = _classificarItemEscopo(info.itens[i] || item);
+            (buckets[chave] || buckets.outros).push(item);
+        });
+        const bloco = [titulo, '', 'Resumo', '', intro, '', 'Cronograma de etapas'];
+        let n = 1;
+        etapas.forEach((e) => {
+            const lista = buckets[e.chave];
+            if (!lista.length) return;
+            const rotulo = e.chave === 'outros' ? ('Etapa ' + n + ' - Demais atividades') : e.titulo.replace(/Etapa \d+/, 'Etapa ' + n);
+            n += 1;
+            bloco.push('', rotulo);
+            bloco.push(lista.join('; ') + '.');
+        });
+        bloco.push('', 'Abrangencia comercial', '', fecha);
         return bloco.join('\n');
     }
 
