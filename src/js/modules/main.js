@@ -1444,15 +1444,148 @@ function _sanitizarTextoOrcamento(texto) {
         : String(texto || '');
 }
 
-// Gera versão concorrente mantendo o texto original completo (sem reescrever itens)
+function _protegerFatosOrcamento(texto) {
+    const fatos = [];
+    const guardar = (m) => {
+        const i = fatos.length;
+        fatos.push(m);
+        return `<<F${i}>>`;
+    };
+    let t = String(texto);
+    t = t.replace(/\d{1,2}\/\d{1,2}\/\d{2,4}/g, guardar);
+    t = t.replace(/\b\d{1,2}:\d{2}(?:h|\s*h)?\b/gi, guardar);
+    t = t.replace(/\b\d+[.,]\d+\s*(?:m|cm|mm|km|kg|metros?|metro)\b/gi, guardar);
+    t = t.replace(/\b\d+\s*(?:m|cm|mm|km|kg|metros?|metro)\b/gi, guardar);
+    t = t.replace(/(?:local|endere[cç]o|igreja|cliente|unidade)\s*:\s*(.+)/gi, (_, rest) => {
+        return 'local: ' + guardar(rest.trim());
+    });
+    t = t.replace(/\b0\d+\b/g, guardar);
+    t = t.replace(/\b\d+(?:[.,]\d+)?\b/g, guardar);
+    t = t.replace(/\b[A-ZÁÉÍÓÚÂÊÔÃÕ][a-záéíóúâêôãõç]+(?:\s+(?:d[aeo]s?|e)\s+[A-ZÁÉÍÓÚÂÊÔÃÕ][a-záéíóúâêôãõç]+|\s+[A-ZÁÉÍÓÚÂÊÔÃÕ][a-záéíóúâêôãõç]+){1,6}\b/g, guardar);
+    return { texto: t, fatos };
+}
+
+function _restaurarFatosOrcamento(texto, fatos) {
+    let t = String(texto);
+    fatos.forEach((valor, i) => {
+        t = t.split(`<<F${i}>>`).join(valor);
+    });
+    return t;
+}
+
+function _linhasEscopoOrcamento(texto) {
+    const soCabecalho = /^(contexto|escopo|observacoes|condicoes|resumo|objeto|entrega|disposicoes finais|servicos contemplados|identificacao|proposta comercial de servicos|memorial descritivo dos servicos)$/i;
+    return String(texto).split(/\r?\n/).map((l) => l.trim()).filter(Boolean).map((l) => {
+        return l.replace(/^(?:\d+[\.\)]\s*|[A-Za-z]\)\s*|[-*]\s*)/, '').trim();
+    }).filter((l) => {
+        if (l.length < 2) return false;
+        const limpo = l.replace(/[^a-zA-ZáéíóúãõçÁÉÍÓÚÃÕÇ\s]/g, '').replace(/\s+/g, ' ').trim();
+        return !soCabecalho.test(limpo);
+    });
+}
+
+function _aplicarTrocas(texto, trocas) {
+    let t = texto;
+    trocas.forEach(([rgx, rep]) => { t = t.replace(rgx, rep); });
+    return t.replace(/\s{2,}/g, ' ').trim();
+}
+
+function _parafrasearLinhaConcorrente(linha, variante) {
+    const { texto, fatos } = _protegerFatosOrcamento(linha);
+    const v0 = [
+        [/\bor[cç]amento\b/gi, 'proposta comercial'],
+        [/\bper[ií]odo da loca[cç][aã]o\b/gi, 'prazo de locacao'],
+        [/\bper[ií]odo\b/gi, 'prazo'],
+        [/\bmodalidade\b/gi, 'forma de contratacao'],
+        [/\bconforme solicitado\b/gi, 'de acordo com o pedido'],
+        [/\bapresentamos\b/gi, 'segue'],
+        [/\bnossa proposta\b/gi, 'esta proposta'],
+        [/\bfoi confeccionada e preparada especificamente para\b/gi, 'sera entregue ja adequada para'],
+        [/\bconfeccionadas\b/gi, 'produzidas'],
+        [/\bconfeccionada\b/gi, 'produzida'],
+        [/\bespecificamente\b/gi, 'de forma dedicada'],
+        [/\bfabrica[cç][aã]o e implementa[cç][aã]o no local\b/gi, 'producao e instalacao em campo'],
+        [/\bimplementa[cç][aã]o no local\b/gi, 'instalacao em campo'],
+        [/\bpermitir (?:a |o )?/gi, 'viabilizar '],
+        [/\bdetalhamento do escopo\b/gi, 'itens contemplados'],
+        [/\boferecemos\b/gi, 'consta'],
+        [/\brealizamos\b/gi, 'sera executado'],
+        [/\bexecutamos\b/gi, 'fica prevista a execucao de'],
+        [/\binstalamos\b/gi, 'sera instalado'],
+    ];
+    const v1 = [
+        [/\bor[cç]amento\b/gi, 'memorial descritivo'],
+        [/\bper[ií]odo da loca[cç][aã]o\b/gi, 'vigencia da locacao'],
+        [/\bper[ií]odo\b/gi, 'vigencia'],
+        [/\bmodalidade\b/gi, 'enquadramento contratual'],
+        [/\bconforme solicitado\b/gi, 'segundo a demanda registrada'],
+        [/\bapresentamos\b/gi, 'este documento descreve'],
+        [/\bnossa proposta\b/gi, 'o escopo abaixo'],
+        [/\bfoi confeccionada e preparada especificamente para\b/gi, 'foi construida sob medida para'],
+        [/\bconfeccionadas\b/gi, 'construidas'],
+        [/\bconfeccionada\b/gi, 'construida'],
+        [/\bespecificamente\b/gi, 'sob medida'],
+        [/\bfabrica[cç][aã]o e implementa[cç][aã]o no local\b/gi, 'execucao in loco'],
+        [/\bimplementa[cç][aã]o no local\b/gi, 'execucao in loco'],
+        [/\bpermitir (?:a |o )?/gi, 'acomodar '],
+        [/\bdetalhamento do escopo\b/gi, 'relacao tecnica'],
+        [/\boferecemos\b/gi, 'o escopo contempla'],
+        [/\brealizamos\b/gi, 'havera'],
+        [/\bexecutamos\b/gi, 'o servico cobre'],
+        [/\binstalamos\b/gi, 'fica prevista a instalacao de'],
+    ];
+    const parafraseado = _aplicarTrocas(texto, variante % 2 === 0 ? v0 : v1);
+    let out = _restaurarFatosOrcamento(parafraseado || texto, fatos);
+    if (out) out = out.charAt(0).toUpperCase() + out.slice(1);
+    if (out && !/[.:;!?]$/.test(out)) out += '.';
+    return out;
+}
+
+function _montarTextoConcorrente(linhas, variante) {
+    const itens = linhas.map((l) => _parafrasearLinhaConcorrente(l, variante));
+    if (variante % 2 === 0) {
+        const bloco = [
+            'PROPOSTA COMERCIAL DE SERVICOS',
+            '',
+            'OBJETO',
+            'Documento comercial com o mesmo escopo, prazos, quantitativos e local informados no pedido, redigido em formato de proposta.',
+            '',
+            'ESCOPO CONTRATADO',
+        ];
+        itens.forEach((item, i) => bloco.push((i + 1) + '. ' + item));
+        bloco.push(
+            '',
+            'CONDICOES',
+            'Mao de obra, materiais e deslocamento acompanham o escopo acima. Prazos e valores desta proposta dependem de aceite formal.',
+        );
+        return bloco.join('\n');
+    }
+    const bloco = [
+        'MEMORIAL DESCRITIVO DOS SERVICOS',
+        '',
+        'A) IDENTIFICACAO',
+        'Descricao tecnica do atendimento, organizada por itens, conservando medidas, datas, local e caracteristicas originais do pedido.',
+        '',
+        'B) RELACAO DE ITENS',
+    ];
+    itens.forEach((item) => bloco.push('- ' + item));
+    bloco.push(
+        '',
+        'C) ENCERRAMENTO',
+        'A entrega ocorre apos conferencia no local, nas mesmas condicoes, medidas e prazos indicados neste memorial.',
+    );
+    return bloco.join('\n');
+}
+
 function gerarTextoConcorrenteAuto(textoBase, variante = 0) {
     try {
         const original = _sanitizarTextoOrcamento((textoBase || '').trim());
         if (!original) return '';
-        const titulo = (variante % 2 === 0)
-            ? 'PROPOSTA COMERCIAL'
-            : 'ESPECIFICACAO DOS SERVICOS';
-        return [titulo, '', original].join('\n');
+        const linhas = _linhasEscopoOrcamento(original);
+        if (linhas.length === 0) {
+            return _montarTextoConcorrente([original], variante % 2);
+        }
+        return _montarTextoConcorrente(linhas, variante % 2);
     } catch (_) {
         return _sanitizarTextoOrcamento(textoBase || '');
     }
