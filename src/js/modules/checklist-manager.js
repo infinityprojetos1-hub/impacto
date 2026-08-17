@@ -207,7 +207,12 @@ function atualizarListaChecklist() {
     const container = document.getElementById('checklistList');
     if (!container) return;
     const hash = (checklistData._ts || 0) + '-' + (checklistData.igrejas||[]).length + ':' + (checklistData.pedidosSandro||[]).length;
-    if (hash === _checklistLastRenderHash) return;
+    const visivel = document.getElementById('checklist')?.classList.contains('active');
+    if (!visivel) {
+        if (hash !== _checklistLastRenderHash) _checklistLastRenderHash = '';
+        return;
+    }
+    if (hash === _checklistLastRenderHash && container.querySelector('.checklist-tabs')) return;
     _checklistLastRenderHash = hash;
 
     container.innerHTML = '';

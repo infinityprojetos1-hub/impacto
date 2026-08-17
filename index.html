@@ -315,7 +315,6 @@
         .tab-content {
             display: none;
             padding: 40px;
-            animation: fadeIn 0.4s ease;
         }
 
         .tab-content.active {
@@ -3521,8 +3520,59 @@
         .nf-card-lista {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 16px;
             margin-top: 12px;
+        }
+
+        .nf-empresa-bloco {
+            padding: 16px;
+            border: 2px solid var(--border-color);
+            border-radius: 16px;
+            background: var(--bg-light);
+        }
+
+        .nf-empresa-bloco-impacto {
+            border-color: #fecaca;
+            background: #fff8f8;
+        }
+
+        .nf-empresa-bloco-spg {
+            border-color: #bfdbfe;
+            background: #f5f9ff;
+        }
+
+        .nf-empresa-titulo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.05em;
+            font-weight: 800;
+            margin: 0 0 12px 0;
+            padding-left: 0;
+        }
+
+        .nf-empresa-titulo::before {
+            display: none;
+        }
+
+        .nf-empresa-titulo-impacto { color: #9f1239; }
+        .nf-empresa-titulo-spg { color: #1d4ed8; }
+
+        .nf-empresa-count {
+            margin-left: auto;
+            font-size: 12px;
+            font-weight: 700;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 3px 10px;
+            color: var(--text-color);
+        }
+
+        .nf-empresa-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
 
         .nf-card {
@@ -3532,9 +3582,11 @@
             padding: 14px 18px;
             border: 2px solid var(--border-color);
             border-radius: 14px;
-            background: var(--card-bg);
-            transition: border-color 0.2s;
+            background: #fff;
+            transition: border-color 0.15s;
             cursor: default;
+            content-visibility: auto;
+            contain-intrinsic-size: 0 76px;
         }
 
         .nf-card:hover {
@@ -3564,30 +3616,36 @@
 
         .nf-card-info strong {
             display: block;
-            font-size: 15px;
-            color: var(--text-color);
-            margin-bottom: 4px;
+            font-size: 16px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 6px;
         }
+
+        .nf-igreja-link { cursor: pointer; }
+        .nf-id-link { cursor: pointer; }
+        .nf-id-link { cursor: pointer; }
 
         .nf-card-meta {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
             flex-wrap: wrap;
         }
 
         .nf-badge {
-            font-size: 11px;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-weight: 600;
-            background: #e8eaf6;
-            color: #3949ab;
+            font-size: 13px;
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-weight: 700;
+            background: #dbeafe;
+            color: #1e3a8a;
         }
 
-        .nf-badge-impacto { background: #ffebee; color: #c62828; }
-        .nf-badge-spg { background: #e3f2fd; color: #1565c0; }
-        .nf-badge-valor { background: #e8f5e9; color: #2e7d32; }
+        .nf-badge-valor {
+            background: #bbf7d0;
+            color: #14532d;
+        }
 
         .nf-card-pendencia {
             flex-shrink: 0;
@@ -3599,6 +3657,21 @@
             flex-shrink: 0;
             flex-wrap: wrap;
             white-space: normal;
+        }
+
+        .nf-card button::before,
+        .btn-icon::before,
+        .material-col-acoes button::before,
+        .checklist-col-acoes button::before {
+            display: none !important;
+        }
+
+        .material-row,
+        .checklist-row,
+        .relatorio-row,
+        .estoque-item {
+            content-visibility: auto;
+            contain-intrinsic-size: 0 76px;
         }
 
         .pag-card-titulo i {
@@ -5220,21 +5293,6 @@
                     txtRel.style.display = this.checked ? '' : 'none';
                 });
             }
-
-            // Ao abrir aba Material: só atualiza a lista (não força sync que pode restaurar itens excluídos)
-            const tabButtons = document.querySelectorAll('.tab-button');
-            tabButtons.forEach(button => {
-                button.addEventListener('click', function () {
-                    const tab = this.getAttribute('data-tab');
-                    if (tab === 'material') {
-                        setTimeout(() => {
-                            if (typeof window.atualizarListaMaterial === 'function') {
-                                window.atualizarListaMaterial();
-                            }
-                        }, 50);
-                    }
-                });
-            });
 
         });
     </script>

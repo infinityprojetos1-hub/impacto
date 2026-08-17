@@ -871,13 +871,72 @@ function filtrarIgrejas(igrejas, termoBusca) {
     );
 }
 
-// Evita re-render desnecessário (mantém hover, reduz custo)
+function _nfEsc(s) {
+    return String(s || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/"/g, '&quot;');
+}
+
+function _nfTipoEmpresa(nome) {
+    return (nome || '').toUpperCase().includes('IMPACTO') ? 'impacto' : 'spg';
+}
+
+function _nfHtmlCard(igreja, tipo, dados) {
+    const idx = dados.indexOf(igreja);
+    const btnWhatsApp = `<button type="button" onclick="compartilharNFWhatsApp('${tipo}', ${idx})" class="btn-whatsapp-nf" title="Compartilhar via WhatsApp"><i class="fab fa-whatsapp"></i></button>`;
+    const acaoBotao = tipo === 'ativas'
+        ? `<button type="button" onclick="arquivarIgreja(${idx})" class="btn-archive" title="Arquivar"><i class="fas fa-archive"></i></button>
+           <button type="button" onclick="moverParaEspeciais(${idx})" class="btn-especial" title="Igrejas especiais"><i class="fas fa-star"></i></button>
+           ${btnWhatsApp}
+           <button type="button" onclick="editarIgreja(${idx}, '${tipo}')" class="btn-edit" title="Editar"><i class="fas fa-edit"></i></button>
+           <button type="button" onclick="excluirIgreja(${idx}, '${tipo}')" class="btn-delete" title="Excluir"><i class="fas fa-trash"></i></button>`
+        : tipo === 'especiais'
+        ? `<button type="button" onclick="moverEspecialParaAtiva(${idx})" class="btn-restore" title="Mover para ativas"><i class="fas fa-undo"></i></button>
+           ${btnWhatsApp}
+           <button type="button" onclick="editarIgreja(${idx}, '${tipo}')" class="btn-edit" title="Editar"><i class="fas fa-edit"></i></button>
+           <button type="button" onclick="excluirIgreja(${idx}, '${tipo}')" class="btn-delete" title="Excluir"><i class="fas fa-trash"></i></button>`
+        : `<button type="button" onclick="restaurarIgreja(${idx})" class="btn-restore" title="Restaurar"><i class="fas fa-undo"></i></button>
+           ${btnWhatsApp}
+           <button type="button" onclick="editarIgreja(${idx}, '${tipo}')" class="btn-edit" title="Editar"><i class="fas fa-edit"></i></button>
+           <button type="button" onclick="excluirIgreja(${idx}, '${tipo}')" class="btn-delete" title="Excluir"><i class="fas fa-trash"></i></button>`;
+
+    const pendAtual = (igreja.pendencia || '').toString().trim().toUpperCase();
+    const opcoes = ['', 'ASSINATURA', 'EXECUÇÃO', 'RELATÓRIO', 'LOGIX', 'NFE', 'PAGAMENTO', 'PAGO'];
+    const pendenciaOptions = `<select class="nf-pendencia-select" onchange="atualizarPendencia(${idx}, '${tipo}', this.value)">` +
+        opcoes.map(v => `<option value="${v}" ${pendAtual === v ? 'selected' : ''}>${v || '—'}</option>`).join('') +
+        `</select>`;
+
+    const idHtml = igreja.id
+        ? `<span class="nf-id-link nf-badge" data-id="${_nfEsc(igreja.id)}" data-link="${_nfEsc(igreja.link || '')}" title="Copiar número e abrir link">ID: ${_nfEsc(igreja.id)}</span>`
+        : '';
+    const valorHtml = igreja.valor
+        ? `<span class="nf-badge nf-badge-valor">${_nfEsc(igreja.valor)}</span>`
+        : '';
+
+    return `<div class="nf-card">
+        <div class="nf-card-icon"><i class="fas fa-church"></i></div>
+        <div class="nf-card-info">
+            <strong class="nf-igreja-link" data-index="${idx}" data-tipo="${tipo}">${_nfEsc(igreja.nome)}</strong>
+            <div class="nf-card-meta">${idHtml}${valorHtml}</div>
+        </div>
+        <div class="nf-card-pendencia">${pendenciaOptions}</div>
+        <div class="nf-acoes">${acaoBotao}</div>
+    </div>`;
+}
+
+let abaAtivaNF = 'ativas';
 let _nfLastRenderHash = '';
 function atualizarListaNF() {
     const container = document.getElementById('nfList');
     if (!container) return;
     const hash = (nfData._ts || 0) + '-' + (nfData.igrejas||[]).length + ':' + (nfData.arquivadas||[]).length + ':' + (nfData.especiais||[]).length;
-    if (hash === _nfLastRenderHash) return;
+    const visivel = document.getElementById('notasFiscais')?.classList.contains('active');
+    if (!visivel) {
+        if (hash !== _nfLastRenderHash) _nfLastRenderHash = '';
+        return;
+    }
+    if (hash === _nfLastRenderHash && container.querySelector('.nf-tabs')) return;
     _nfLastRenderHash = hash;
 
     container.innerHTML = '';
@@ -886,9 +945,9 @@ function atualizarListaNF() {
     const tabsContainer = document.createElement('div');
     tabsContainer.className = 'nf-tabs';
     tabsContainer.innerHTML = `
-        <button class="nf-tab-button active" data-tab="ativas">Igrejas Ativas</button>
-        <button class="nf-tab-button" data-tab="arquivadas">Igrejas Arquivadas</button>
-        <button class="nf-tab-button" data-tab="especiais">Igrejas Especiais</button>
+        <button class="nf-tab-button ${abaAtivaNF === 'ativas' ? 'active' : ''}" data-tab="ativas">Igrejas Ativas</button>
+        <button class="nf-tab-button ${abaAtivaNF === 'arquivadas' ? 'active' : ''}" data-tab="arquivadas">Igrejas Arquivadas</button>
+        <button class="nf-tab-button ${abaAtivaNF === 'especiais' ? 'active' : ''}" data-tab="especiais">Igrejas Especiais</button>
     `;
     container.appendChild(tabsContainer);
 
@@ -897,12 +956,38 @@ function atualizarListaNF() {
     contentContainer.className = 'nf-content';
     container.appendChild(contentContainer);
 
+    contentContainer.addEventListener('click', async function (e) {
+        const idEl = e.target.closest('.nf-id-link');
+        if (idEl) {
+            e.preventDefault();
+            e.stopPropagation();
+            const id = idEl.getAttribute('data-id');
+            const link = idEl.getAttribute('data-link');
+            try {
+                await navigator.clipboard.writeText(id);
+                const orig = idEl.textContent;
+                idEl.textContent = '✓ Copiado!';
+                idEl.style.color = '#15803d';
+                setTimeout(() => { idEl.textContent = orig; idEl.style.color = ''; }, 1500);
+            } catch (err) {
+                alert('Não foi possível copiar o número.');
+            }
+            if (link && link.trim()) window.open(link, '_blank');
+            return;
+        }
+        const nome = e.target.closest('.nf-igreja-link');
+        if (nome) {
+            abrirChecklistModal(parseInt(nome.getAttribute('data-index'), 10), nome.getAttribute('data-tipo'));
+        }
+    });
+
     // Adiciona event listeners para as abas (com touchend para Android/MIUI)
     tabsContainer.querySelectorAll('.nf-tab-button').forEach(button => {
         function ativarTabNF() {
             tabsContainer.querySelectorAll('.nf-tab-button').forEach(b => b.classList.remove('active'));
             button.classList.add('active');
-            mostrarLista(button.dataset.tab);
+            abaAtivaNF = button.dataset.tab;
+            mostrarLista(abaAtivaNF);
         }
 
         let _touchHandled = false;
@@ -952,131 +1037,43 @@ function atualizarListaNF() {
                 const mensagem = document.createElement('div');
                 mensagem.className = 'nf-no-results';
                 mensagem.innerHTML = termoBusca
-                    ? `Nenhuma igreja encontrada para "${termoBusca}"`
+                    ? `Nenhuma igreja encontrada para "${_nfEsc(termoBusca)}"`
                     : 'Nenhuma igreja disponível';
                 contentContainer.appendChild(mensagem);
                 return;
             }
 
-            // Agrupa as igrejas por empresa
             const empresas = {};
             igrejasFiltradas.forEach(igreja => {
-                if (!empresas[igreja.empresa]) {
-                    empresas[igreja.empresa] = [];
-                }
-                empresas[igreja.empresa].push(igreja);
+                const emp = igreja.empresa || 'Sem empresa';
+                if (!empresas[emp]) empresas[emp] = [];
+                empresas[emp].push(igreja);
             });
+
+            const nomesEmpresas = Object.keys(empresas).sort((a, b) => {
+                const ai = _nfTipoEmpresa(a) === 'impacto' ? 0 : 1;
+                const bi = _nfTipoEmpresa(b) === 'impacto' ? 0 : 1;
+                if (ai !== bi) return ai - bi;
+                return a.localeCompare(b, 'pt-BR');
+            });
+
+            const html = nomesEmpresas.map(empresa => {
+                const tipoEmp = _nfTipoEmpresa(empresa);
+                const lista = empresas[empresa];
+                const cards = lista.map(ig => _nfHtmlCard(ig, tipo, dados)).join('');
+                return `<section class="nf-empresa-bloco nf-empresa-bloco-${tipoEmp}">
+                    <h3 class="nf-empresa-titulo nf-empresa-titulo-${tipoEmp}">
+                        <i class="fas fa-building"></i> ${_nfEsc(empresa)}
+                        <span class="nf-empresa-count">${lista.length} ${lista.length === 1 ? 'igreja' : 'igrejas'}</span>
+                    </h3>
+                    <div class="nf-empresa-cards">${cards}</div>
+                </section>`;
+            }).join('');
 
             const lista = document.createElement('div');
             lista.className = 'nf-card-lista';
-
-            for (const [empresa, igrejas] of Object.entries(empresas)) {
-                igrejas.forEach((igreja) => {
-                    const card = document.createElement('div');
-                    card.className = 'nf-card';
-
-                    const idx = dados.indexOf(igreja);
-                    const btnWhatsApp = `<button onclick="compartilharNFWhatsApp('${tipo}', ${idx})" class="btn-whatsapp-nf" title="Compartilhar via WhatsApp"><i class="fab fa-whatsapp"></i></button>`;
-
-                    const acaoBotao = tipo === 'ativas'
-                        ? `<button onclick="arquivarIgreja(${idx})" class="btn-archive" title="Arquivar igreja"><i class="fas fa-archive"></i></button>
-                           <button onclick="moverParaEspeciais(${idx})" class="btn-especial" title="Mover para Igrejas Especiais"><i class="fas fa-star"></i></button>
-                           ${btnWhatsApp}
-                           <button onclick="editarIgreja(${idx}, '${tipo}')" class="btn-edit" title="Editar igreja"><i class="fas fa-edit"></i></button>
-                           <button onclick="excluirIgreja(${idx}, '${tipo}')" class="btn-delete" title="Excluir igreja"><i class="fas fa-trash"></i></button>`
-                        : tipo === 'especiais'
-                        ? `<button onclick="moverEspecialParaAtiva(${idx})" class="btn-restore" title="Mover para Ativas"><i class="fas fa-undo"></i></button>
-                           ${btnWhatsApp}
-                           <button onclick="editarIgreja(${idx}, '${tipo}')" class="btn-edit" title="Editar igreja"><i class="fas fa-edit"></i></button>
-                           <button onclick="excluirIgreja(${idx}, '${tipo}')" class="btn-delete" title="Excluir igreja"><i class="fas fa-trash"></i></button>`
-                        : `<button onclick="restaurarIgreja(${idx})" class="btn-restore" title="Restaurar igreja"><i class="fas fa-undo"></i></button>
-                           ${btnWhatsApp}
-                           <button onclick="editarIgreja(${idx}, '${tipo}')" class="btn-edit" title="Editar igreja"><i class="fas fa-edit"></i></button>
-                           <button onclick="excluirIgreja(${idx}, '${tipo}')" class="btn-delete" title="Excluir igreja"><i class="fas fa-trash"></i></button>`;
-
-                    const pendAtual = (igreja.pendencia || '').toString().trim().toUpperCase();
-                    const pendenciaOptions = `
-                        <select class="nf-pendencia-select" onchange="atualizarPendencia(${dados.indexOf(igreja)}, '${tipo}', this.value)">
-                            <option value="" ${!pendAtual ? 'selected' : ''}>—</option>
-                            <option value="ASSINATURA" ${pendAtual === 'ASSINATURA' ? 'selected' : ''}>ASSINATURA</option>
-                            <option value="EXECUÇÃO" ${pendAtual === 'EXECUÇÃO' ? 'selected' : ''}>EXECUÇÃO</option>
-                            <option value="RELATÓRIO" ${pendAtual === 'RELATÓRIO' ? 'selected' : ''}>RELATÓRIO</option>
-                            <option value="LOGIX" ${pendAtual === 'LOGIX' ? 'selected' : ''}>LOGIX</option>
-                            <option value="NFE" ${pendAtual === 'NFE' ? 'selected' : ''}>NFE</option>
-                            <option value="PAGAMENTO" ${pendAtual === 'PAGAMENTO' ? 'selected' : ''}>PAGAMENTO</option>
-                            <option value="PAGO" ${pendAtual === 'PAGO' ? 'selected' : ''}>PAGO</option>
-                        </select>
-                    `;
-
-                    const badgeEmpresa = empresa.includes('Impacto') ? 'nf-badge-impacto' : 'nf-badge-spg';
-                    const idHtml = igreja.id
-                        ? `<span class="nf-id-link nf-badge" data-id="${igreja.id}" data-link="${(igreja.link || '').replace(/"/g, '&quot;')}" title="Clique para copiar o número e abrir o link">ID: ${igreja.id}</span>`
-                        : '';
-                    const valorHtml = igreja.valor
-                        ? `<span class="nf-badge nf-badge-valor">${igreja.valor}</span>`
-                        : '';
-
-                    card.innerHTML = `
-                        <div class="nf-card-icon"><i class="fas fa-church"></i></div>
-                        <div class="nf-card-info">
-                            <strong class="nf-igreja-link" data-index="${idx}" data-tipo="${tipo}">${igreja.nome}</strong>
-                            <div class="nf-card-meta">
-                                <span class="nf-badge ${badgeEmpresa}">${empresa}</span>
-                                ${idHtml}
-                                ${valorHtml}
-                            </div>
-                        </div>
-                        <div class="nf-card-pendencia">${pendenciaOptions}</div>
-                        <div class="nf-acoes">${acaoBotao}</div>
-                    `;
-
-                    lista.appendChild(card);
-                });
-            }
-
+            lista.innerHTML = html;
             contentContainer.appendChild(lista);
-
-            // Ativa clique no nome da igreja para abrir checklist
-            contentContainer.querySelectorAll('.nf-igreja-link').forEach(el => {
-                el.style.cursor = 'pointer';
-                el.title = 'Ver checklist';
-                el.addEventListener('click', () => {
-                    const idx = parseInt(el.getAttribute('data-index'));
-                    const tp = el.getAttribute('data-tipo');
-                    abrirChecklistModal(idx, tp);
-                });
-            });
-
-            // Ativa clique no número do pedido para copiar e abrir link
-            contentContainer.querySelectorAll('.nf-id-link').forEach(el => {
-                el.style.cursor = 'pointer';
-                el.addEventListener('click', async (e) => {
-                    e.stopPropagation(); // Evita que o clique abra o modal
-                    const id = el.getAttribute('data-id');
-                    const link = el.getAttribute('data-link');
-
-                    // Copia o número
-                    try {
-                        await navigator.clipboard.writeText(id);
-                        // Feedback visual
-                        const textoOriginal = el.textContent;
-                        el.textContent = '✓ Copiado!';
-                        el.style.color = '#28a745';
-                        setTimeout(() => {
-                            el.textContent = textoOriginal;
-                            el.style.color = '';
-                        }, 1500);
-                    } catch (err) {
-                        console.error('Erro ao copiar:', err);
-                        alert('Não foi possível copiar o número.');
-                    }
-
-                    // Abre o link em nova aba (se existir)
-                    if (link && link.trim()) {
-                        window.open(link, '_blank');
-                    }
-                });
-            });
         }
 
         // Adiciona listener para o campo de pesquisa
@@ -1121,7 +1118,7 @@ function atualizarListaNF() {
     }
 
     // Mostra a lista ativa por padrão
-    mostrarLista('ativas');
+    mostrarLista(abaAtivaNF || 'ativas');
 
     // Garante que os estilos existem apenas uma vez no head
     if (!document.getElementById('nf-dynamic-styles')) {

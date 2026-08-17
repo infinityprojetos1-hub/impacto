@@ -202,10 +202,6 @@ function renderizarAbaHome() {
 
 // Inicializa a Home
 function inicializarHome() {
-    const tabBtn = document.querySelector('[data-tab="home"]');
-    if (tabBtn) {
-        tabBtn.addEventListener('click', () => setTimeout(renderizarAbaHome, 80));
-    }
     renderizarAbaHome();
 }
 

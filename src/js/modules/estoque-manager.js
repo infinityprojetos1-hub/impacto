@@ -453,11 +453,6 @@ function removerItemEstoque(index) {
 
 function inicializarEstoque() {
     carregarDadosEstoque();
-    document.querySelectorAll('.tab-button').forEach(btn => {
-        if (btn.getAttribute('data-tab') === 'estoque') {
-            btn.addEventListener('click', () => setTimeout(renderizarAbaEstoque, 80));
-        }
-    });
 }
 
 // Expõe globalmente para material-manager e firebase-config

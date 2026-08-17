@@ -245,7 +245,12 @@ function atualizarListaMaterial() {
     const container = document.getElementById('materialList');
     if (!container) return;
     const hash = (materialData._ts || 0) + '-' + (materialData.pendentes||[]).length + ':' + (materialData.enviadas||[]).length + ':' + (materialData.pedidosSandro||[]).length;
-    if (hash === _materialLastRenderHash) return;
+    const visivel = document.getElementById('material')?.classList.contains('active');
+    if (!visivel) {
+        if (hash !== _materialLastRenderHash) _materialLastRenderHash = '';
+        return;
+    }
+    if (hash === _materialLastRenderHash && container.querySelector('.material-tabs')) return;
     _materialLastRenderHash = hash;
 
     container.innerHTML = '';
@@ -318,34 +323,8 @@ function mostrarListaTipo(tipo) {
         return;
     }
 
-    // Cria a tabela
-    const tabela = document.createElement('div');
-    tabela.className = 'material-table';
-    tabela.innerHTML = '';
-
-    dados.forEach((igreja, index) => {
-        const linha = document.createElement('div');
-        linha.className = 'material-row material-row-clicavel';
-        linha.style.cursor = 'pointer';
-        linha.setAttribute('role', 'button');
-        linha.setAttribute('tabindex', '0');
-        linha.setAttribute('title', 'Clique para gerenciar material');
-        linha.addEventListener('click', (e) => {
-            if (!e.target.closest('.material-col-acoes')) {
-                e.preventDefault();
-                abrirModalMaterial(tipo, index);
-            }
-        });
-        linha.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                if (!e.target.closest('.material-col-acoes')) abrirModalMaterial(tipo, index);
-            }
-        });
-
+    const html = dados.map((igreja, index) => {
         const totalItens = igreja.materiais ? igreja.materiais.length : 0;
-
-        // Define o status baseado na categoria
         let statusClass, statusText;
         if (tipo === 'pendentes') {
             statusClass = 'status-nao-enviado';
@@ -357,10 +336,10 @@ function mostrarListaTipo(tipo) {
             statusClass = 'status-sandro';
             statusText = 'Sandro';
         }
-
-        linha.innerHTML = `
+        const nome = String(igreja.nome || '').replace(/</g, '&lt;');
+        return `<div class="material-row material-row-clicavel" role="button" tabindex="0" data-mat-tipo="${tipo}" data-mat-index="${index}" style="cursor:pointer">
             <div class="material-col-igreja">
-                <strong><i class="fas fa-church" style="margin-right: 8px; color: var(--gradient-start);"></i>${igreja.nome}</strong>
+                <strong><i class="fas fa-church" style="margin-right: 8px; color: var(--gradient-start);"></i>${nome}</strong>
                 ${igreja.id ? `<span class="material-id"><i class="fas fa-tag"></i> ID: ${igreja.id}</span>` : ''}
                 ${totalItens > 0 ? `<span class="material-count"><i class="fas fa-boxes"></i> ${totalItens} ${totalItens === 1 ? 'item' : 'itens'}</span>` : ''}
             </div>
@@ -384,12 +363,15 @@ function mostrarListaTipo(tipo) {
                     <i class="fas fa-box"></i> Gerenciar Material
                 </button>
             </div>
-        `;
+        </div>`;
+    }).join('');
 
-        tabela.appendChild(linha);
-    });
-
-    contentContainer.appendChild(tabela);
+    contentContainer.innerHTML = `<div class="material-table">${html}</div>`;
+    contentContainer.onclick = (e) => {
+        if (e.target.closest('.material-col-acoes')) return;
+        const row = e.target.closest('[data-mat-index]');
+        if (row) abrirModalMaterial(row.getAttribute('data-mat-tipo'), parseInt(row.getAttribute('data-mat-index'), 10));
+    };
 }
 
 // Funções para mover igrejas entre categorias

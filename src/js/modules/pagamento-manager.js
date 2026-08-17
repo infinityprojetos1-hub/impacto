@@ -146,6 +146,9 @@ function gerarOpcoesAno(anoAtual) {
 
 function renderizarAbaPagamento() {
     try {
+        const abaPag = document.getElementById('pagamento');
+        if (abaPag && !abaPag.classList.contains('active')) return;
+
         const container = document.getElementById('pagamentoContainer');
         if (!container) {
             console.warn('[Pagamento] Container não encontrado');
@@ -1020,17 +1023,7 @@ function mostrarToastPagamento(htmlMsg) {
 // =============================================
 
 function inicializarPagamento() {
-    // Carrega todos os dados persistidos (localStorage)
     carregarDadosPagamento();
-
-    // Dispara o render quando o usuário clica na aba
-    document.querySelectorAll('.tab-button').forEach(function(btn) {
-        if (btn.getAttribute('data-tab') === 'pagamento') {
-            btn.addEventListener('click', function() {
-                setTimeout(renderizarAbaPagamento, 80);
-            });
-        }
-    });
     console.log('[Pagamento] Módulo inicializado');
 }
 

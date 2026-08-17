@@ -86,9 +86,17 @@ function calcularNecessidade(materiaisIniciais) {
 }
 
 // ── Renderização principal ────────────────────────────────────────────────────
+let _previaLastHash = '';
 function renderizarAbaPrevia() {
     const container = document.getElementById('previaContainer');
     if (!container) return;
+    if (!document.getElementById('previaMaterial')?.classList.contains('active')) return;
+    const hash = abaAtivaPrevia + ':' +
+        (materialData && materialData.pendentes ? materialData.pendentes.length : 0) + ':' +
+        (materialData && materialData.enviadas ? materialData.enviadas.length : 0) + ':' +
+        (materialData && materialData.pedidosSandro ? materialData.pedidosSandro.length : 0);
+    if (hash === _previaLastHash && container.querySelector('.material-tabs')) return;
+    _previaLastHash = hash;
 
     carregarPreviaMateriais();
 

@@ -198,6 +198,12 @@ function inicializarTabs() {
             if (tabId === 'previaMaterial' && typeof window.renderizarAbaPrevia === 'function') {
                 setTimeout(window.renderizarAbaPrevia, 80);
             }
+            if (tabId === 'material' && typeof window.atualizarListaMaterial === 'function') {
+                setTimeout(window.atualizarListaMaterial, 50);
+            }
+            if (tabId === 'home' && typeof window.renderizarAbaHome === 'function') {
+                setTimeout(window.renderizarAbaHome, 50);
+            }
 
             if (window.innerWidth <= 768) {
                 requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
