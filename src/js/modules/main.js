@@ -527,12 +527,14 @@ async function iniciarGeracaoOrcamentos() {
             return;
         }
 
-        const configConc = obterConfigConcorrentes();
-        if (configConc.modo === 'manual') {
-            const qtd = configConc.qtd || 1;
-            if (configConc.empresas.length < qtd) {
-                alert(`Selecione pelo menos ${qtd} empresa(s) concorrente(s) no modo manual.`);
-                return;
+        for (let i = 0; i < igrejasAdicionadas.length; i++) {
+            const cfgIgreja = igrejasAdicionadas[i].configConcorrentes;
+            if (cfgIgreja && cfgIgreja.modo === 'manual') {
+                const qtd = cfgIgreja.qtd || 1;
+                if ((cfgIgreja.empresas || []).length < qtd) {
+                    alert('A igreja "' + igrejasAdicionadas[i].nome + '" precisa de pelo menos ' + qtd + ' empresa(s) concorrente(s).');
+                    return;
+                }
             }
         }
 
@@ -605,8 +607,8 @@ async function iniciarGeracaoOrcamentos() {
                 // Passa o tipo de texto para o orçamento
                 dadosOrcamento.tipoTexto = igreja.tipoTexto || 'padrao';
 
-                // Passa configuração de concorrentes (global do formulário)
-                dadosOrcamento.configConcorrentes = obterConfigConcorrentes();
+                // Usa as empresas concorrentes salvas nesta igreja (não as do formulário atual)
+                dadosOrcamento.configConcorrentes = igreja.configConcorrentes || obterConfigConcorrentes();
 
                 // Anexa textos personalizados se tipoTexto for personalizado
                 if (igreja.tipoTexto === 'personalizado') {
@@ -1420,6 +1422,26 @@ function obterConfigConcorrentes() {
     return { modo, qtd: qtd === 2 ? 2 : 1, empresas };
 }
 
+function aplicarConfigConcorrentes(config) {
+    if (typeof inicializarCheckboxesConcorrentes === 'function') {
+        inicializarCheckboxesConcorrentes();
+    }
+    const cfg = config || { modo: 'aleatorio', qtd: 1, empresas: [] };
+    const modo = document.getElementById('modoConcorrentes');
+    const qtd = document.getElementById('qtdConcorrentes');
+    const bloco = document.getElementById('blocoConcorrentesManual');
+    if (modo) modo.value = cfg.modo || 'aleatorio';
+    if (qtd) qtd.value = String(cfg.qtd === 2 ? 2 : 1);
+    if (bloco) bloco.style.display = (cfg.modo === 'manual') ? '' : 'none';
+    const selecionadas = new Set(Array.isArray(cfg.empresas) ? cfg.empresas : []);
+    document.querySelectorAll('#listaConcorrentesManual input[type="checkbox"]').forEach(cb => {
+        cb.checked = selecionadas.has(cb.value);
+    });
+    if (typeof atualizarCamposTextoConcorrentes === 'function') {
+        atualizarCamposTextoConcorrentes();
+    }
+}
+
 function inicializarCheckboxesConcorrentes() {
     const container = document.getElementById('listaConcorrentesManual');
     if (!container || container.dataset.init) return;
@@ -1438,6 +1460,7 @@ function inicializarCheckboxesConcorrentes() {
 }
 
 window.obterConfigConcorrentes = obterConfigConcorrentes;
+window.aplicarConfigConcorrentes = aplicarConfigConcorrentes;
 window.inicializarCheckboxesConcorrentes = inicializarCheckboxesConcorrentes;
 
 function _sanitizarTextoOrcamento(texto) {

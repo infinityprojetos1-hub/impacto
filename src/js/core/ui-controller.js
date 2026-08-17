@@ -274,6 +274,14 @@ function inicializarGerenciamentoIgrejas() {
         const txtConc = (document.getElementById('textoOrcamentoConcorrente') && document.getElementById('textoOrcamentoConcorrente').value) || '';
         const txtConc2 = (document.getElementById('textoOrcamentoConcorrente2') && document.getElementById('textoOrcamentoConcorrente2').value) || '';
 
+        const configConc = (typeof obterConfigConcorrentes === 'function')
+            ? obterConfigConcorrentes()
+            : { modo: 'aleatorio', qtd: 1, empresas: [] };
+        if (configConc.modo === 'manual' && (configConc.empresas || []).length < (configConc.qtd || 1)) {
+            alert('Selecione pelo menos ' + (configConc.qtd || 1) + ' empresa(s) concorrente(s) para esta igreja.');
+            return;
+        }
+
         // Verifica se deve usar texto personalizado
         const usarTextoPersonalizado = tipoTexto === 'personalizado';
 
@@ -291,7 +299,8 @@ function inicializarGerenciamentoIgrejas() {
             textoSuaEmpresa: usarTextoPersonalizado ? txtSua : '',
             textoConcorrente: usarTextoPersonalizado ? txtConc : '',
             textoConcorrente2: usarTextoPersonalizado ? txtConc2 : '',
-            tipoPedido: tipoPedido
+            tipoPedido: tipoPedido,
+            configConcorrentes: configConc
         };
 
         if (_indiceEdicaoIgreja !== null && _indiceEdicaoIgreja >= 0 && _indiceEdicaoIgreja < igrejasAdicionadas.length) {
@@ -306,8 +315,8 @@ function inicializarGerenciamentoIgrejas() {
         // Atualiza a interface
         atualizarListaIgrejas();
 
-        // Zera todas as opções para o próximo orçamento
-        resetarCamposFormularioOrcamento(false);
+        // Zera todas as opções, inclusive empresas concorrentes, para o próximo orçamento
+        resetarCamposFormularioOrcamento(true);
     });
 
     // Limpar a lista de igrejas
@@ -352,6 +361,7 @@ function atualizarListaIgrejas() {
             }</p>
             <p><strong>Tipo de pedido:</strong> ${igreja.tipoPedido === 'especial' ? 'Especial' : 'Padrão'}</p>
             ${igreja.tipoValorOrcamento === 'manual' && igreja.valorManual !== null && !isNaN(igreja.valorManual) ? `<p><strong>Valor Manual:</strong> R$ ${igreja.valorManual.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>` : ''}
+            ${igreja.configConcorrentes ? `<p><strong>Concorrentes:</strong> ${igreja.configConcorrentes.qtd || 1} — ${igreja.configConcorrentes.modo === 'manual' && (igreja.configConcorrentes.empresas || []).length ? igreja.configConcorrentes.empresas.join(', ') : 'Aleatório'}</p>` : ''}
             <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
                 <button type="button" class="btn-secondary editar-igreja" data-index="${index}" style="padding:6px 12px; font-size:13px;">
                     <i class="fas fa-pen"></i> Editar
@@ -432,7 +442,11 @@ function atualizarListaIgrejas() {
             if (txtSuaEl) txtSuaEl.value = ig.textoSuaEmpresa || '';
             if (txtConcEl) txtConcEl.value = ig.textoConcorrente || '';
             if (txtConc2El) txtConc2El.value = ig.textoConcorrente2 || '';
-            if (typeof atualizarCamposTextoConcorrentes === 'function') atualizarCamposTextoConcorrentes();
+            if (typeof aplicarConfigConcorrentes === 'function') {
+                aplicarConfigConcorrentes(ig.configConcorrentes);
+            } else if (typeof atualizarCamposTextoConcorrentes === 'function') {
+                atualizarCamposTextoConcorrentes();
+            }
 
             const selPedido = document.getElementById('tipoPedido');
             if (selPedido) selPedido.value = ig.tipoPedido || 'padrao';
