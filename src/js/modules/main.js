@@ -613,7 +613,9 @@ async function iniciarGeracaoOrcamentos() {
                 // Anexa textos personalizados se tipoTexto for personalizado
                 if (igreja.tipoTexto === 'personalizado') {
                     const sua = (igreja.textoSuaEmpresa || '').trim();
-                    const qtdConc = dadosOrcamento.configConcorrentes.qtd || 1;
+                    const isEspecialIgreja = igreja.tipoPedido === 'especial';
+                    const qtdSalva = parseInt(dadosOrcamento.configConcorrentes && dadosOrcamento.configConcorrentes.qtd, 10);
+                    const qtdConc = (isEspecialIgreja || qtdSalva === 2) ? 2 : 1;
                     const textosConc = [];
                     const manualConc = (igreja.textoConcorrente || '').trim();
                     const manualConc2 = (igreja.textoConcorrente2 || '').trim();

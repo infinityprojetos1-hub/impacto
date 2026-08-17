@@ -372,10 +372,17 @@ function _dadosOrcamentoComTextoConcorrente(dadosOrcamento, indice) {
     const clone = Object.assign({}, dadosOrcamento);
     const textos = dadosOrcamento.textosConcorrentesGerados;
     let texto = '';
-    if (textos && textos[indice]) {
+    if (textos && textos[indice] && String(textos[indice]).trim()) {
         texto = textos[indice];
-    } else if (indice === 1 && dadosOrcamento.textoPersonalizadoConcorrente2) {
+    } else if (indice === 1 && dadosOrcamento.textoPersonalizadoConcorrente2 && String(dadosOrcamento.textoPersonalizadoConcorrente2).trim()) {
         texto = dadosOrcamento.textoPersonalizadoConcorrente2;
+    } else if (indice >= 1) {
+        const base = dadosOrcamento.textoPersonalizadoSuaEmpresa
+            || (dadosOrcamento.igreja && dadosOrcamento.igreja.textoSuaEmpresa)
+            || '';
+        if (typeof gerarTextoConcorrenteAuto === 'function' && String(base).trim()) {
+            texto = gerarTextoConcorrenteAuto(base, indice);
+        }
     } else if (clone.textoPersonalizadoConcorrente) {
         texto = clone.textoPersonalizadoConcorrente;
     }
@@ -422,7 +429,7 @@ async function gerarPDFs(dadosOrcamento, index, pdfsGerados) {
         }
 
         const configConc = (dadosOrcamento && dadosOrcamento.configConcorrentes) || { modo: 'aleatorio', qtd: 1, empresas: [] };
-        const qtdConcorrentes = isEspecial ? 2 : (configConc.qtd === 2 ? 2 : 1);
+        const qtdConcorrentes = isEspecial ? 2 : (parseInt(configConc.qtd, 10) === 2 ? 2 : 1);
 
         // Cria objetos de concorrente
         const valorSuaEmpresa = dadosOrcamento.suaEmpresa.total;
