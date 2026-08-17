@@ -705,8 +705,8 @@ async function inicializarDownloadZip() {
             const orcamento = dados.orcamento;
 
             // Formatação do nome da igreja para evitar caracteres inválidos em nome de arquivo
-            const nomeIgrejaSeguro = igreja.nome.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
-            const codigoIgreja = igreja.codigo.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20);
+            const nomeIgrejaSeguro = String(igreja.nome || 'igreja').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
+            const codigoIgreja = String(igreja.codigo || '000000').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20);
 
             // Nome da empresa formatado
             const empresaNome = orcamento.suaEmpresa.nome.replace(/[^a-zA-Z0-9]/g, '_');
@@ -717,6 +717,10 @@ async function inicializarDownloadZip() {
             if (dados.pdfConcorrente && dados.empresaConcorrente) {
                 const concorrenteNome = dados.empresaConcorrente.replace(/[^a-zA-Z0-9]/g, '_');
                 zip.file(`${codigoIgreja}_${nomeIgrejaSeguro}_${concorrenteNome}.pdf`, dados.pdfConcorrente.output('blob'));
+            }
+            if (dados.pdfConcorrente2 && dados.empresaConcorrente2) {
+                const concorrente2Nome = dados.empresaConcorrente2.replace(/[^a-zA-Z0-9]/g, '_');
+                zip.file(`${codigoIgreja}_${nomeIgrejaSeguro}_${concorrente2Nome}.pdf`, dados.pdfConcorrente2.output('blob'));
             }
             if (dados.pdfConcorrenteMega && dados.empresaConcorrenteMega) {
                 const megaNome = dados.empresaConcorrenteMega.replace(/[^a-zA-Z0-9]/g, '_');
@@ -1413,6 +1417,10 @@ function gerarVariacaoTexto(item) {
 
 // Lê configuração de empresas concorrentes do formulário
 function obterConfigConcorrentes() {
+    const tipoPedido = document.getElementById('tipoPedido')?.value;
+    if (tipoPedido === 'especial') {
+        return { modo: 'manual', qtd: 2, empresas: ['MEGA EVENTOS', 'TELLA VIDEO'] };
+    }
     const modo = (document.getElementById('modoConcorrentes')?.value || 'aleatorio');
     const qtd = parseInt(document.getElementById('qtdConcorrentes')?.value || '1', 10);
     const empresas = [];
@@ -1425,6 +1433,10 @@ function obterConfigConcorrentes() {
 }
 
 function aplicarConfigConcorrentes(config) {
+    if (document.getElementById('tipoPedido')?.value === 'especial') {
+        if (typeof aplicarPadraoPedidoEspecial === 'function') aplicarPadraoPedidoEspecial();
+        return;
+    }
     if (typeof inicializarCheckboxesConcorrentes === 'function') {
         inicializarCheckboxesConcorrentes();
     }
@@ -2045,60 +2057,13 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 
-// Função para inicializar o sistema de abas
+// Abas já são gerenciadas por inicializarTabs() — evita listeners duplicados
 function inicializarAbas() {
-    const tabs = document.querySelectorAll('.tab-button');
-    const contents = document.querySelectorAll('.tab-content');
-
-    function mostrarAba(tabId) {
-        // Esconde todos os conteúdos
-        contents.forEach(content => {
-            content.style.display = 'none';
-        });
-
-        // Remove a classe active de todas as abas
-        tabs.forEach(tab => {
-            tab.classList.remove('active');
-        });
-
-        // Mostra o conteúdo selecionado
-        const selectedContent = document.getElementById(tabId);
-        if (selectedContent) {
-            selectedContent.style.display = 'block';
-        }
-
-        // Adiciona a classe active na aba selecionada
-        const selectedTab = document.querySelector(`[data-tab="${tabId}"]`);
-        if (selectedTab) {
-            selectedTab.classList.add('active');
-        }
-
-        // Se for a aba de Notas Fiscais, atualiza a lista
-        if (tabId === 'notasFiscais' && window.atualizarListaNF) {
-            window.atualizarListaNF();
-        }
-
-        // Se for a aba de Pagamento, renderiza
-        if (tabId === 'pagamento' && window.renderizarAbaPagamento) {
-            setTimeout(window.renderizarAbaPagamento, 50);
-        }
-
-        // Se for a aba de Prévia de Material, renderiza
-        if (tabId === 'previaMaterial' && window.renderizarAbaPrevia) {
-            setTimeout(window.renderizarAbaPrevia, 50);
-        }
+    const home = document.getElementById('home');
+    if (home) {
+        home.classList.add('active');
+        home.style.display = 'block';
     }
-
-    // Adiciona os event listeners
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            const tabId = tab.getAttribute('data-tab');
-            mostrarAba(tabId);
-        });
-    });
-
-    // Mostra a aba Home por padrão (tela inicial)
-    mostrarAba('home');
 }
 
 // Inicializa tudo quando o documento estiver pronto

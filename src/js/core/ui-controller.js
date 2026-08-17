@@ -49,22 +49,75 @@ function resetarCamposFormularioOrcamento(incluirConcorrentes) {
 
     if (incluirConcorrentes) {
         const modo = document.getElementById('modoConcorrentes');
-        if (modo) modo.value = 'aleatorio';
+        if (modo) { modo.value = 'aleatorio'; modo.disabled = false; }
         const qtd = document.getElementById('qtdConcorrentes');
-        if (qtd) qtd.value = '1';
+        if (qtd) { qtd.value = '1'; qtd.disabled = false; }
         const blocoConc = document.getElementById('blocoConcorrentesManual');
         if (blocoConc) blocoConc.style.display = 'none';
         document.querySelectorAll('#listaConcorrentesManual input[type="checkbox"]').forEach(cb => {
             cb.checked = false;
+            cb.disabled = false;
         });
     }
-    if (typeof atualizarCamposTextoConcorrentes === 'function') {
+    if (typeof aplicarPadraoPedidoEspecial === 'function') {
+        aplicarPadraoPedidoEspecial();
+    } else if (typeof atualizarCamposTextoConcorrentes === 'function') {
         atualizarCamposTextoConcorrentes();
     }
 }
 
+function atualizarVisibilidadeTextoOrcamento() {
+    const bloco = document.getElementById('blocoTextoOrcamento');
+    const tipoTexto = document.getElementById('tipoTexto')?.value;
+    const tipoPedido = document.getElementById('tipoPedido')?.value;
+    if (bloco) {
+        bloco.style.display = (tipoTexto === 'personalizado' || tipoPedido === 'especial') ? '' : 'none';
+    }
+}
+
+function aplicarPadraoPedidoEspecial() {
+    const tipo = document.getElementById('tipoPedido')?.value || 'padrao';
+    const modo = document.getElementById('modoConcorrentes');
+    const qtd = document.getElementById('qtdConcorrentes');
+    const bloco = document.getElementById('blocoConcorrentesManual');
+    const aviso = document.getElementById('avisoPedidoEspecial');
+    const especial = tipo === 'especial';
+
+    if (typeof inicializarCheckboxesConcorrentes === 'function') {
+        inicializarCheckboxesConcorrentes();
+    }
+
+    if (aviso) aviso.style.display = especial ? '' : 'none';
+
+    if (especial) {
+        if (modo) { modo.value = 'manual'; modo.disabled = true; }
+        if (qtd) { qtd.value = '2'; qtd.disabled = true; }
+        if (bloco) bloco.style.display = '';
+        document.querySelectorAll('#listaConcorrentesManual input[type="checkbox"]').forEach(cb => {
+            const v = (cb.value || '').toUpperCase();
+            cb.checked = v === 'MEGA EVENTOS' || v === 'TELLA VIDEO';
+            cb.disabled = true;
+        });
+        const details = document.getElementById('detailsEmpresasConcorrentes');
+        if (details) details.open = true;
+    } else {
+        if (modo) modo.disabled = false;
+        if (qtd) qtd.disabled = false;
+        document.querySelectorAll('#listaConcorrentesManual input[type="checkbox"]').forEach(cb => {
+            cb.disabled = false;
+        });
+        if (bloco && modo) bloco.style.display = (modo.value === 'manual') ? '' : 'none';
+    }
+
+    atualizarVisibilidadeTextoOrcamento();
+    atualizarCamposTextoConcorrentes();
+}
+
 function atualizarCamposTextoConcorrentes() {
-    const qtd = parseInt(document.getElementById('qtdConcorrentes')?.value || '1', 10);
+    const tipoPedido = document.getElementById('tipoPedido')?.value;
+    const qtd = tipoPedido === 'especial'
+        ? 2
+        : parseInt(document.getElementById('qtdConcorrentes')?.value || '1', 10);
     const bloco2 = document.getElementById('blocoTextoConcorrente2');
     const label1 = document.getElementById('labelTextoOrcamentoConcorrente');
     if (bloco2) bloco2.style.display = qtd === 2 ? '' : 'none';
@@ -117,9 +170,15 @@ function inicializarTabs() {
 
             const tabId = tab.getAttribute('data-tab');
             const allContents = document.querySelectorAll('.tab-content');
-            allContents.forEach(content => content.classList.remove('active'));
+            allContents.forEach(content => {
+                content.classList.remove('active');
+                content.style.display = 'none';
+            });
             const content = document.getElementById(tabId);
-            if (content) content.classList.add('active');
+            if (content) {
+                content.classList.add('active');
+                content.style.display = 'block';
+            }
 
             if (tabId === 'pagamento' && typeof window.renderizarAbaPagamento === 'function') {
                 setTimeout(window.renderizarAbaPagamento, 80);
@@ -191,48 +250,6 @@ function inicializarTabs() {
     }
 }
 
-// Salvar configurações
-function inicializarConfigForm() {
-    document.getElementById('salvarConfig').addEventListener('click', () => {
-        // Obtém a lista de serviços do textarea e filtra as linhas vazias
-        const servicosTexto = document.getElementById('servicos').value;
-        const servicosLista = servicosTexto.split('\n').filter(s => s.trim() !== '');
-
-        // Se houver menos de 10 itens, usa a lista predefinida como fallback
-        if (servicosLista.length < 10) {
-            console.warn("A lista de serviços tem menos de 10 itens. Usando lista predefinida.");
-            configuracao.servicos = [
-                "Confecção de cabeamento de microfone",
-                "Confecção de cabeamento de periféricos de som",
-                "Confecção de Cabos para instrumentos e Mics",
-                "Instalação de cabeamento de caixas de som",
-                "Manutenção de cabos de som",
-                "Manutenção do periférico",
-                "Manutenção e intstalação do Sistema do Projeção",
-                "Reposicionamento das caixas de PA",
-                "Reposicionamento das caixas de retorno",
-                "Reposicionamento dos microfones sem fio"
-            ];
-        } else {
-            configuracao.servicos = servicosLista;
-        }
-
-        configuracao.valorMinimo = parseFloat(document.getElementById('valorMinimo').value);
-        configuracao.valorMaximo = parseFloat(document.getElementById('valorMaximo').value);
-        configuracao.margemConcorrente1 = parseFloat(document.getElementById('margemConcorrente1').value);
-        configuracao.margemConcorrente2 = parseFloat(document.getElementById('margemConcorrente2').value);
-        configuracao.suaEmpresa1 = document.getElementById('suaEmpresa1').value;
-        configuracao.suaEmpresa2 = document.getElementById('suaEmpresa2').value;
-        configuracao.concorrente1 = document.getElementById('concorrente1').value;
-        configuracao.concorrente2 = document.getElementById('concorrente2').value;
-
-        alert('Configurações salvas com sucesso!');
-
-        // Muda para a próxima tab
-        document.querySelector('[data-tab="gerarOrcamentos"]').click();
-    });
-}
-
 // Adicionar igreja à lista
 function inicializarGerenciamentoIgrejas() {
     document.getElementById('adicionarIgreja').addEventListener('click', () => {
@@ -282,8 +299,7 @@ function inicializarGerenciamentoIgrejas() {
             return;
         }
 
-        // Verifica se deve usar texto personalizado
-        const usarTextoPersonalizado = tipoTexto === 'personalizado';
+        const usarTextoPersonalizado = tipoTexto === 'personalizado' || tipoPedido === 'especial';
 
         // Adiciona ou atualiza na lista de igrejas
         const igreja = {
@@ -336,7 +352,7 @@ function atualizarListaIgrejas() {
     listaIgrejas.innerHTML = '';
 
     if (igrejasAdicionadas.length === 0) {
-        listaIgrejas.innerHTML = '<p class="text-muted">Nenhuma igreja adicionada.</p>';
+        listaIgrejas.innerHTML = '<div class="estoque-empty"><i class="fas fa-church"></i><p>Nenhuma igreja adicionada.</p></div>';
         return;
     }
 
@@ -344,29 +360,32 @@ function atualizarListaIgrejas() {
         const itemIgreja = document.createElement('div');
         itemIgreja.className = 'igreja-item';
         itemIgreja.innerHTML = `
-            <h4>${igreja.nome}</h4>
-            <p><strong>ID:</strong> ${igreja.id}</p>
-            <p><strong>Código:</strong> ${igreja.codigo || '-'}</p>
-            <p><strong>Empresa:</strong> ${igreja.empresa}</p>
-            <p><strong>Tipo de igreja:</strong> ${igreja.tipoIgreja === 'padrao' ? 'Padrão' :
-                igreja.tipoIgreja === 'som_para_tras' ? 'Som para trás' :
-                    igreja.tipoIgreja === 'longe_2' ? 'Longe (Até 2 igrejas)' :
-                        igreja.tipoIgreja === 'longe_3' ? 'Longe (Acima de 3 igrejas)' :
-                            igreja.tipoIgreja === 'longe_bruno' ? 'Longe (Bruno)' : '-'
-            }</p>
-            <p><strong>Tipo de texto:</strong> ${igreja.tipoTexto === 'forro' ? 'Forro' :
-                igreja.tipoTexto === 'tenda' ? 'Tenda' :
-                    igreja.tipoTexto === 'vidro' ? 'Vidro' :
-                        igreja.tipoTexto === 'personalizado' ? 'Personalizado' : 'Padrão'
-            }</p>
-            <p><strong>Tipo de pedido:</strong> ${igreja.tipoPedido === 'especial' ? 'Especial' : 'Padrão'}</p>
-            ${igreja.tipoValorOrcamento === 'manual' && igreja.valorManual !== null && !isNaN(igreja.valorManual) ? `<p><strong>Valor Manual:</strong> R$ ${igreja.valorManual.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>` : ''}
-            ${igreja.configConcorrentes ? `<p><strong>Concorrentes:</strong> ${igreja.configConcorrentes.qtd || 1} — ${igreja.configConcorrentes.modo === 'manual' && (igreja.configConcorrentes.empresas || []).length ? igreja.configConcorrentes.empresas.join(', ') : 'Aleatório'}</p>` : ''}
-            <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
-                <button type="button" class="btn-secondary editar-igreja" data-index="${index}" style="padding:6px 12px; font-size:13px;">
-                    <i class="fas fa-pen"></i> Editar
+            <div class="estoque-item-info" style="flex:1;min-width:0;">
+                <strong>${igreja.nome}</strong>
+                <p><strong>ID:</strong> ${igreja.id} · <strong>Código:</strong> ${igreja.codigo || '-'}</p>
+                <p><strong>Empresa:</strong> ${igreja.empresa}</p>
+                <p><strong>Tipo de igreja:</strong> ${igreja.tipoIgreja === 'padrao' ? 'Padrão' :
+                    igreja.tipoIgreja === 'som_para_tras' ? 'Som para trás' :
+                        igreja.tipoIgreja === 'longe_2' ? 'Longe (Até 2 igrejas)' :
+                            igreja.tipoIgreja === 'longe_3' ? 'Longe (Acima de 3 igrejas)' :
+                                igreja.tipoIgreja === 'longe_bruno' ? 'Longe (Bruno)' : '-'
+                }</p>
+                <p><strong>Tipo de texto:</strong> ${igreja.tipoTexto === 'forro' ? 'Forro' :
+                    igreja.tipoTexto === 'tenda' ? 'Tenda' :
+                        igreja.tipoTexto === 'vidro' ? 'Vidro' :
+                            igreja.tipoTexto === 'personalizado' ? 'Personalizado' : 'Padrão'
+                }</p>
+                <p><strong>Tipo de pedido:</strong> ${igreja.tipoPedido === 'especial' ? 'Especial' : 'Padrão'}</p>
+                ${igreja.tipoValorOrcamento === 'manual' && igreja.valorManual !== null && !isNaN(igreja.valorManual) ? `<p><strong>Valor Manual:</strong> R$ ${igreja.valorManual.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>` : ''}
+                ${igreja.configConcorrentes ? `<p><strong>Concorrentes:</strong> ${igreja.configConcorrentes.qtd || 1} — ${igreja.configConcorrentes.modo === 'manual' && (igreja.configConcorrentes.empresas || []).length ? igreja.configConcorrentes.empresas.join(', ') : 'Aleatório'}</p>` : ''}
+            </div>
+            <div class="estoque-item-acoes" onclick="event.stopPropagation()">
+                <button type="button" class="btn-secondary btn-icon editar-igreja" data-index="${index}" title="Editar">
+                    <i class="fas fa-edit"></i>
                 </button>
-                <button type="button" class="remover-igreja" data-index="${index}" style="padding:6px 12px;">× Remover</button>
+                <button type="button" class="btn-danger btn-icon remover-igreja" data-index="${index}" title="Remover">
+                    <i class="fas fa-trash"></i>
+                </button>
             </div>
         `;
 
@@ -431,25 +450,30 @@ function atualizarListaIgrejas() {
                 if (!selTipoIgreja.value) selTipoIgreja.selectedIndex = 0;
             }
             const selTipoTexto = document.getElementById('tipoTexto');
-            const blocoTxt = document.getElementById('blocoTextoOrcamento');
-            if (selTipoTexto) {
-                selTipoTexto.value = ig.tipoTexto || 'padrao';
-                if (blocoTxt) blocoTxt.style.display = (ig.tipoTexto === 'personalizado') ? '' : 'none';
-            }
+            if (selTipoTexto) selTipoTexto.value = ig.tipoTexto || 'padrao';
             const txtSuaEl = document.getElementById('textoOrcamentoSuaEmpresa');
             const txtConcEl = document.getElementById('textoOrcamentoConcorrente');
             const txtConc2El = document.getElementById('textoOrcamentoConcorrente2');
             if (txtSuaEl) txtSuaEl.value = ig.textoSuaEmpresa || '';
             if (txtConcEl) txtConcEl.value = ig.textoConcorrente || '';
             if (txtConc2El) txtConc2El.value = ig.textoConcorrente2 || '';
-            if (typeof aplicarConfigConcorrentes === 'function') {
-                aplicarConfigConcorrentes(ig.configConcorrentes);
-            } else if (typeof atualizarCamposTextoConcorrentes === 'function') {
-                atualizarCamposTextoConcorrentes();
-            }
 
             const selPedido = document.getElementById('tipoPedido');
             if (selPedido) selPedido.value = ig.tipoPedido || 'padrao';
+
+            if (ig.tipoPedido === 'especial' && typeof aplicarPadraoPedidoEspecial === 'function') {
+                aplicarPadraoPedidoEspecial();
+            } else if (typeof aplicarConfigConcorrentes === 'function') {
+                aplicarConfigConcorrentes(ig.configConcorrentes);
+                if (typeof aplicarPadraoPedidoEspecial === 'function') aplicarPadraoPedidoEspecial();
+            } else if (typeof aplicarPadraoPedidoEspecial === 'function') {
+                aplicarPadraoPedidoEspecial();
+            } else if (typeof atualizarCamposTextoConcorrentes === 'function') {
+                atualizarCamposTextoConcorrentes();
+            }
+            if (typeof atualizarVisibilidadeTextoOrcamento === 'function') {
+                atualizarVisibilidadeTextoOrcamento();
+            }
 
             const nomeEl = document.getElementById('nomeIgreja');
             if (nomeEl && nomeEl.scrollIntoView) nomeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -498,6 +522,8 @@ window.inicializarInterface = inicializarInterface;
 window.atualizarListaIgrejas = atualizarListaIgrejas;
 window.resetarCamposFormularioOrcamento = resetarCamposFormularioOrcamento;
 window.atualizarCamposTextoConcorrentes = atualizarCamposTextoConcorrentes;
+window.aplicarPadraoPedidoEspecial = aplicarPadraoPedidoEspecial;
+window.atualizarVisibilidadeTextoOrcamento = atualizarVisibilidadeTextoOrcamento;
 
 // =============================================
 // SISTEMA DE PEDIDOS PENDENTES

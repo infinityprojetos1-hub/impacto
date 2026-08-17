@@ -106,17 +106,14 @@ function renderizarAbaHome() {
     if (!container) return;
 
     container.innerHTML = `
-        <div class="home-section">
-            <div class="home-hero">
-                <h3 class="home-title"><i class="fas fa-search"></i> Buscar Igreja</h3>
-                <p class="home-subtitle">Digite para buscar em tempo real (nome, código ou pedido)</p>
-                <div class="home-search-container">
-                    <input type="text" id="homeSearchInput" class="home-search-input" 
-                           placeholder="Ex: SÃO FRANCISCO, 060883 ou 93581" 
-                           autocomplete="off">
-                </div>
+        <div class="section">
+            <h2><i class="fas fa-search"></i> Buscar Igreja</h2>
+            <p>Digite para buscar em tempo real (nome, código ou pedido)</p>
+            <div class="home-search-container">
+                <input type="text" id="homeSearchInput" class="home-search-input"
+                       placeholder="Ex: SÃO FRANCISCO, 060883 ou 93581"
+                       autocomplete="off">
             </div>
-
             <div id="homeSearchResults" class="home-results">
                 <div class="home-results-placeholder">
                     <i class="fas fa-church"></i>

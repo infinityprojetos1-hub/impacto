@@ -1288,53 +1288,6 @@ function baixarPDF(index, tipo, pdfsGerados) {
     }
 }
 
-// Função para baixar todos os PDFs com a nova implementação otimizada
-function baixarTodosPDFs(pdfsGerados) {
-    // Utiliza a função otimizada que foi implementada em orcamentos.js
-    if (typeof window.baixarTodosPDFs === 'function') {
-        // Chama a função otimizada com feedback visual e delays
-        window.baixarTodosPDFs(pdfsGerados);
-    } else {
-        // Fallback para o método antigo (menos eficiente) caso a função otimizada não esteja disponível
-        console.warn("Função otimizada de download não encontrada, usando método padrão");
-
-        // Mostra alerta para o usuário
-        alert("Baixando todos os PDFs. Por favor, aguarde até que todos os downloads sejam concluídos.");
-
-        for (const key in pdfsGerados) {
-            const igreja = pdfsGerados[key].igreja;
-            const orcamento = pdfsGerados[key].orcamento;
-
-            // Baixa o PDF da sua empresa
-            const pdfSuaEmpresa = pdfsGerados[key].pdfSuaEmpresa;
-            const nomeSuaEmpresa = `Orçamento ${igreja.nome} - ${orcamento.suaEmpresa.nome}.pdf`;
-            pdfSuaEmpresa.save(nomeSuaEmpresa);
-
-            // Baixa o(s) PDF(s) do(s) concorrente(s)
-            if (pdfsGerados[key].pdfConcorrente) {
-                const pdfConcorrente = pdfsGerados[key].pdfConcorrente;
-                const nomeConcorrente = `Orçamento ${igreja.nome} - ${pdfsGerados[key].empresaConcorrente}.pdf`;
-                pdfConcorrente.save(nomeConcorrente);
-            }
-            if (pdfsGerados[key].pdfConcorrente2) {
-                const pdfConc2 = pdfsGerados[key].pdfConcorrente2;
-                const nomeConc2 = `Orçamento ${igreja.nome} - ${pdfsGerados[key].empresaConcorrente2}.pdf`;
-                pdfConc2.save(nomeConc2);
-            }
-            if (pdfsGerados[key].pdfConcorrenteMega) {
-                const pdfMega = pdfsGerados[key].pdfConcorrenteMega;
-                const nomeMega = `Orçamento ${igreja.nome} - ${pdfsGerados[key].empresaConcorrenteMega}.pdf`;
-                pdfMega.save(nomeMega);
-            }
-            if (pdfsGerados[key].pdfConcorrenteTella) {
-                const pdfTella = pdfsGerados[key].pdfConcorrenteTella;
-                const nomeTella = `Orçamento ${igreja.nome} - ${pdfsGerados[key].empresaConcorrenteTella}.pdf`;
-                pdfTella.save(nomeTella);
-            }
-        }
-    }
-}
-
 // Função para atualizar a interface com os resultados
 function atualizarInterfaceResultados(dadosOrcamento, index, pdfsGerados) {
     const pdfsDisplay = document.getElementById('pdfsDisplay');
@@ -1608,7 +1561,6 @@ async function regenerarPDFsConcorrentesEspecial(indexStr) {
 // Disponibiliza as funções globalmente
 window.gerarPDFs = gerarPDFs;
 window.baixarPDF = baixarPDF;
-window.baixarTodosPDFs = baixarTodosPDFs;
 window.atualizarInterfaceResultados = atualizarInterfaceResultados;
 window.regenerarPDFConcorrente = regenerarPDFConcorrente;
 window.regenerarPDFsConcorrentesEspecial = regenerarPDFsConcorrentesEspecial; 

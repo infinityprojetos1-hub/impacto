@@ -1141,24 +1141,26 @@ function atualizarListaNF() {
             gap: 10px;
             margin-bottom: 20px;
             overflow-x: auto;
-            flex-wrap: nowrap;
+            flex-wrap: wrap;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none;
             padding-bottom: 2px;
         }
         .nf-tabs::-webkit-scrollbar { display: none; }
         .nf-tab-button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
+            padding: 10px 18px;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
             cursor: pointer;
-            background: #f0f0f0;
-            color: #666;
-            transition: all 0.2s ease;
+            background: white;
+            color: var(--text-color);
+            font-weight: 600;
+            transition: border-color 0.2s, background 0.2s, color 0.2s;
         }
         .nf-tab-button.active {
-            background: var(--primary-color);
+            background: var(--primary-gradient);
             color: white;
+            border-color: transparent;
         }
         .nf-search-container {
             margin-bottom: 20px;
@@ -1167,10 +1169,10 @@ function atualizarListaNF() {
             display: flex;
             align-items: center;
             background: white;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 8px 12px;
-            max-width: 300px;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            padding: 10px 14px;
+            max-width: 100%;
         }
         .nf-search-box i {
             color: #666;
