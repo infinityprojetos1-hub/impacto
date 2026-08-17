@@ -614,10 +614,12 @@ async function iniciarGeracaoOrcamentos() {
                     const qtdConc = dadosOrcamento.configConcorrentes.qtd || 1;
                     const textosConc = [];
                     const manualConc = (igreja.textoConcorrente || '').trim();
+                    const manualConc2 = (igreja.textoConcorrente2 || '').trim();
 
                     for (let v = 0; v < qtdConc; v++) {
-                        if (v === 0 && manualConc) {
-                            textosConc.push(_sanitizarTextoOrcamento(manualConc));
+                        const manual = v === 0 ? manualConc : manualConc2;
+                        if (manual) {
+                            textosConc.push(_sanitizarTextoOrcamento(manual));
                         } else {
                             textosConc.push(gerarTextoConcorrenteAuto(sua, v));
                         }
@@ -1454,6 +1456,7 @@ function _protegerFatosOrcamento(texto) {
     let t = String(texto);
     t = t.replace(/\d{1,2}\/\d{1,2}\/\d{2,4}/g, guardar);
     t = t.replace(/\b\d{1,2}:\d{2}(?:h|\s*h)?\b/gi, guardar);
+    t = t.replace(/\d+[.,]\d+\s*m(?:etros?)?\s*[xX×]\s*\d+[.,]\d+\s*m(?:etros?)?/gi, guardar);
     t = t.replace(/\b\d+[.,]\d+\s*(?:m|cm|mm|km|kg|metros?|metro)\b/gi, guardar);
     t = t.replace(/\b\d+\s*(?:m|cm|mm|km|kg|metros?|metro)\b/gi, guardar);
     t = t.replace(/(?:local|endere[cç]o|igreja|cliente|unidade)\s*:\s*(.+)/gi, (_, rest) => {
@@ -1473,107 +1476,212 @@ function _restaurarFatosOrcamento(texto, fatos) {
     return t;
 }
 
-function _linhasEscopoOrcamento(texto) {
-    const soCabecalho = /^(contexto|escopo|observacoes|condicoes|resumo|objeto|entrega|disposicoes finais|servicos contemplados|identificacao|proposta comercial de servicos|memorial descritivo dos servicos)$/i;
-    return String(texto).split(/\r?\n/).map((l) => l.trim()).filter(Boolean).map((l) => {
-        return l.replace(/^(?:\d+[\.\)]\s*|[A-Za-z]\)\s*|[-*]\s*)/, '').trim();
-    }).filter((l) => {
-        if (l.length < 2) return false;
-        const limpo = l.replace(/[^a-zA-ZáéíóúãõçÁÉÍÓÚÃÕÇ\s]/g, '').replace(/\s+/g, ' ').trim();
-        return !soCabecalho.test(limpo);
-    });
-}
-
 function _aplicarTrocas(texto, trocas) {
     let t = texto;
     trocas.forEach(([rgx, rep]) => { t = t.replace(rgx, rep); });
     return t.replace(/\s{2,}/g, ' ').trim();
 }
 
-function _parafrasearLinhaConcorrente(linha, variante) {
-    const { texto, fatos } = _protegerFatosOrcamento(linha);
-    const v0 = [
-        [/\bor[cç]amento\b/gi, 'proposta comercial'],
-        [/\bper[ií]odo da loca[cç][aã]o\b/gi, 'prazo de locacao'],
-        [/\bper[ií]odo\b/gi, 'prazo'],
-        [/\bmodalidade\b/gi, 'forma de contratacao'],
-        [/\bconforme solicitado\b/gi, 'de acordo com o pedido'],
-        [/\bapresentamos\b/gi, 'segue'],
-        [/\bnossa proposta\b/gi, 'esta proposta'],
-        [/\bfoi confeccionada e preparada especificamente para\b/gi, 'sera entregue ja adequada para'],
-        [/\bconfeccionadas\b/gi, 'produzidas'],
-        [/\bconfeccionada\b/gi, 'produzida'],
-        [/\bespecificamente\b/gi, 'de forma dedicada'],
-        [/\bfabrica[cç][aã]o e implementa[cç][aã]o no local\b/gi, 'producao e instalacao em campo'],
-        [/\bimplementa[cç][aã]o no local\b/gi, 'instalacao em campo'],
-        [/\bpermitir (?:a |o )?/gi, 'viabilizar '],
-        [/\bdetalhamento do escopo\b/gi, 'itens contemplados'],
-        [/\boferecemos\b/gi, 'consta'],
-        [/\brealizamos\b/gi, 'sera executado'],
-        [/\bexecutamos\b/gi, 'fica prevista a execucao de'],
-        [/\binstalamos\b/gi, 'sera instalado'],
-    ];
-    const v1 = [
-        [/\bor[cç]amento\b/gi, 'memorial descritivo'],
-        [/\bper[ií]odo da loca[cç][aã]o\b/gi, 'vigencia da locacao'],
-        [/\bper[ií]odo\b/gi, 'vigencia'],
-        [/\bmodalidade\b/gi, 'enquadramento contratual'],
-        [/\bconforme solicitado\b/gi, 'segundo a demanda registrada'],
-        [/\bapresentamos\b/gi, 'este documento descreve'],
-        [/\bnossa proposta\b/gi, 'o escopo abaixo'],
-        [/\bfoi confeccionada e preparada especificamente para\b/gi, 'foi construida sob medida para'],
-        [/\bconfeccionadas\b/gi, 'construidas'],
-        [/\bconfeccionada\b/gi, 'construida'],
-        [/\bespecificamente\b/gi, 'sob medida'],
-        [/\bfabrica[cç][aã]o e implementa[cç][aã]o no local\b/gi, 'execucao in loco'],
-        [/\bimplementa[cç][aã]o no local\b/gi, 'execucao in loco'],
-        [/\bpermitir (?:a |o )?/gi, 'acomodar '],
-        [/\bdetalhamento do escopo\b/gi, 'relacao tecnica'],
-        [/\boferecemos\b/gi, 'o escopo contempla'],
-        [/\brealizamos\b/gi, 'havera'],
-        [/\bexecutamos\b/gi, 'o servico cobre'],
-        [/\binstalamos\b/gi, 'fica prevista a instalacao de'],
-    ];
-    const parafraseado = _aplicarTrocas(texto, variante % 2 === 0 ? v0 : v1);
-    let out = _restaurarFatosOrcamento(parafraseado || texto, fatos);
-    if (out) out = out.charAt(0).toUpperCase() + out.slice(1);
-    if (out && !/[.:;!?]$/.test(out)) out += '.';
-    return out;
+function _capFrase(texto) {
+    const t = String(texto || '').trim();
+    if (!t) return '';
+    return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
-function _montarTextoConcorrente(linhas, variante) {
-    const itens = linhas.map((l) => _parafrasearLinhaConcorrente(l, variante));
+function _analisarOrcamentoOriginal(texto) {
+    const linhas = String(texto).split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    const itens = [];
+    const paragrafos = [];
+    const ignora = /^(servi[cç]os contemplados|escopo(?: da execu[cç][aã]o)?|observa[cç][oõ]es|condi[cç][oõ]es(?: do or[cç]amento)?|o que est[aá] inclu[ií]do|investimento)$/i;
+    linhas.forEach((linha) => {
+        if (ignora.test(linha.replace(/[:.]$/, ''))) return;
+        const m = linha.match(/^(?:[-•*]\s+|\d+[\.\)]\s+)(.+)/);
+        if (m) itens.push(m[1].replace(/[.;]\s*$/, '').trim());
+        else paragrafos.push(linha);
+    });
+    let titulo = '';
+    let intro = '';
+    let fechamento = '';
+    if (paragrafos.length) {
+        titulo = paragrafos[0];
+        const resto = paragrafos.slice(1);
+        if (resto.length >= 2) {
+            intro = resto.slice(0, -1).join(' ');
+            fechamento = resto[resto.length - 1];
+        } else if (resto.length === 1) {
+            if (/valor|contempla|investimento|proposta|or[cç]amento/.test(resto[0].toLowerCase())) fechamento = resto[0];
+            else intro = resto[0];
+        }
+    }
+    const dimensoes = [];
+    const reDim = /\d+[.,]\d+\s*m(?:etros?)?\s*[xX×]\s*\d+[.,]\d+\s*m(?:etros?)?/gi;
+    let md;
+    const blob = String(texto);
+    while ((md = reDim.exec(blob))) dimensoes.push(md[0].replace(/\s+/g, ' '));
+    const datas = blob.match(/\d{1,2}\/\d{1,2}\/\d{2,4}/g) || [];
+    const localM = blob.match(/(?:local|endere[cç]o)\s*:\s*(.+)/i);
+    return {
+        titulo, intro, itens, fechamento, dimensoes, datas,
+        local: localM ? localM[1].trim() : '',
+        drywall: /drywall/i.test(blob),
+        tenda: /tenda/i.test(blob),
+        forro: /forro/i.test(blob),
+        vidro: /vidro|esquadria/i.test(blob),
+        porta: /porta/i.test(blob),
+        janela: /janela/i.test(blob),
+        locacao: /loca[cç][aã]o/i.test(blob),
+        maoDeObra: /m[aã]o de obra/i.test(blob),
+        incluiJanela: /fornecimento[\s\S]{0,80}janela|janela[\s\S]{0,80}fornecimento/i.test(blob)
+    };
+}
+
+function _classificarItemEscopo(texto) {
+    const t = String(texto).toLowerCase();
+    if (/limp|organiza|res[ií]duo|t[eé]rmino|conclus[aã]o|entrega do local/.test(t)) return 'finalizacao';
+    if (/fita|massa|junta|emenda|acabamento|arremate|tratamento/.test(t)) return 'acabamento';
+    if (/v[aã]o|abertura|refor[cç]o|esquadro/.test(t)) return 'aberturas';
+    if (/(porta|janela).{0,50}(instala|fornec)|(instala|fornec).{0,50}(porta|janela)/.test(t)) return 'instalacoes';
+    if (/estrutura|placa|chapa|met[aá]lic|drywall|parede|nivelamento|alinhamento|fechamento/.test(t)) return 'estrutura';
+    if (/tenda|lona|porta de acesso|infraestrutura/.test(t)) return 'estrutura';
+    return 'outros';
+}
+
+function _reescreverItemCompleto(item, variante) {
+    const { texto, fatos } = _protegerFatosOrcamento(item);
+    const v0 = [
+        [/montagem da estrutura met[aá]lica para paredes(?: em drywall)?/gi, 'Montagem e nivelamento da estrutura metalica destinada as paredes'],
+        [/instala[cç][aã]o e fixa[cç][aã]o das placas de drywall/gi, 'Fixacao e instalacao das placas de drywall'],
+        [/prepara[cç][aã]o e execu[cç][aã]o dos v[aã]os para porta e janela/gi, 'Confeccao dos vaos destinados a porta e a janela'],
+        [/execu[cç][aã]o dos refor[cç]os estruturais necess[aá]rios para sustenta[cç][aã]o e fixa[cç][aã]o da porta e da janela/gi, 'Execucao dos reforcos internos necessarios para garantir a estabilidade e a correta fixacao da porta e da janela'],
+        [/tratamento das juntas,?\s*aplica[cç][aã]o de fita e massa espec[ií]fica para drywall/gi, 'Tratamento das emendas e juntas das placas, com aplicacao de fita e massa apropriada'],
+        [/acabamentos necess[aá]rios ap[oó]s a montagem/gi, 'Realizacao dos arremates e acabamentos decorrentes da execucao'],
+        [/organiza[cç][aã]o e limpeza da [aá]rea ap[oó]s a conclus[aã]o dos servi[cç]os/gi, 'Retirada de residuos, organizacao e limpeza do local ao termino dos trabalhos'],
+        [/fornecimento e instala[cç][aã]o de janela medindo/gi, 'Fornecimento e instalacao de janela com dimensoes de'],
+        [/medindo\s+/gi, 'com dimensoes de '],
+        [/espec[ií]fica para/gi, 'apropriada para'],
+        [/ap[oó]s a conclus[aã]o/gi, 'ao termino'],
+        [/para paredes em/gi, 'destinada as paredes em'],
+        [/foi confeccionada e preparada especificamente para/gi, 'sera entregue ja adequada para'],
+        [/fabrica[cç][aã]o e implementa[cç][aã]o no local/gi, 'producao e instalacao em campo'],
+    ];
+    const v1 = [
+        [/montagem da estrutura met[aá]lica para paredes(?: em drywall)?/gi, 'Instalacao da estrutura metalica'],
+        [/instala[cç][aã]o e fixa[cç][aã]o das placas de drywall/gi, 'Montagem e fixacao das chapas de drywall'],
+        [/prepara[cç][aã]o e execu[cç][aã]o dos v[aã]os para porta e janela/gi, 'Dimensionamento e execucao dos espacos destinados a porta e a janela'],
+        [/execu[cç][aã]o dos refor[cç]os estruturais necess[aá]rios para sustenta[cç][aã]o e fixa[cç][aã]o da porta e da janela/gi, 'Reforco da estrutura metalica nos pontos de instalacao, para maior resistencia e estabilidade'],
+        [/tratamento das juntas,?\s*aplica[cç][aã]o de fita e massa espec[ií]fica para drywall/gi, 'Aplicacao de fita nas juntas e massa propria para tratamento de drywall'],
+        [/acabamentos necess[aá]rios ap[oó]s a montagem/gi, 'Correcoes e arremates necessarios apos a montagem, com acabamento das areas trabalhadas'],
+        [/organiza[cç][aã]o e limpeza da [aá]rea ap[oó]s a conclus[aã]o dos servi[cç]os/gi, 'Organizacao dos materiais e ferramentas, limpeza da area utilizada e entrega do local organizado'],
+        [/fornecimento e instala[cç][aã]o de janela medindo/gi, 'Fornecimento e instalacao de 01 janela de'],
+        [/placas de drywall/gi, 'chapas de drywall'],
+        [/medindo\s+/gi, 'de '],
+        [/espec[ií]fica para/gi, 'propria para'],
+        [/foi confeccionada e preparada especificamente para/gi, 'foi construida sob medida para'],
+        [/fabrica[cç][aã]o e implementa[cç][aã]o no local/gi, 'execucao in loco'],
+    ];
+    let out = _aplicarTrocas(texto, variante % 2 === 0 ? v0 : v1);
+    out = _restaurarFatosOrcamento(out || texto, fatos);
+    return _capFrase(out.replace(/[.;]\s*$/, ''));
+}
+
+function _tituloVariante(info, variante) {
     if (variante % 2 === 0) {
-        const bloco = [
-            'PROPOSTA COMERCIAL DE SERVICOS',
-            '',
-            'OBJETO',
-            'Documento comercial com o mesmo escopo, prazos, quantitativos e local informados no pedido, redigido em formato de proposta.',
-            '',
-            'ESCOPO CONTRATADO',
-        ];
-        itens.forEach((item, i) => bloco.push((i + 1) + '. ' + item));
-        bloco.push(
-            '',
-            'CONDICOES',
-            'Mao de obra, materiais e deslocamento acompanham o escopo acima. Prazos e valores desta proposta dependem de aceite formal.',
-        );
+        if (info.drywall) return 'ORCAMENTO DE EXECUCAO - SISTEMA DRYWALL';
+        if (info.tenda) return 'ORCAMENTO DE EXECUCAO - TENDA E INFRAESTRUTURA';
+        if (info.forro) return 'ORCAMENTO DE EXECUCAO - FORRO';
+        if (info.vidro) return 'ORCAMENTO DE EXECUCAO - ESQUADRIAS E VIDROS';
+        return 'ORCAMENTO DE EXECUCAO';
+    }
+    if (info.drywall) return 'PROPOSTA DE SERVICOS\n\nMONTAGEM DE PAREDE EM DRYWALL';
+    if (info.tenda) return 'PROPOSTA DE SERVICOS\n\nLOCACAO DE TENDA E INFRAESTRUTURA';
+    if (info.forro) return 'PROPOSTA DE SERVICOS\n\nEXECUCAO DE FORRO';
+    if (info.vidro) return 'PROPOSTA DE SERVICOS\n\nESQUADRIAS E VIDROS';
+    return 'PROPOSTA DE SERVICOS';
+}
+
+function _introVariante(info, variante) {
+    const alvo = info.drywall
+        ? (variante % 2 === 0 ? 'montagem de paredes em sistema drywall' : 'implantacao de estrutura em drywall')
+        : info.tenda
+            ? (variante % 2 === 0 ? 'locacao e montagem de tenda e infraestrutura' : 'fornecimento de tenda e infraestrutura no local')
+            : 'execucao dos servicos previstos no pedido';
+    const extras = [];
+    if (info.porta && info.janela) {
+        extras.push(variante % 2 === 0
+            ? 'a preparacao dos ambientes e dos elementos necessarios para instalacao de porta e janela'
+            : 'a montagem do sistema, preparacao das aberturas e instalacao dos elementos previstos');
+    } else if (info.porta) {
+        extras.push('a instalacao da porta prevista');
+    } else if (info.janela) {
+        extras.push('a instalacao da janela prevista');
+    }
+    let txt;
+    if (variante % 2 === 0) {
+        txt = 'Execucao de mao de obra especializada para ' + alvo;
+        if (extras.length) txt += ', incluindo ' + extras.join(' e ');
+        txt += '.';
+    } else {
+        txt = 'Apresentamos proposta para execucao completa dos servicos relacionados a ' + alvo;
+        if (extras.length) txt += ', contemplando ' + extras.join(', ');
+        txt += '.';
+    }
+    if (info.datas.length >= 2) txt += ' Periodo: ' + info.datas[0] + ' a ' + info.datas[1] + '.';
+    else if (info.datas.length === 1) txt += ' Data de referencia: ' + info.datas[0] + '.';
+    if (info.local) txt += ' Local: ' + info.local + '.';
+    return txt;
+}
+
+function _fechamentoVariante(info, variante) {
+    const dimJanela = info.dimensoes[0] || '';
+    const janelaTxt = info.incluiJanela && dimJanela
+        ? 'fornecimento da janela de ' + dimJanela
+        : (info.incluiJanela ? 'fornecimento da janela prevista' : '');
+    if (variante % 2 === 0) {
+        let a = 'O valor apresentado corresponde a execucao da mao de obra referente aos servicos acima especificados';
+        if (janelaTxt) a += ' e inclui tambem o ' + janelaTxt;
+        a += '.';
+        return a + '\n\nOs servicos serao realizados conforme as condicoes verificadas no local e de acordo com as necessidades tecnicas da instalacao.';
+    }
+    let a = 'O orcamento contempla a mao de obra especializada para todos os servicos relacionados acima';
+    if (janelaTxt) a += ', incluindo o fornecimento e instalacao da janela' + (dimJanela ? ' de ' + dimJanela : '');
+    a += '.';
+    return a + '\n\nEsta proposta considera a execucao integral do servico de acordo com as caracteristicas e necessidades da instalacao.';
+}
+
+function _montarTextoConcorrente(info, variante) {
+    const itens = (info.itens && info.itens.length ? info.itens : [info.intro || info.titulo || 'Servicos conforme pedido'])
+        .map((l) => _reescreverItemCompleto(l, variante));
+    const titulo = _tituloVariante(info, variante);
+    const intro = _introVariante(info, variante);
+    const fecha = _fechamentoVariante(info, variante);
+
+    if (variante % 2 === 0) {
+        const bloco = [titulo, '', 'Objeto do servico', '', intro, '', 'Escopo da execucao', ''];
+        itens.forEach((item) => bloco.push('- ' + item));
+        bloco.push('', 'Condicoes do orcamento', '', fecha);
         return bloco.join('\n');
     }
-    const bloco = [
-        'MEMORIAL DESCRITIVO DOS SERVICOS',
-        '',
-        'A) IDENTIFICACAO',
-        'Descricao tecnica do atendimento, organizada por itens, conservando medidas, datas, local e caracteristicas originais do pedido.',
-        '',
-        'B) RELACAO DE ITENS',
-    ];
-    itens.forEach((item) => bloco.push('- ' + item));
-    bloco.push(
-        '',
-        'C) ENCERRAMENTO',
-        'A entrega ocorre apos conferencia no local, nas mesmas condicoes, medidas e prazos indicados neste memorial.',
-    );
+
+    const grupos = {
+        estrutura: { titulo: 'Estrutura e fechamento', itens: [] },
+        aberturas: { titulo: 'Aberturas e reforcos', itens: [] },
+        instalacoes: { titulo: 'Instalacoes', itens: [] },
+        acabamento: { titulo: 'Tratamento e acabamento', itens: [] },
+        finalizacao: { titulo: 'Finalizacao', itens: [] },
+        outros: { titulo: 'Servicos previstos', itens: [] }
+    };
+    itens.forEach((item, i) => {
+        const chave = _classificarItemEscopo(info.itens[i] || item);
+        (grupos[chave] || grupos.outros).itens.push(item);
+    });
+    const bloco = [titulo, '', intro, '', 'O que esta incluido'];
+    Object.keys(grupos).forEach((chave) => {
+        const g = grupos[chave];
+        if (!g.itens.length) return;
+        bloco.push('', g.titulo, '');
+        g.itens.forEach((item) => bloco.push('- ' + item));
+    });
+    bloco.push('', 'Investimento', '', fecha);
     return bloco.join('\n');
 }
 
@@ -1581,11 +1689,8 @@ function gerarTextoConcorrenteAuto(textoBase, variante = 0) {
     try {
         const original = _sanitizarTextoOrcamento((textoBase || '').trim());
         if (!original) return '';
-        const linhas = _linhasEscopoOrcamento(original);
-        if (linhas.length === 0) {
-            return _montarTextoConcorrente([original], variante % 2);
-        }
-        return _montarTextoConcorrente(linhas, variante % 2);
+        const info = _analisarOrcamentoOriginal(original);
+        return _montarTextoConcorrente(info, variante % 2);
     } catch (_) {
         return _sanitizarTextoOrcamento(textoBase || '');
     }

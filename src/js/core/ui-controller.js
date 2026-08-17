@@ -16,7 +16,7 @@ function atualizarRotuloBotaoAdicionarIgreja() {
 function resetarCamposFormularioOrcamento(incluirConcorrentes) {
     const idsTexto = [
         'nomeIgreja', 'idIgreja', 'linkIgreja', 'codigoIgreja',
-        'valorManual', 'textoOrcamentoSuaEmpresa', 'textoOrcamentoConcorrente'
+        'valorManual', 'textoOrcamentoSuaEmpresa', 'textoOrcamentoConcorrente', 'textoOrcamentoConcorrente2'
     ];
     idsTexto.forEach(id => {
         const el = document.getElementById(id);
@@ -57,6 +57,21 @@ function resetarCamposFormularioOrcamento(incluirConcorrentes) {
         document.querySelectorAll('#listaConcorrentesManual input[type="checkbox"]').forEach(cb => {
             cb.checked = false;
         });
+    }
+    if (typeof atualizarCamposTextoConcorrentes === 'function') {
+        atualizarCamposTextoConcorrentes();
+    }
+}
+
+function atualizarCamposTextoConcorrentes() {
+    const qtd = parseInt(document.getElementById('qtdConcorrentes')?.value || '1', 10);
+    const bloco2 = document.getElementById('blocoTextoConcorrente2');
+    const label1 = document.getElementById('labelTextoOrcamentoConcorrente');
+    if (bloco2) bloco2.style.display = qtd === 2 ? '' : 'none';
+    if (label1) {
+        label1.textContent = qtd === 2
+            ? 'Texto do concorrente 1 (opcional — gerado automaticamente se vazio)'
+            : 'Texto do concorrente (opcional — gerado automaticamente se vazio)';
     }
 }
 
@@ -257,6 +272,7 @@ function inicializarGerenciamentoIgrejas() {
         // Captura textos personalizados (quando tipoTexto = 'personalizado')
         const txtSua = (document.getElementById('textoOrcamentoSuaEmpresa') && document.getElementById('textoOrcamentoSuaEmpresa').value) || '';
         const txtConc = (document.getElementById('textoOrcamentoConcorrente') && document.getElementById('textoOrcamentoConcorrente').value) || '';
+        const txtConc2 = (document.getElementById('textoOrcamentoConcorrente2') && document.getElementById('textoOrcamentoConcorrente2').value) || '';
 
         // Verifica se deve usar texto personalizado
         const usarTextoPersonalizado = tipoTexto === 'personalizado';
@@ -274,6 +290,7 @@ function inicializarGerenciamentoIgrejas() {
             tipoTexto: tipoTexto,
             textoSuaEmpresa: usarTextoPersonalizado ? txtSua : '',
             textoConcorrente: usarTextoPersonalizado ? txtConc : '',
+            textoConcorrente2: usarTextoPersonalizado ? txtConc2 : '',
             tipoPedido: tipoPedido
         };
 
@@ -411,8 +428,11 @@ function atualizarListaIgrejas() {
             }
             const txtSuaEl = document.getElementById('textoOrcamentoSuaEmpresa');
             const txtConcEl = document.getElementById('textoOrcamentoConcorrente');
+            const txtConc2El = document.getElementById('textoOrcamentoConcorrente2');
             if (txtSuaEl) txtSuaEl.value = ig.textoSuaEmpresa || '';
             if (txtConcEl) txtConcEl.value = ig.textoConcorrente || '';
+            if (txtConc2El) txtConc2El.value = ig.textoConcorrente2 || '';
+            if (typeof atualizarCamposTextoConcorrentes === 'function') atualizarCamposTextoConcorrentes();
 
             const selPedido = document.getElementById('tipoPedido');
             if (selPedido) selPedido.value = ig.tipoPedido || 'padrao';
@@ -463,6 +483,7 @@ function inicializarInterface() {
 window.inicializarInterface = inicializarInterface;
 window.atualizarListaIgrejas = atualizarListaIgrejas;
 window.resetarCamposFormularioOrcamento = resetarCamposFormularioOrcamento;
+window.atualizarCamposTextoConcorrentes = atualizarCamposTextoConcorrentes;
 
 // =============================================
 // SISTEMA DE PEDIDOS PENDENTES

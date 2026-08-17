@@ -4387,9 +4387,14 @@
                             <label for="textoOrcamentoSuaEmpresa">Texto do orçamento (sua empresa)</label>
                             <textarea id="textoOrcamentoSuaEmpresa" rows="12" class="textarea-orcamento-grande"
                                 placeholder="Texto que aparecerá no orçamento da sua empresa..."></textarea>
-                            <label for="textoOrcamentoConcorrente" style="margin-top:12px; display:block;">Texto do concorrente (opcional — versões distintas são geradas automaticamente se vazio)</label>
+                            <label id="labelTextoOrcamentoConcorrente" for="textoOrcamentoConcorrente" style="margin-top:12px; display:block;">Texto do concorrente (opcional — gerado automaticamente se vazio)</label>
                             <textarea id="textoOrcamentoConcorrente" rows="12" class="textarea-orcamento-grande"
-                                placeholder="Deixe vazio para gerar textos totalmente diferentes do seu, com estrutura nova..."></textarea>
+                                placeholder="Deixe vazio para gerar um texto com estrutura e redação diferentes do original..."></textarea>
+                            <div id="blocoTextoConcorrente2" style="display:none;">
+                                <label for="textoOrcamentoConcorrente2" style="margin-top:12px; display:block;">Texto do concorrente 2 (opcional — gerado automaticamente se vazio)</label>
+                                <textarea id="textoOrcamentoConcorrente2" rows="12" class="textarea-orcamento-grande"
+                                    placeholder="Deixe vazio para gerar a segunda versão, com outra estrutura..."></textarea>
+                            </div>
                         </div>
 
                         <button id="adicionarIgreja" class="btn-primary" style="margin-top:12px;">
@@ -4979,6 +4984,17 @@
                 modoConc.addEventListener('change', function () {
                     blocoConcManual.style.display = (this.value === 'manual') ? '' : 'none';
                 });
+            }
+            var qtdConc = document.getElementById('qtdConcorrentes');
+            if (qtdConc) {
+                qtdConc.addEventListener('change', function () {
+                    if (typeof window.atualizarCamposTextoConcorrentes === 'function') {
+                        window.atualizarCamposTextoConcorrentes();
+                    }
+                });
+            }
+            if (typeof window.atualizarCamposTextoConcorrentes === 'function') {
+                window.atualizarCamposTextoConcorrentes();
             }
             if (typeof window.inicializarCheckboxesConcorrentes === 'function') {
                 window.inicializarCheckboxesConcorrentes();
