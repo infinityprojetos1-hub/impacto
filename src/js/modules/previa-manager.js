@@ -223,9 +223,10 @@ function _mostrarListaPrevia(tipo) {
                     title="Mover para Sandro" data-label-mobile="Sandro">
                     <i class="fas fa-user"></i>
                 </button>` : ''}
-                <button class="btn-primary"
-                    onclick="event.stopPropagation(); abrirModalPrevia('${chaveEsc}','${nomeEsc}')">
-                    <i class="fas fa-clipboard-list"></i> Ver Prévia
+                <button class="btn-icon btn-primary"
+                    onclick="event.stopPropagation(); abrirModalPrevia('${chaveEsc}','${nomeEsc}')"
+                    title="Ver Prévia" data-label-mobile="Prévia">
+                    <i class="fas fa-clipboard-list"></i>
                 </button>
             </div>`;
 

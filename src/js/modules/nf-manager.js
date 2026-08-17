@@ -884,22 +884,22 @@ function _nfTipoEmpresa(nome) {
 
 function _nfHtmlCard(igreja, tipo, dados) {
     const idx = dados.indexOf(igreja);
-    const btnWhatsApp = `<button type="button" onclick="compartilharNFWhatsApp('${tipo}', ${idx})" class="btn-whatsapp-nf" title="Compartilhar via WhatsApp"><i class="fab fa-whatsapp"></i></button>`;
+    const btnWhatsApp = `<button type="button" class="btn-icon btn-success btn-whatsapp-nf" onclick="compartilharNFWhatsApp('${tipo}', ${idx})" title="WhatsApp"><i class="fab fa-whatsapp"></i></button>`;
     const acaoBotao = tipo === 'ativas'
-        ? `<button type="button" onclick="arquivarIgreja(${idx})" class="btn-archive" title="Arquivar"><i class="fas fa-archive"></i></button>
-           <button type="button" onclick="moverParaEspeciais(${idx})" class="btn-especial" title="Igrejas especiais"><i class="fas fa-star"></i></button>
+        ? `<button type="button" class="btn-icon btn-secondary" onclick="arquivarIgreja(${idx})" title="Arquivar"><i class="fas fa-archive"></i></button>
+           <button type="button" class="btn-icon btn-warning" onclick="moverParaEspeciais(${idx})" title="Igrejas especiais"><i class="fas fa-star"></i></button>
            ${btnWhatsApp}
-           <button type="button" onclick="editarIgreja(${idx}, '${tipo}')" class="btn-edit" title="Editar"><i class="fas fa-edit"></i></button>
-           <button type="button" onclick="excluirIgreja(${idx}, '${tipo}')" class="btn-delete" title="Excluir"><i class="fas fa-trash"></i></button>`
+           <button type="button" class="btn-icon btn-secondary" onclick="editarIgreja(${idx}, '${tipo}')" title="Editar"><i class="fas fa-edit"></i></button>
+           <button type="button" class="btn-icon btn-danger" onclick="excluirIgreja(${idx}, '${tipo}')" title="Excluir"><i class="fas fa-trash"></i></button>`
         : tipo === 'especiais'
-        ? `<button type="button" onclick="moverEspecialParaAtiva(${idx})" class="btn-restore" title="Mover para ativas"><i class="fas fa-undo"></i></button>
+        ? `<button type="button" class="btn-icon btn-secondary" onclick="moverEspecialParaAtiva(${idx})" title="Mover para ativas"><i class="fas fa-undo"></i></button>
            ${btnWhatsApp}
-           <button type="button" onclick="editarIgreja(${idx}, '${tipo}')" class="btn-edit" title="Editar"><i class="fas fa-edit"></i></button>
-           <button type="button" onclick="excluirIgreja(${idx}, '${tipo}')" class="btn-delete" title="Excluir"><i class="fas fa-trash"></i></button>`
-        : `<button type="button" onclick="restaurarIgreja(${idx})" class="btn-restore" title="Restaurar"><i class="fas fa-undo"></i></button>
+           <button type="button" class="btn-icon btn-secondary" onclick="editarIgreja(${idx}, '${tipo}')" title="Editar"><i class="fas fa-edit"></i></button>
+           <button type="button" class="btn-icon btn-danger" onclick="excluirIgreja(${idx}, '${tipo}')" title="Excluir"><i class="fas fa-trash"></i></button>`
+        : `<button type="button" class="btn-icon btn-secondary" onclick="restaurarIgreja(${idx})" title="Restaurar"><i class="fas fa-undo"></i></button>
            ${btnWhatsApp}
-           <button type="button" onclick="editarIgreja(${idx}, '${tipo}')" class="btn-edit" title="Editar"><i class="fas fa-edit"></i></button>
-           <button type="button" onclick="excluirIgreja(${idx}, '${tipo}')" class="btn-delete" title="Excluir"><i class="fas fa-trash"></i></button>`;
+           <button type="button" class="btn-icon btn-secondary" onclick="editarIgreja(${idx}, '${tipo}')" title="Editar"><i class="fas fa-edit"></i></button>
+           <button type="button" class="btn-icon btn-danger" onclick="excluirIgreja(${idx}, '${tipo}')" title="Excluir"><i class="fas fa-trash"></i></button>`;
 
     const pendAtual = (igreja.pendencia || '').toString().trim().toUpperCase();
     const opcoes = ['', 'ASSINATURA', 'EXECUÇÃO', 'RELATÓRIO', 'LOGIX', 'NFE', 'PAGAMENTO', 'PAGO'];
@@ -908,18 +908,19 @@ function _nfHtmlCard(igreja, tipo, dados) {
         `</select>`;
 
     const idHtml = igreja.id
-        ? `<span class="nf-id-link nf-badge" data-id="${_nfEsc(igreja.id)}" data-link="${_nfEsc(igreja.link || '')}" title="Copiar número e abrir link">ID: ${_nfEsc(igreja.id)}</span>`
+        ? `<span class="nf-id-link nf-id-chip" data-id="${_nfEsc(igreja.id)}" data-link="${_nfEsc(igreja.link || '')}" title="Copiar número e abrir link">ID ${_nfEsc(igreja.id)}</span>`
         : '';
     const valorHtml = igreja.valor
-        ? `<span class="nf-badge nf-badge-valor">${_nfEsc(igreja.valor)}</span>`
+        ? `<div class="nf-card-valor-box"><div class="nf-card-valor">${_nfEsc(igreja.valor)}</div></div>`
         : '';
 
     return `<div class="nf-card">
         <div class="nf-card-icon"><i class="fas fa-church"></i></div>
         <div class="nf-card-info">
             <strong class="nf-igreja-link" data-index="${idx}" data-tipo="${tipo}">${_nfEsc(igreja.nome)}</strong>
-            <div class="nf-card-meta">${idHtml}${valorHtml}</div>
+            <div class="nf-card-meta">${idHtml}</div>
         </div>
+        ${valorHtml}
         <div class="nf-card-pendencia">${pendenciaOptions}</div>
         <div class="nf-acoes">${acaoBotao}</div>
     </div>`;
@@ -1218,69 +1219,9 @@ function atualizarListaNF() {
             cursor: pointer;
             background: white;
         }
-        .nf-card .btn-archive,
-        .nf-card .btn-restore,
-        .nf-card .btn-especial,
-        .nf-card .btn-whatsapp-nf,
-        .nf-card .btn-edit,
-        .nf-card .btn-delete {
-            width: 36px;
-            height: 36px;
-            padding: 0;
-            border: 2px solid var(--border-color);
-            border-radius: 10px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: white;
-            cursor: pointer;
-        }
-        .btn-archive, .btn-restore {
-            padding: 5px 10px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            background: #f0f0f0;
-            color: #666;
-            transition: all 0.2s ease;
-        }
-        .btn-archive:hover {
-            background: #e0e0e0;
-            color: #333;
-        }
-        .btn-especial {
-            padding: 5px 10px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            background: #fff8e1;
-            color: #f59e0b;
-            transition: all 0.2s ease;
-        }
-        .btn-especial:hover {
-            background: #fde68a;
-            color: #d97706;
-        }
-        .btn-whatsapp-nf {
-            padding: 5px 10px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            background: #e8f5e9;
-            color: #25d366;
-            transition: all 0.2s ease;
-            font-size: 1em;
-        }
-        .btn-whatsapp-nf:hover {
-            background: #25d366;
-            color: #fff;
-        }
-        .btn-restore {
-            background: var(--primary-color);
-            color: white;
-        }
-        .btn-restore:hover {
-            opacity: 0.9;
+        .nf-card .btn-whatsapp-nf {
+            color: #2e7d32 !important;
+            border-color: #2e7d32;
         }
         .nf-modal {
             position: fixed;
@@ -1336,55 +1277,28 @@ function atualizarListaNF() {
             justify-content: flex-end;
             margin-top: 20px;
         }
-        .btn-edit,
-        .btn-delete {
-            padding: 5px 10px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .btn-edit {
-            background: #4CAF50;
-            color: white;
-        }
-        .btn-edit:hover {
-            background: #45a049;
-        }
-        .btn-delete {
-            background: #f44336;
-            color: white;
-        }
-        .btn-delete:hover {
-            background: #da190b;
-        }
-        .btn-secondary {
+        .nf-modal-buttons .btn-secondary {
             background: #f0f0f0;
             color: #666;
             border: none;
             padding: 8px 16px;
             border-radius: 4px;
             cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .btn-secondary:hover {
-            background: #e0e0e0;
         }
         .nf-steps { display: grid; gap: 16px; }
         .nf-step h4 { margin: 0 0 8px 0; color: #2c3e50; }
         .nf-item-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; margin-bottom: 6px; }
         .nf-item-label { font-weight: 600; color: #444; }
-        .nf-badge { display: inline-block; padding: 4px 10px; border-radius: 4px; font-weight: bold; color: #fff; min-width: 50px; text-align: center; }
+        .nf-badge--sim, .nf-badge--nao { display: inline-block; padding: 4px 10px; border-radius: 4px; font-weight: bold; color: #fff; min-width: 50px; text-align: center; }
         .nf-badge--sim { background: #28a745; }
         .nf-badge--nao { background: #dc3545; }
         .nf-igreja-link { color: var(--primary-color); text-decoration: underline; }
         .nf-igreja-id { margin-left: 8px; color: #6c757d; font-weight: 600; }
         .nf-id-link { 
-            color: #007bff; 
-            text-decoration: underline; 
-            font-weight: 600;
+            color: #1e3a8a; 
+            text-decoration: none; 
+            font-weight: 800;
             cursor: pointer;
-            transition: all 0.2s ease;
         }
         .nf-id-link:hover { 
             color: #0056b3; 

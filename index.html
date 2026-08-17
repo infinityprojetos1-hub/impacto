@@ -490,11 +490,44 @@
         }
 
         .btn-icon {
-            padding: 8px 10px;
-            min-width: 40px;
+            width: 38px;
+            height: 38px;
+            min-width: 38px;
+            padding: 0;
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            background: #fff !important;
+            color: #475569 !important;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            box-shadow: none !important;
+            transform: none !important;
+        }
+
+        .btn-icon.btn-success,
+        .btn-icon.btn-warning,
+        .btn-icon.btn-primary,
+        .btn-icon.btn-secondary {
+            background: #fff !important;
+            box-shadow: none !important;
+            transform: none !important;
+        }
+
+        .btn-icon.btn-success { color: #2e7d32 !important; border-color: #2e7d32; }
+        .btn-icon.btn-warning { color: #e65100 !important; border-color: #fb8c00; }
+        .btn-icon.btn-primary { color: #4f46e5 !important; border-color: #6366f1; }
+        .btn-icon.btn-secondary { color: #475569 !important; border-color: var(--border-color); }
+        .btn-icon.btn-danger {
+            background: var(--danger-gradient) !important;
+            color: #fff !important;
+            border: none;
+        }
+
+        .btn-icon:hover {
+            transform: none !important;
+            box-shadow: none !important;
+            border-color: var(--primary-color);
         }
 
         .lista-igrejas {
@@ -2183,6 +2216,27 @@
                 border-radius: 6px !important;
             }
 
+            .nf-card .nf-acoes .btn-icon {
+                width: 38px !important;
+                height: 38px !important;
+                min-width: 38px !important;
+                padding: 0 !important;
+            }
+
+            .nf-card-valor-box {
+                width: 100% !important;
+                text-align: left !important;
+                min-width: 0 !important;
+            }
+
+            .nf-card-valor {
+                font-size: 22px !important;
+            }
+
+            .nf-id-chip {
+                font-size: 15px !important;
+            }
+
             /* Esconde células vazias de empresa em modo card */
             .nf-table td:empty {
                 display: none !important;
@@ -3631,20 +3685,56 @@
             align-items: center;
             gap: 8px;
             flex-wrap: wrap;
+            margin-top: 4px;
         }
 
-        .nf-badge {
-            font-size: 13px;
-            padding: 5px 10px;
-            border-radius: 8px;
-            font-weight: 700;
-            background: #dbeafe;
+        .nf-id-chip {
+            display: inline-block;
+            font-size: 14px;
+            font-weight: 800;
             color: #1e3a8a;
+            background: #dbeafe;
+            border: 1px solid #93c5fd;
+            padding: 5px 12px;
+            border-radius: 8px;
+            text-decoration: none;
+            letter-spacing: 0.2px;
         }
 
-        .nf-badge-valor {
-            background: #bbf7d0;
-            color: #14532d;
+        .nf-card-valor-box {
+            flex-shrink: 0;
+            text-align: right;
+            min-width: 130px;
+        }
+
+        .nf-card-valor {
+            font-size: 20px;
+            font-weight: 800;
+            color: #15803d;
+            line-height: 1.1;
+            letter-spacing: -0.3px;
+        }
+
+        .nf-card .nf-acoes .btn-icon {
+            width: 38px;
+            height: 38px;
+            min-width: 38px;
+            padding: 0;
+            margin: 0;
+        }
+
+        .nf-card .nf-acoes .btn-icon:hover {
+            background: #fff !important;
+            color: inherit;
+            border-color: var(--primary-color);
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        .nf-card .nf-acoes .btn-icon.btn-danger:hover {
+            background: var(--danger-gradient) !important;
+            color: #fff !important;
+            border: none;
         }
 
         .nf-card-pendencia {
