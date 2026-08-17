@@ -527,6 +527,15 @@ async function iniciarGeracaoOrcamentos() {
             return;
         }
 
+        const configConc = obterConfigConcorrentes();
+        if (configConc.modo === 'manual') {
+            const qtd = configConc.qtd || 1;
+            if (configConc.empresas.length < qtd) {
+                alert(`Selecione pelo menos ${qtd} empresa(s) concorrente(s) no modo manual.`);
+                return;
+            }
+        }
+
         const dataOrcamento = document.getElementById('dataOrcamento').value;
         const prazoExecucao = document.getElementById('prazoExecucao').value;
         // Textos personalizados agora vêm armazenados em cada igreja ao adicionar
@@ -596,14 +605,28 @@ async function iniciarGeracaoOrcamentos() {
                 // Passa o tipo de texto para o orçamento
                 dadosOrcamento.tipoTexto = igreja.tipoTexto || 'padrao';
 
+                // Passa configuração de concorrentes (global do formulário)
+                dadosOrcamento.configConcorrentes = obterConfigConcorrentes();
+
                 // Anexa textos personalizados se tipoTexto for personalizado
                 if (igreja.tipoTexto === 'personalizado') {
                     const sua = (igreja.textoSuaEmpresa || '').trim();
-                    let conc = (igreja.textoConcorrente || '').trim();
-                    if (!conc) conc = gerarTextoConcorrenteAuto(sua);
+                    const qtdConc = dadosOrcamento.configConcorrentes.qtd || 1;
+                    const textosConc = [];
+                    const manualConc = (igreja.textoConcorrente || '').trim();
+
+                    for (let v = 0; v < qtdConc; v++) {
+                        if (v === 0 && manualConc) {
+                            textosConc.push(manualConc);
+                        } else {
+                            textosConc.push(gerarTextoConcorrenteAuto(sua, v));
+                        }
+                    }
+
+                    dadosOrcamento.textosConcorrentesGerados = textosConc;
                     dadosOrcamento.textoPersonalizadoSuaEmpresa = sua;
-                    dadosOrcamento.textoPersonalizadoConcorrente = conc;
-                    // Garante que tipoTexto seja 'personalizado' para a lógica do PDF
+                    dadosOrcamento.textoPersonalizadoConcorrente = textosConc[0] || '';
+                    dadosOrcamento.textoPersonalizadoConcorrente2 = textosConc[1] || '';
                     dadosOrcamento.tipoTexto = 'personalizado';
                 }
 
@@ -1387,143 +1410,169 @@ function gerarVariacaoTexto(item) {
     return opcoes[Math.floor(Math.random() * opcoes.length)];
 }
 
-// Gera uma versão "concorrente" a partir do texto da sua empresa
-function gerarTextoConcorrenteAuto(textoBase) {
+// Lê configuração de empresas concorrentes do formulário
+function obterConfigConcorrentes() {
+    const modo = (document.getElementById('modoConcorrentes')?.value || 'aleatorio');
+    const qtd = parseInt(document.getElementById('qtdConcorrentes')?.value || '1', 10);
+    const empresas = [];
+    if (modo === 'manual') {
+        document.querySelectorAll('#listaConcorrentesManual input[type="checkbox"]:checked').forEach(cb => {
+            if (cb.value) empresas.push(cb.value);
+        });
+    }
+    return { modo, qtd: qtd === 2 ? 2 : 1, empresas };
+}
+
+function inicializarCheckboxesConcorrentes() {
+    const container = document.getElementById('listaConcorrentesManual');
+    if (!container || container.dataset.init) return;
+    container.dataset.init = '1';
+    const lista = (typeof window.EMPRESAS_CONCORRENTES !== 'undefined')
+        ? [...window.EMPRESAS_CONCORRENTES, 'MEGA EVENTOS', 'TELLA VIDEO']
+        : ['Virtual Guitar Shop', 'GG PROAUTO LTDA', 'STV IMAGEM E SOM', 'UP SERVIÇOS', 'SENA AUDIOVISUAL PRODUÇÕES', 'INSTALASSOM', 'GLAUBER SISTEMAS CONSTRUTIVOS', 'MEGA EVENTOS', 'TELLA VIDEO'];
+    const visto = new Set();
+    container.innerHTML = lista.filter(n => {
+        if (!n || visto.has(n)) return false;
+        visto.add(n);
+        return true;
+    }).map(nome => `
+        <label><input type="checkbox" value="${nome.replace(/"/g, '&quot;')}"> ${nome}</label>
+    `).join('');
+}
+
+window.obterConfigConcorrentes = obterConfigConcorrentes;
+window.inicializarCheckboxesConcorrentes = inicializarCheckboxesConcorrentes;
+
+function _extrairItensDoTexto(texto) {
+    const linhas = texto.split('\n').map(l => l.trim()).filter(Boolean);
+    const itens = [];
+    for (const linha of linhas) {
+        const m = linha.match(/^(?:\d+[\.\)]\s*|[-•*]\s*)(.+)/);
+        if (m) {
+            itens.push(m[1].trim());
+        } else if (linha.length > 12 && !/^[A-ZÁÉÍÓÚ\s]{6,}$/.test(linha)) {
+            const frases = linha.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 10);
+            if (frases.length > 1) itens.push(...frases.map(f => f.trim()));
+            else itens.push(linha);
+        }
+    }
+    if (itens.length === 0) {
+        return linhas.filter(l => l.length > 8);
+    }
+    return itens.slice(0, 12);
+}
+
+function _reescreverItemConcorrente(texto, variante, indice) {
+    let corpo = texto
+        .replace(/\b(nós|nos|conosco|nosso|nossa|nossos|nossas|meu|minha|eu|você|seu|sua)\b/gi, '')
+        .replace(/\b(oferecemos|realizamos|executamos|fornecemos|garantimos|utilizamos|aplicamos|seguimos|atuamos|prestamos|entregamos|comprometemos|instalamos|trabalhamos|desenvolvemos|projetamos)\b/gi, '')
+        .replace(/\b(melhor|excelente|premium|diferenciado|personalizado|especializado|profissional|inovador|avançado)\b/gi, '')
+        .replace(/!/g, '.')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+
+    const subs = [
+        [/instala(ção|cao|ções|lar|lado)/gi, variante === 0 ? 'montagem técnica' : 'implementação no local'],
+        [/manuten(ção|cao|ções)/gi, 'revisão e ajuste'],
+        [/garantia/gi, 'cobertura contratual'],
+        [/equipamento(s)?/gi, variante === 0 ? 'conjunto de equipamentos' : 'materiais previstos'],
+        [/som/gi, 'áudio'],
+        [/microfone(s)?/gi, 'captação vocal'],
+        [/caixa(s)?\s*(de\s*)?(som|acústica)?/gi, 'unidade acústica'],
+        [/amplificador(es)?/gi, 'etapa de potência'],
+        [/mesa(s)?\s*(de\s*)?som/gi, 'central de mixagem'],
+        [/cabo(s)?/gi, 'interligação'],
+        [/sistema(s)?/gi, 'infraestrutura'],
+        [/serviço(s)?/gi, 'prestação técnica'],
+        [/igreja/gi, 'unidade atendida'],
+        [/qualidade/gi, 'padrão especificado'],
+        [/completo(a|s)?/gi, 'integral'],
+        [/teste(s)?/gi, 'verificação operacional'],
+        [/organizad[oa]s?/gi, 'identificados'],
+    ];
+    subs.forEach(([rgx, rep]) => { corpo = corpo.replace(rgx, rep); });
+
+    if (!corpo) corpo = 'intervenção técnica conforme levantamento de campo';
+    corpo = corpo.charAt(0).toUpperCase() + corpo.slice(1);
+    if (!/[.!?]$/.test(corpo)) corpo += '.';
+
+    const prefixosV0 = ['Execução prevista:', 'Incluso no escopo —', 'Serviço técnico:', 'Etapa prevista:'];
+    const prefixosV1 = ['→', '• Item:', '▸', '—'];
+    const pref = (variante === 0 ? prefixosV0 : prefixosV1)[indice % 4];
+    return `${pref} ${corpo}`;
+}
+
+function _gerarResumoConcorrente(variante) {
+    const v0 = [
+        'Trata-se de proposta para prestação de serviços técnicos no local indicado, abrangendo fornecimento, montagem e verificação operacional conforme levantamento realizado.',
+        'O escopo contempla intervenções necessárias ao funcionamento do sistema instalado, com materiais e mão de obra previstos nesta especificação.',
+        'Documento descritivo dos trabalhos propostos para atendimento da demanda registrada, incluindo etapas de instalação, ajuste e entrega funcional.',
+    ];
+    const v1 = [
+        'A presente descrição detalha os trabalhos técnicos propostos, com foco na entrega operacional do conjunto de equipamentos no ambiente indicado.',
+        'Especificação dos serviços previstos para execução no local, contemplando materiais, deslocamento e atividades de acabamento técnico.',
+        'Proposta técnica com escopo definido por etapas, materiais previstos e condições de entrega sujeitas a confirmação formal.',
+    ];
+    const pool = variante === 0 ? v0 : v1;
+    return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function _montarTextoConcorrente(itens, variante) {
+    const resumo = _gerarResumoConcorrente(variante);
+    const reescritos = itens.map((item, i) => _reescreverItemConcorrente(item, variante, i));
+
+    if (variante === 0) {
+        const linhas = [
+            'DOCUMENTO DE ESCOPO — PROPOSTA COMERCIAL',
+            '',
+            'RESUMO EXECUTIVO',
+            resumo,
+            '',
+            'SERVIÇOS CONTEMPLADOS',
+        ];
+        reescritos.forEach((item, i) => linhas.push(`${i + 1}. ${item.replace(/^[^:→•▸—]+\s*[-:→•▸—]\s*/, '')}`));
+        linhas.push(
+            '',
+            'CONDIÇÕES DE EXECUÇÃO',
+            'Materiais, ferramentas e deslocamento inclusos conforme especificação acordada. Prazos e condições comerciais sujeitos a confirmação após aceite formal da proposta.',
+            '',
+            'OBSERVAÇÕES',
+            'Proposta válida para análise técnica e comercial. Eventuais itens não descritos deverão ser formalizados em aditivo.',
+        );
+        return linhas.join('\n');
+    }
+
+    const linhas = [
+        'ESPECIFICAÇÃO TÉCNICA DOS TRABALHOS',
+        '',
+        '1. CONTEXTO',
+        resumo,
+        '',
+        '2. DETALHAMENTO DO ESCOPO',
+    ];
+    reescritos.forEach(item => linhas.push(`   ${item}`));
+    linhas.push(
+        '',
+        '3. ENTREGA E VERIFICAÇÃO',
+        'Os serviços serão concluídos com testes de operação e entrega funcional do sistema, conforme cronograma aprovado entre as partes.',
+        '',
+        '4. DISPOSIÇÕES FINAIS',
+        'Equipamentos e materiais citados atendem ao escopo acima. Condições comerciais e prazos definidos em contrato ou ordem de serviço.',
+    );
+    return linhas.join('\n');
+}
+
+// Gera versão concorrente com estrutura e redação totalmente distintas
+function gerarTextoConcorrenteAuto(textoBase, variante = 0) {
     try {
         if (!textoBase || !textoBase.trim()) return '';
-
-        // ── FASE 1: substituições de palavras ─────────────────────────────────
-
-        // Pronomes pessoais / possessivos → referência impessoal
-        const subsPessoa = [
-            [/\bnós\b/gi,        'o fornecedor'],
-            [/\bnos\b/gi,        'ao fornecedor'],
-            [/\bconosco\b/gi,    'com o fornecedor'],
-            [/\bnosso(s)?\b/gi,  'do fornecedor'],
-            [/\bnossa(s)?\b/gi,  'do fornecedor'],
-            [/\bmeu\b/gi,        'do fornecedor'],
-            [/\bminha\b/gi,      'do fornecedor'],
-            [/\beu\b/gi,         'o fornecedor'],
-            [/\bvocê\b/gi,       'o contratante'],
-            [/\bseu(s)?\b/gi,    'do contratante'],
-            [/\bsua(s)?\b/gi,    'do contratante'],
-        ];
-
-        // Verbos 1ª pessoa → 3ª pessoa distante + incerteza nas garantias
-        const subsVerbos = [
-            [/\boferecemos\b/gi,        'oferece'],
-            [/\brealizamos\b/gi,        'realizará'],
-            [/\bexecutamos\b/gi,        'executará'],
-            [/\bfornecemos\b/gi,        'fornece'],
-            [/\bgarantimos\b/gi,        'prevê garantir'],
-            [/\butilizamos\b/gi,        'utilizará'],
-            [/\baplicamos\b/gi,         'aplicará'],
-            [/\bseguimos\b/gi,          'segue'],
-            [/\batuamos\b/gi,           'atua'],
-            [/\bprestamos\b/gi,         'presta'],
-            [/\bcuidamos\b/gi,          'cuidará'],
-            [/\btrabalhamos\b/gi,       'trabalhará'],
-            [/\bcontamos\b/gi,          'conta'],
-            [/\bdispomos\b/gi,          'dispõe'],
-            [/\bpossu[ií]mos\b/gi,      'possui'],
-            [/\bvalorizamos\b/gi,       'considera'],
-            [/\bpriorizamos\b/gi,       'prevê priorizar'],
-            [/\bentregamos\b/gi,        'entregará'],
-            [/\bcomprometemos\b/gi,     'prevê comprometer-se'],
-            [/\bcumprimos\b/gi,         'cumpre'],
-            [/\batendemos\b/gi,         'atende'],
-            [/\binstalamos\b/gi,        'instalará'],
-            [/\bmonitoramos\b/gi,       'monitora'],
-            [/\bgerenciamos\b/gi,       'gerencia'],
-            [/\bdesenvolvemos\b/gi,     'desenvolve'],
-            [/\bcriamos\b/gi,           'cria'],
-            [/\bbuscamos\b/gi,          'busca'],
-            [/\bprojektamos\b/gi,       'projeta'],
-            [/\bprojetamos\b/gi,        'projeta'],
-        ];
-
-        // Superlativos e diferenciais → termos neutros ou removidos
-        const subsQualidade = [
-            [/\bmelhor(es)?\b/gi,                    'um'],
-            [/\bexcelência\b/gi,                     'qualidade padrão'],
-            [/\bexcelente(s)?\b/gi,                  'adequado'],
-            [/\bpremium\b/gi,                        'padrão'],
-            [/\balta\s+qualidade\b/gi,               'qualidade'],
-            [/\balta\s+performance\b/gi,             'desempenho'],
-            [/\btop\s+de\s+linha\b/gi,               'disponível no mercado'],
-            [/\bde\s+ponta\b/gi,                     'disponível'],
-            [/\bde\s+alto\s+padrão\b/gi,             ''],
-            [/\bde\s+alto\s+nível\b/gi,              ''],
-            [/\bdiferenciado(s|a|as)?\b/gi,          'padrão'],
-            [/\bpersonalizado(s|a|as)?\b/gi,         'padrão'],
-            [/\bespecializado(s|a|as)?\b/gi,         ''],
-            [/\bqualificado(s|a|as)?\b/gi,           ''],
-            [/\bprofissional(is)?\b/gi,              'disponível'],
-            [/\bexperiente(s)?\b/gi,                 ''],
-            [/\batencioso(s|a|as)?\b/gi,             ''],
-            [/\bdedicado(s|a|as)?\b/gi,              ''],
-            [/\binovador(es|a|as)?\b/gi,             ''],
-            [/\bmoderno(s|a|as)?\b/gi,               'disponível'],
-            [/\bavançado(s|a|as)?\b/gi,              'disponível'],
-            [/\bcom\s+garantia\b/gi,                 'sujeito a condições'],
-            [/\bsem\s+custo\s+adicional\b/gi,        'conforme condições do contrato'],
-            [/\bàs\s+suas\s+necessidades\b/gi,       'conforme o solicitado'],
-            [/\bsuas\s+expectativas\b/gi,            'o solicitado'],
-            [/\btranquilidade\b/gi,                  ''],
-            [/\bsatisfação\b/gi,                     'entrega'],
-            [/\bconfiança\b/gi,                      ''],
-            [/\bsegurança\b/gi,                      ''],
-            [/\bcomprometimento\b/gi,                'previsão de entrega'],
-        ];
-
-        // Pontuação e expressões de chamada para ação
-        const subsFormatacao = [
-            [/!/g,                        '.'],
-            [/\bcontate-nos\b/gi,         'entre em contato com o fornecedor'],
-            [/\bfale\s+conosco\b/gi,      'contate o fornecedor'],
-            [/\bagende\s+(uma\s+)?visita\b/gi, 'solicite informações'],
-            [/\bnão\s+perca\s+tempo\b/gi, ''],
-        ];
-
-        let t = textoBase;
-        [...subsPessoa, ...subsVerbos, ...subsQualidade, ...subsFormatacao]
-            .forEach(([rgx, rep]) => { t = t.replace(rgx, rep); });
-
-        // Limpa artefatos de substituições vazias
-        t = t.replace(/\s{2,}/g, ' ')
-             .replace(/ ([,.])/g, '$1')
-             .replace(/,\s*\./g, '.')
-             .trim();
-
-        // ── FASE 2: transformação estrutural por linha ────────────────────────
-        const linhas = t.split('\n');
-        const linhasTransformadas = linhas.map((linha, idx) => {
-            const l = linha.trim();
-            if (!l) return '';
-
-            // Títulos/cabeçalhos: mantém mas adiciona prefixo de terceiro
-            if (/^[A-ZÁÉÍÓÚ\s]{5,}$/.test(l) || /^\*\*/.test(l) || /^#{1,3}\s/.test(l)) {
-                return linha; // mantém formatação de títulos
-            }
-
-            // Frases que contêm garantias absolutas → adiciona incerteza
-            if (/garanti|certeza|absolut|100%|sempre|nunca\s+falt/i.test(l)) {
-                return linha.replace(/\b(garanti\w*)\b/gi, 'prevê $1');
-            }
-
-            return linha;
-        });
-
-        t = linhasTransformadas.join('\n').replace(/\n{3,}/g, '\n\n').trim();
-
-        // ── FASE 3: cabeçalho impessoal ───────────────────────────────────────
-        if (!/^(Conforme|Segundo|De acordo)/i.test(t)) {
-            t = 'Conforme proposta da empresa concorrente:\n\n' + t;
+        const itens = _extrairItensDoTexto(textoBase);
+        if (itens.length === 0) {
+            return _montarTextoConcorrente([textoBase.trim()], variante % 2);
         }
-
-        return t;
+        return _montarTextoConcorrente(itens, variante % 2);
     } catch (_) {
-        return textoBase || '';
+        return _montarTextoConcorrente([textoBase || 'Serviços técnicos conforme especificação'], variante % 2);
     }
 }
 
@@ -1902,6 +1951,10 @@ document.addEventListener('DOMContentLoaded', () => {
     inicializarDownloadZip();
 
     inicializarRelatorioTecnico();
+
+    if (typeof inicializarCheckboxesConcorrentes === 'function') {
+        inicializarCheckboxesConcorrentes();
+    }
 
     inicializarAbas();
 

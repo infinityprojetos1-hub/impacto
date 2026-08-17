@@ -1007,6 +1007,89 @@
             font-size: 1.3em;
         }
 
+        /* Orçamentos — layout compacto */
+        .orcamento-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px 16px;
+        }
+
+        @media (max-width: 768px) {
+            .orcamento-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .orcamento-grid .form-group-full {
+            grid-column: 1 / -1;
+        }
+
+        .orcamento-details {
+            margin: 16px 0;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background: #fafbfc;
+            overflow: hidden;
+        }
+
+        .orcamento-details summary {
+            cursor: pointer;
+            padding: 12px 16px;
+            font-weight: 600;
+            color: var(--primary-color, #4A6FDC);
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .orcamento-details summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .orcamento-details[open] summary {
+            border-bottom: 1px solid var(--border-color);
+            background: #f0f4ff;
+        }
+
+        .orcamento-details-body {
+            padding: 16px;
+        }
+
+        .textarea-orcamento-grande {
+            min-height: 220px;
+            resize: vertical;
+            width: 100%;
+            font-size: 0.95em;
+            line-height: 1.45;
+        }
+
+        .concorrentes-checkboxes {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .concorrentes-checkboxes label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9em;
+            cursor: pointer;
+            padding: 6px 8px;
+            border-radius: 6px;
+            background: white;
+            border: 1px solid #e2e8f0;
+        }
+
+        .orcamento-acoes-gerar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
         /* Estilos para o modal de relatório */
         .modal-overlay {
             position: fixed;
@@ -4217,140 +4300,167 @@
 
         <div id="orcamentos" class="tab-content">
             <div class="section">
-                <h2>Dados das Igrejas</h2>
-                <p>Preencha os campos abaixo para adicionar uma igreja à lista de orçamentos</p>
+                <h2>Orçamentos</h2>
+                <p style="margin-bottom:16px;">Adicione igrejas à lista e configure as opções abaixo antes de gerar.</p>
 
-                <div class="form-group">
-                    <label for="nomeIgreja">Nome da Igreja</label>
-                    <input type="text" id="nomeIgreja" placeholder="Ex: ILHA DAS CAIEIRAS">
-                </div>
+                <details class="orcamento-details" open>
+                    <summary><i class="fas fa-church"></i> Dados da igreja</summary>
+                    <div class="orcamento-details-body">
+                        <div class="orcamento-grid">
+                            <div class="form-group">
+                                <label for="nomeIgreja">Nome da Igreja</label>
+                                <input type="text" id="nomeIgreja" placeholder="Ex: ILHA DAS CAIEIRAS">
+                            </div>
+                            <div class="form-group">
+                                <label for="idIgreja">ID da Igreja</label>
+                                <input type="text" id="idIgreja" placeholder="Ex: 83541">
+                            </div>
+                            <div class="form-group">
+                                <label for="codigoIgreja">Código</label>
+                                <input type="text" id="codigoIgreja" placeholder="Ex: (060137)">
+                            </div>
+                            <div class="form-group">
+                                <label for="linkIgreja">Link</label>
+                                <input type="text" id="linkIgreja" placeholder="https://...">
+                            </div>
+                            <div class="form-group">
+                                <label for="empresaSelecionada">Empresa Responsável</label>
+                                <select id="empresaSelecionada">
+                                    <option value="Impacto Soluções">Impacto Soluções</option>
+                                    <option value="SPG da Silva Sonorização e Iluminação">SPG da Silva Sonorização e Iluminação</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="tipoValorOrcamento">Tipo de Valor</label>
+                                <select id="tipoValorOrcamento">
+                                    <option value="" disabled selected hidden>Selecione...</option>
+                                    <option value="auto">Automático</option>
+                                    <option value="manual">Manual</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="tipoIgreja">Tipo de igreja</label>
+                                <select id="tipoIgreja">
+                                    <option value="" disabled selected hidden>Selecione...</option>
+                                    <option value="padrao">Padrão</option>
+                                    <option value="som_para_tras">Som para trás</option>
+                                    <option value="longe_2">Longe (Até 2 igrejas)</option>
+                                    <option value="longe_3">Longe (Acima de 3 igrejas)</option>
+                                    <option value="longe_bruno">Longe (Bruno)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="tipoTexto">Tipo de texto</label>
+                                <select id="tipoTexto">
+                                    <option value="padrao" selected>Padrão</option>
+                                    <option value="forro">Forro</option>
+                                    <option value="tenda">Tenda</option>
+                                    <option value="vidro">Vidro</option>
+                                    <option value="personalizado">Personalizado</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="tipoPedido">Tipo de pedido</label>
+                                <select id="tipoPedido">
+                                    <option value="padrao" selected>Padrão</option>
+                                    <option value="especial">Especial</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="grupoValorManual" style="display:none;">
+                                <label for="valorManual">Valor (R$)</label>
+                                <input type="number" id="valorManual" min="0" step="0.01" placeholder="3500.00">
+                            </div>
+                        </div>
 
-                <div class="form-group">
-                    <label for="idIgreja">ID da Igreja</label>
-                    <input type="text" id="idIgreja" placeholder="Ex: 83541">
-                </div>
+                        <div class="form-group form-group-full" id="blocoTextoOrcamento" style="display:none; margin-top:12px;">
+                            <label for="textoOrcamentoSuaEmpresa">Texto do orçamento (sua empresa)</label>
+                            <textarea id="textoOrcamentoSuaEmpresa" rows="12" class="textarea-orcamento-grande"
+                                placeholder="Texto que aparecerá no orçamento da sua empresa..."></textarea>
+                            <label for="textoOrcamentoConcorrente" style="margin-top:12px; display:block;">Texto do concorrente (opcional — versões distintas são geradas automaticamente se vazio)</label>
+                            <textarea id="textoOrcamentoConcorrente" rows="12" class="textarea-orcamento-grande"
+                                placeholder="Deixe vazio para gerar textos totalmente diferentes do seu, com estrutura nova..."></textarea>
+                        </div>
 
-                <div class="form-group">
-                    <label for="codigoIgreja">Código da Igreja</label>
-                    <input type="text" id="codigoIgreja" placeholder="Ex: (060137)">
-                </div>
+                        <button id="adicionarIgreja" class="btn-primary" style="margin-top:12px;">
+                            <i class="fas fa-plus-circle"></i> Adicionar Igreja
+                        </button>
+                    </div>
+                </details>
 
-                <div class="form-group">
-                    <label for="linkIgreja">Link</label>
-                    <input type="text" id="linkIgreja" placeholder="Ex: https://exemplo.com">
-                </div>
+                <details class="orcamento-details">
+                    <summary><i class="fas fa-building"></i> Empresas concorrentes</summary>
+                    <div class="orcamento-details-body">
+                        <div class="orcamento-grid">
+                            <div class="form-group">
+                                <label for="modoConcorrentes">Modo de seleção</label>
+                                <select id="modoConcorrentes">
+                                    <option value="aleatorio" selected>Aleatório (padrão)</option>
+                                    <option value="manual">Escolher empresas específicas</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="qtdConcorrentes">Quantidade de concorrentes</label>
+                                <select id="qtdConcorrentes">
+                                    <option value="1" selected>1 concorrente</option>
+                                    <option value="2">2 concorrentes</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="blocoConcorrentesManual" style="display:none; margin-top:12px;">
+                            <p style="font-size:0.85em; color:#64748b; margin:0 0 8px;">Marque as empresas desejadas (mínimo igual à quantidade acima):</p>
+                            <div id="listaConcorrentesManual" class="concorrentes-checkboxes"></div>
+                        </div>
+                    </div>
+                </details>
 
-                <div class="form-group">
-                    <label for="empresaSelecionada">Empresa Responsável</label>
-                    <select id="empresaSelecionada">
-                        <option value="Impacto Soluções">Impacto Soluções</option>
-                        <option value="SPG da Silva Sonorização e Iluminação">SPG da Silva Sonorização e Iluminação
-                        </option>
-                    </select>
-                </div>
+                <details class="orcamento-details">
+                    <summary><i class="fas fa-list"></i> Lista e geração</summary>
+                    <div class="orcamento-details-body">
+                        <div class="orcamento-grid">
+                            <div class="form-group">
+                                <label for="dataOrcamento">Data dos Orçamentos</label>
+                                <input type="date" id="dataOrcamento">
+                            </div>
+                            <div class="form-group">
+                                <label for="prazoExecucao">Prazo (dias)</label>
+                                <input type="number" id="prazoExecucao" value="30" min="1">
+                            </div>
+                        </div>
+                        <div class="form-group form-group-full" style="margin-top:12px;">
+                            <label for="listaIgrejas">Igrejas adicionadas</label>
+                            <div id="listaIgrejas" class="lista-igrejas"></div>
+                        </div>
+                    </div>
+                </details>
 
-                <div class="form-group">
-                    <label for="tipoValorOrcamento">Tipo de Valor do Orçamento</label>
-                    <select id="tipoValorOrcamento">
-                        <option value="" disabled selected hidden>Selecione o tipo de valor</option>
-                        <option value="auto">Gerar valor automaticamente</option>
-                        <option value="manual">Informar valor manualmente</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="tipoIgreja">Tipo de igreja</label>
-                    <select id="tipoIgreja">
-                        <option value="" disabled selected hidden>Selecione o tipo de igreja</option>
-                        <option value="padrao">Padrão</option>
-                        <option value="som_para_tras">Som para trás</option>
-                        <option value="longe_2">Longe (Até 2 igrejas)</option>
-                        <option value="longe_3">Longe (Acima de 3 igrejas)</option>
-                        <option value="longe_bruno">Longe (Bruno)</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="tipoTexto">Tipo de texto</label>
-                    <select id="tipoTexto">
-                        <option value="padrao" selected>Padrão</option>
-                        <option value="forro">Forro</option>
-                        <option value="tenda">Tenda</option>
-                        <option value="vidro">Vidro</option>
-                        <option value="personalizado">Personalizado</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="tipoPedido">Tipo de pedido</label>
-                    <select id="tipoPedido">
-                        <option value="padrao" selected>Padrão</option>
-                        <option value="especial">Especial</option>
-                    </select>
-                </div>
-                <div class="form-group" id="grupoValorManual" style="display:none;">
-                    <label for="valorManual">Valor do Orçamento (R$)</label>
-                    <input type="number" id="valorManual" min="0" step="0.01" placeholder="Ex: 3500.00">
-                </div>
+                <details class="orcamento-details">
+                    <summary><i class="fas fa-folder-open"></i> Pasta de trabalho</summary>
+                    <div class="orcamento-details-body">
+                        <p style="font-size: 13px; color: #666; margin-bottom: 10px;">
+                            Salva automaticamente os orçamentos organizados por igreja.
+                        </p>
+                        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                            <button id="escolherPastaTrabalho" class="btn-secondary" style="padding: 10px 15px;">
+                                <i class="fas fa-folder-open"></i> Escolher Pasta
+                            </button>
+                            <span id="pastaTrabalhoStatus" style="font-size: 13px; color: #666;">Nenhuma pasta selecionada</span>
+                        </div>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-top: 10px;">
+                            <input type="checkbox" id="salvarAutomaticoPasta" checked>
+                            <span style="font-size: 13px;">Salvar PDFs automaticamente ao gerar</span>
+                        </label>
+                    </div>
+                </details>
 
-                <!-- Texto personalizado (apenas quando tipo de igreja = texto_personalizado) -->
-                <div class="form-group" id="blocoTextoOrcamento" style="display:none; margin-top:10px;">
-                    <label for="textoOrcamentoSuaEmpresa">Texto do orçamento (sua empresa)</label>
-                    <textarea id="textoOrcamentoSuaEmpresa" rows="4"
-                        placeholder="Texto que aparecerá no orçamento da sua empresa..."></textarea>
-                    <label for="textoOrcamentoConcorrente" style="margin-top:10px; display:block;">Texto do
-                        concorrente (opcional – será gerado automaticamente se vazio)</label>
-                    <textarea id="textoOrcamentoConcorrente" rows="4"
-                        placeholder="Texto que aparecerá no orçamento do concorrente..."></textarea>
-                </div>
-
-                <button id="adicionarIgreja" class="btn-primary">
-                    <i class="fas fa-plus-circle"></i> Adicionar Igreja
-                </button>
-
-                <div class="form-group" style="margin-top: 20px;">
-                    <label for="listaIgrejas">Igrejas Adicionadas</label>
-                    <div id="listaIgrejas" class="lista-igrejas"></div>
-                </div>
-
-                <div class="form-group">
-                    <label for="dataOrcamento">Data dos Orçamentos</label>
-                    <input type="date" id="dataOrcamento">
-                </div>
-
-                <div class="form-group">
-                    <label for="prazoExecucao">Prazo para Execução (em dias)</label>
-                    <input type="number" id="prazoExecucao" value="30" min="1">
-                </div>
-
-
-            </div>
-
-            <!-- Configuração de Pasta de Trabalho -->
-            <div class="section" style="margin-top: 20px; background: #f0f8ff; border: 2px solid #4A6FDC;">
-                <h3 style="color: #4A6FDC; margin-bottom: 15px;">📁 Pasta de Trabalho</h3>
-                <p style="font-size: 13px; color: #666; margin-bottom: 10px;">
-                    Configure uma pasta para salvar automaticamente os orçamentos organizados por igreja.
-                </p>
-                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                    <button id="escolherPastaTrabalho" class="btn-secondary" style="padding: 10px 15px;">
-                        <i class="fas fa-folder-open"></i> Escolher Pasta
+                <div class="orcamento-acoes-gerar">
+                    <button id="gerarOrcamentosBtn" class="btn-success">
+                        <i class="fas fa-file-pdf"></i> Gerar Orçamentos
                     </button>
-                    <span id="pastaTrabalhoStatus" style="font-size: 13px; color: #666;">
-                        Nenhuma pasta selecionada
-                    </span>
-                </div>
-                <div style="margin-top: 10px;">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                        <input type="checkbox" id="salvarAutomaticoPasta" checked>
-                        <span style="font-size: 13px;">Criar pasta e salvar PDFs automaticamente ao gerar</span>
-                    </label>
+                    <button id="limparIgrejas" class="btn-warning">
+                        <i class="fas fa-trash-alt"></i> Limpar Lista
+                    </button>
                 </div>
             </div>
-
-            <button id="gerarOrcamentosBtn" class="btn-success">
-                <i class="fas fa-file-pdf"></i> Gerar Orçamentos
-            </button>
-            <button id="limparIgrejas" class="btn-warning">
-                <i class="fas fa-trash-alt"></i> Limpar Lista
-            </button>
         </div>
 
         <div id="relatorioTecnico" class="tab-content">
@@ -4850,6 +4960,17 @@
                 selTipoTexto.addEventListener('change', function () {
                     blocoTxtOrc.style.display = (this.value === 'personalizado') ? '' : 'none';
                 });
+            }
+
+            var modoConc = document.getElementById('modoConcorrentes');
+            var blocoConcManual = document.getElementById('blocoConcorrentesManual');
+            if (modoConc && blocoConcManual) {
+                modoConc.addEventListener('change', function () {
+                    blocoConcManual.style.display = (this.value === 'manual') ? '' : 'none';
+                });
+            }
+            if (typeof window.inicializarCheckboxesConcorrentes === 'function') {
+                window.inicializarCheckboxesConcorrentes();
             }
             if (usarTxtRel && txtRel) {
                 usarTxtRel.addEventListener('change', function () {

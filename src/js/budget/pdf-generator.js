@@ -302,6 +302,83 @@ function nomePdfConcorrenteOrcamentoPasta(nomeEmpresa) {
     return `Orcamento_${base}.pdf`;
 }
 
+function _criarObjConcorrente(nome, dadosOrcamento, markupExtra) {
+    const valorSuaEmpresa = dadosOrcamento.suaEmpresa.total;
+    const markup = markupExtra != null ? markupExtra : (1.1 + (Math.random() * 0.05));
+    const valorConcorrente = valorSuaEmpresa * markup;
+    return {
+        nome,
+        itens: (dadosOrcamento.suaEmpresa.itens || []).map(it => ({ servico: it.servico })),
+        total: valorConcorrente,
+        totalFormatado: (typeof window.formatarMoeda === 'function') ? window.formatarMoeda(valorConcorrente) : ("R$ " + valorConcorrente.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ".")),
+        totalPorExtenso: (typeof window.valorPorExtenso === 'function') ? window.valorPorExtenso(valorConcorrente) : (valorConcorrente.toFixed(2).replace('.', ',') + " reais")
+    };
+}
+
+function _sortearUmaEmpresa(candidatasSemRepetir) {
+    const todasEmpresas = Object.keys(contadorEmpresas);
+    const totalUsos = todasEmpresas.reduce((total, empresa) => total + (contadorEmpresas[empresa] || 0), 0);
+    const mediaUsos = totalUsos / (todasEmpresas.length || 1) || 0;
+
+    const empresasSubrepresentadas = candidatasSemRepetir.filter(empresa => {
+        const contagem = contadorEmpresas[empresa] || 0;
+        return contagem < Math.min(mediaUsos, limiteMaximoRepeticao);
+    });
+
+    if (empresasSubrepresentadas.length > 0) {
+        return empresasSubrepresentadas[Math.floor(Math.random() * empresasSubrepresentadas.length)];
+    }
+
+    let menorContagem = Infinity;
+    candidatasSemRepetir.forEach(empresa => {
+        const contagem = contadorEmpresas[empresa] || 0;
+        if (contagem < menorContagem) menorContagem = contagem;
+    });
+    const empatadas = candidatasSemRepetir.filter(empresa => (contadorEmpresas[empresa] || 0) === menorContagem);
+    return empatadas[Math.floor(Math.random() * empatadas.length)];
+}
+
+function escolherEmpresasConcorrentes(dadosOrcamento, config, quantidade, empresasPossiveis) {
+    const qtd = Math.max(1, Math.min(quantidade || 1, 2));
+    const configConc = config || { modo: 'aleatorio', qtd, empresas: [] };
+
+    if (configConc.modo === 'manual' && configConc.empresas && configConc.empresas.length > 0) {
+        const validas = configConc.empresas.filter(e => empresasPossiveis.includes(e));
+        if (validas.length >= qtd) return validas.slice(0, qtd);
+    }
+
+    const maxSemRepetir = Math.min(6, empresasPossiveis.length);
+    let candidatasSemRepetir = empresasPossiveis.filter(e => !empresasUsadasNoLote.has(e));
+    if (empresasUsadasNoLote.size >= maxSemRepetir || candidatasSemRepetir.length === 0) {
+        empresasUsadasNoLote = new Set();
+        candidatasSemRepetir = [...empresasPossiveis];
+    }
+
+    const escolhidas = [];
+    let pool = [...candidatasSemRepetir];
+    for (let i = 0; i < qtd; i++) {
+        if (pool.length === 0) pool = empresasPossiveis.filter(e => !escolhidas.includes(e));
+        if (pool.length === 0) pool = [...empresasPossiveis];
+        const nome = _sortearUmaEmpresa(pool);
+        escolhidas.push(nome);
+        pool = pool.filter(e => e !== nome);
+        contadorEmpresas[nome] = (contadorEmpresas[nome] || 0) + 1;
+        empresasUsadasNoLote.add(nome);
+    }
+    return escolhidas;
+}
+
+function _dadosOrcamentoComTextoConcorrente(dadosOrcamento, indice) {
+    const clone = Object.assign({}, dadosOrcamento);
+    const textos = dadosOrcamento.textosConcorrentesGerados;
+    if (textos && textos[indice]) {
+        clone.textoPersonalizadoConcorrente = textos[indice];
+    } else if (indice === 1 && dadosOrcamento.textoPersonalizadoConcorrente2) {
+        clone.textoPersonalizadoConcorrente = dadosOrcamento.textoPersonalizadoConcorrente2;
+    }
+    return clone;
+}
+
 // Função para gerar os PDFs
 async function gerarPDFs(dadosOrcamento, index, pdfsGerados) {
     try {
@@ -336,90 +413,24 @@ async function gerarPDFs(dadosOrcamento, index, pdfsGerados) {
             empresasPossiveis = ['Virtual Guitar Shop'];
         }
 
-        // Em lotes de até 6 orçamentos, evita repetição até esgotar 6 opções
-        const maxSemRepetir = Math.min(6, empresasPossiveis.length);
-        let candidatasSemRepetir = empresasPossiveis.filter(e => !empresasUsadasNoLote.has(e));
-        if (empresasUsadasNoLote.size >= maxSemRepetir || candidatasSemRepetir.length === 0) {
-            // já usamos 6 distintas (ou todas as opções); permite repetir reiniciando o conjunto
-            empresasUsadasNoLote = new Set();
-            candidatasSemRepetir = empresasPossiveis;
-        }
-
-        // Calcular a média de uso para favorecer menos usadas
-        const todasEmpresas = Object.keys(contadorEmpresas);
-        const totalUsos = todasEmpresas.reduce((total, empresa) => total + (contadorEmpresas[empresa] || 0), 0);
-        const mediaUsos = totalUsos / todasEmpresas.length || 0;
-
-        const empresasSubrepresentadas = candidatasSemRepetir.filter(empresa => {
-            const contagem = contadorEmpresas[empresa] || 0;
-            return contagem < Math.min(mediaUsos, limiteMaximoRepeticao);
-        });
-
-        // Se houver empresas subrepresentadas, priorize-as
-        let empresaSelecionada;
-        if (empresasSubrepresentadas.length > 0) {
-            // Escolha aleatoriamente entre as empresas subrepresentadas
-            const indiceAleatorio = Math.floor(Math.random() * empresasSubrepresentadas.length);
-            empresaSelecionada = empresasSubrepresentadas[indiceAleatorio];
-        } else {
-            // Se todas as empresas já estiverem representadas igualmente, escolha a que foi menos usada
-            let menorContagem = Infinity;
-            const empatadas = [];
-            for (const empresa of candidatasSemRepetir) {
-                const contagem = contadorEmpresas[empresa] || 0;
-                if (contagem < menorContagem) {
-                    menorContagem = contagem;
-                }
-            }
-            for (const empresa of candidatasSemRepetir) {
-                const contagem = contadorEmpresas[empresa] || 0;
-                if (contagem === menorContagem) empatadas.push(empresa);
-            }
-            // Se houver empate, escolhe aleatoriamente entre as menos usadas
-            const iRand = Math.floor(Math.random() * empatadas.length);
-            empresaSelecionada = empatadas[iRand];
-        }
+        const configConc = (dadosOrcamento && dadosOrcamento.configConcorrentes) || { modo: 'aleatorio', qtd: 1, empresas: [] };
+        const qtdConcorrentes = isEspecial ? 2 : (configConc.qtd === 2 ? 2 : 1);
 
         // Cria objetos de concorrente
         const valorSuaEmpresa = dadosOrcamento.suaEmpresa.total;
-        let concorrenteAleatorio = null;
+        let concorrentesLista = [];
         let concorrenteMega = null;
         let concorrenteTella = null;
 
         if (isEspecial) {
-            const itensBase = (dadosOrcamento.suaEmpresa.itens || []).map(it => ({ servico: it.servico }));
-            const vMega = valorSuaEmpresa * 1.12;
-            const vTella = valorSuaEmpresa * 1.15;
-            concorrenteMega = {
-                nome: 'MEGA EVENTOS',
-                itens: itensBase,
-                total: vMega,
-                totalFormatado: (typeof window.formatarMoeda === 'function') ? window.formatarMoeda(vMega) : ("R$ " + vMega.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ".")),
-                totalPorExtenso: (typeof window.valorPorExtenso === 'function') ? window.valorPorExtenso(vMega) : (vMega.toFixed(2).replace('.', ',') + " reais")
-            };
-            concorrenteTella = {
-                nome: 'TELLA VIDEO',
-                itens: itensBase,
-                total: vTella,
-                totalFormatado: (typeof window.formatarMoeda === 'function') ? window.formatarMoeda(vTella) : ("R$ " + vTella.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ".")),
-                totalPorExtenso: (typeof window.valorPorExtenso === 'function') ? window.valorPorExtenso(vTella) : (vTella.toFixed(2).replace('.', ',') + " reais")
-            };
+            concorrenteMega = _criarObjConcorrente('MEGA EVENTOS', dadosOrcamento, 1.12);
+            concorrenteTella = _criarObjConcorrente('TELLA VIDEO', dadosOrcamento, 1.15);
         } else {
-            const markup = 1.1 + (Math.random() * 0.05);
-            const valorConcorrente = valorSuaEmpresa * markup;
-            concorrenteAleatorio = {
-                nome: empresaSelecionada,
-                itens: (dadosOrcamento.suaEmpresa.itens || []).map(it => ({ servico: it.servico })),
-                total: valorConcorrente,
-                totalFormatado: (typeof window.formatarMoeda === 'function') ? window.formatarMoeda(valorConcorrente) : ("R$ " + valorConcorrente.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ".")),
-                totalPorExtenso: (typeof window.valorPorExtenso === 'function') ? window.valorPorExtenso(valorConcorrente) : (valorConcorrente.toFixed(2).replace('.', ',') + " reais")
-            };
-        }
-
-        // Incrementar o contador da empresa selecionada
-        if (!isEspecial) {
-            contadorEmpresas[concorrenteAleatorio.nome] = (contadorEmpresas[concorrenteAleatorio.nome] || 0) + 1;
-            empresasUsadasNoLote.add(concorrenteAleatorio.nome);
+            const nomesEscolhidos = escolherEmpresasConcorrentes(dadosOrcamento, configConc, qtdConcorrentes, empresasPossiveis);
+            concorrentesLista = nomesEscolhidos.map((nome, idx) => {
+                const markup = 1.1 + (Math.random() * 0.05) + (idx * 0.02);
+                return _criarObjConcorrente(nome, dadosOrcamento, markup);
+            });
             console.log("Contagem atual de empresas:", contadorEmpresas);
         }
 
@@ -450,13 +461,20 @@ async function gerarPDFs(dadosOrcamento, index, pdfsGerados) {
 
         // Gera PDFs de concorrentes
         let pdfConcorrente = null;
+        let pdfConcorrente2 = null;
         let pdfConcorrenteMega = null;
         let pdfConcorrenteTella = null;
         if (isEspecial) {
-            pdfConcorrenteMega = await gerarPDFConcorrente(dadosOrcamento, concorrenteMega, 1);
-            pdfConcorrenteTella = await gerarPDFConcorrente(dadosOrcamento, concorrenteTella, 1);
+            pdfConcorrenteMega = await gerarPDFConcorrente(_dadosOrcamentoComTextoConcorrente(dadosOrcamento, 0), concorrenteMega, 1);
+            pdfConcorrenteTella = await gerarPDFConcorrente(_dadosOrcamentoComTextoConcorrente(dadosOrcamento, 1), concorrenteTella, 1);
         } else {
-            pdfConcorrente = await gerarPDFConcorrente(dadosOrcamento, concorrenteAleatorio, 1);
+            for (let ci = 0; ci < concorrentesLista.length; ci++) {
+                const conc = concorrentesLista[ci];
+                const dadosComTexto = _dadosOrcamentoComTextoConcorrente(dadosOrcamento, ci);
+                const pdf = await gerarPDFConcorrente(dadosComTexto, conc, 1);
+                if (ci === 0) pdfConcorrente = pdf;
+                else pdfConcorrente2 = pdf;
+            }
         }
 
         // Armazena os PDFs gerados e os dados do orçamento
@@ -472,7 +490,11 @@ async function gerarPDFs(dadosOrcamento, index, pdfsGerados) {
             registro.empresaConcorrenteTella = concorrenteTella.nome;
         } else {
             registro.pdfConcorrente = pdfConcorrente;
-            registro.empresaConcorrente = concorrenteAleatorio.nome;
+            registro.empresaConcorrente = concorrentesLista[0] ? concorrentesLista[0].nome : '';
+            if (concorrentesLista[1]) {
+                registro.pdfConcorrente2 = pdfConcorrente2;
+                registro.empresaConcorrente2 = concorrentesLista[1].nome;
+            }
         }
         pdfsGerados[`igreja_${index}`] = registro;
 
@@ -518,15 +540,21 @@ async function gerarPDFs(dadosOrcamento, index, pdfsGerados) {
                             }
                         }
                     } else if (pdfConcorrente) {
-                        const empresaConcNome = concorrenteAleatorio.nome
-                            .replace(/[<>:"/\\|?*]/g, '')
-                            .replace(/\s+/g, '_');
+                        const nomeConc = nomePdfConcorrenteOrcamentoPasta(concorrentesLista[0].nome);
                         const blobConc = pdfConcorrente.output('blob');
-                        const nomeConc = `Orcamento_${empresaConcNome}.pdf`;
                         if (typeof window.salvarPDFEmPastaSubstituir === 'function') {
                             await window.salvarPDFEmPastaSubstituir(pastas.orcamento, nomeConc, blobConc);
                         } else {
                             await window.salvarPDFEmPasta(pastas.orcamento, nomeConc, blobConc);
+                        }
+                        if (pdfConcorrente2 && concorrentesLista[1]) {
+                            const nomeConc2 = nomePdfConcorrenteOrcamentoPasta(concorrentesLista[1].nome);
+                            const blobConc2 = pdfConcorrente2.output('blob');
+                            if (typeof window.salvarPDFEmPastaSubstituir === 'function') {
+                                await window.salvarPDFEmPastaSubstituir(pastas.orcamento, nomeConc2, blobConc2);
+                            } else {
+                                await window.salvarPDFEmPasta(pastas.orcamento, nomeConc2, blobConc2);
+                            }
                         }
                     }
 
@@ -1227,9 +1255,11 @@ function baixarPDF(index, tipo, pdfsGerados) {
         nomeArquivo = `Orçamento - ${dadosIgreja.igreja.nome} - ${dadosIgreja.orcamento.suaEmpresa.nome}`;
         dadosIgreja.pdfSuaEmpresa.save(nomeArquivo + '.pdf');
     } else if (tipo === 'concorrente') {
-        // Para orçamento do concorrente
         nomeArquivo = `Orçamento - ${dadosIgreja.igreja.nome} - ${dadosIgreja.empresaConcorrente}`;
         dadosIgreja.pdfConcorrente.save(nomeArquivo + '.pdf');
+    } else if (tipo === 'concorrente2') {
+        nomeArquivo = `Orçamento - ${dadosIgreja.igreja.nome} - ${dadosIgreja.empresaConcorrente2}`;
+        dadosIgreja.pdfConcorrente2 && dadosIgreja.pdfConcorrente2.save(nomeArquivo + '.pdf');
     } else if (tipo === 'concorrenteMega') {
         nomeArquivo = `Orçamento - ${dadosIgreja.igreja.nome} - ${dadosIgreja.empresaConcorrenteMega || 'MEGA EVENTOS'}`;
         dadosIgreja.pdfConcorrenteMega && dadosIgreja.pdfConcorrenteMega.save(nomeArquivo + '.pdf');
@@ -1271,6 +1301,11 @@ function baixarTodosPDFs(pdfsGerados) {
                 const nomeConcorrente = `Orçamento ${igreja.nome} - ${pdfsGerados[key].empresaConcorrente}.pdf`;
                 pdfConcorrente.save(nomeConcorrente);
             }
+            if (pdfsGerados[key].pdfConcorrente2) {
+                const pdfConc2 = pdfsGerados[key].pdfConcorrente2;
+                const nomeConc2 = `Orçamento ${igreja.nome} - ${pdfsGerados[key].empresaConcorrente2}.pdf`;
+                pdfConc2.save(nomeConc2);
+            }
             if (pdfsGerados[key].pdfConcorrenteMega) {
                 const pdfMega = pdfsGerados[key].pdfConcorrenteMega;
                 const nomeMega = `Orçamento ${igreja.nome} - ${pdfsGerados[key].empresaConcorrenteMega}.pdf`;
@@ -1296,6 +1331,8 @@ function atualizarInterfaceResultados(dadosOrcamento, index, pdfsGerados) {
     // Nome da empresa concorrente selecionada para esta igreja
     // Verificação direta sem usar window.pdfsGerados para evitar referências circulares
     let empresaConcorrente = "Empresa Concorrente";
+    let empresaConcorrente2 = "";
+    let temSegundoConc = false;
     let temMega = false;
     let temTella = false;
     let empresaMegaNome = "MEGA EVENTOS";
@@ -1308,6 +1345,10 @@ function atualizarInterfaceResultados(dadosOrcamento, index, pdfsGerados) {
             pdfsGerados[pdfsGeradosKey] &&
             pdfsGerados[pdfsGeradosKey].empresaConcorrente) {
             empresaConcorrente = pdfsGerados[pdfsGeradosKey].empresaConcorrente;
+        }
+        temSegundoConc = !!(pdfsGerados[pdfsGeradosKey] && pdfsGerados[pdfsGeradosKey].pdfConcorrente2);
+        if (temSegundoConc && pdfsGerados[pdfsGeradosKey].empresaConcorrente2) {
+            empresaConcorrente2 = pdfsGerados[pdfsGeradosKey].empresaConcorrente2;
         }
         temMega = !!(pdfsGerados[pdfsGeradosKey] && pdfsGerados[pdfsGeradosKey].pdfConcorrenteMega);
         temTella = !!(pdfsGerados[pdfsGeradosKey] && pdfsGerados[pdfsGeradosKey].pdfConcorrenteTella);
@@ -1364,6 +1405,7 @@ function atualizarInterfaceResultados(dadosOrcamento, index, pdfsGerados) {
             ` : ''}
             ${(!temMega && !temTella) ? `
                 <button class="btn-download" id="btnConc_${index}" onclick="baixarPDF('${index}', 'concorrente')">Baixar PDF ${empresaConcorrente}</button>
+                ${temSegundoConc ? `<button class="btn-download" id="btnConc2_${index}" onclick="baixarPDF('${index}', 'concorrente2')">Baixar PDF ${empresaConcorrente2}</button>` : ''}
                 <div class="regenerar-concorrente" style="margin-top:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                     <label style="font-size:12px;">Trocar concorrente:</label>
                     <select id="selectConc_${index}" style="padding:6px 10px; font-size:13px; min-width:180px;">
