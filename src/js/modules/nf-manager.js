@@ -941,10 +941,10 @@ function atualizarListaNF() {
                         : (nfData.especiais || []);
             const igrejasFiltradas = filtrarIgrejas(dados, termoBusca);
 
-            // Remove tabela anterior se existir
-            const tabelaAntiga = contentContainer.querySelector('.nf-table');
-            if (tabelaAntiga) {
-                tabelaAntiga.remove();
+            // Remove lista anterior se existir
+            const listaAntiga = contentContainer.querySelector('.nf-table, .nf-card-lista, .nf-no-results');
+            if (listaAntiga) {
+                listaAntiga.remove();
             }
 
             // Mensagem quando não há resultados
@@ -967,30 +967,13 @@ function atualizarListaNF() {
                 empresas[igreja.empresa].push(igreja);
             });
 
-            // Cria a tabela
-            const table = document.createElement('table');
-            table.className = 'nf-table';
-
-            // Cabeçalho da tabela
-            const thead = document.createElement('thead');
-            thead.innerHTML = `
-                <tr>
-                    <th>Empresa</th>
-                    <th>Igreja</th>
-                    <th>Pendência</th>
-                    <th>Valor</th>
-                    <th>Ações</th>
-                </tr>
-            `;
-            table.appendChild(thead);
-
-            // Corpo da tabela
-            const tbody = document.createElement('tbody');
+            const lista = document.createElement('div');
+            lista.className = 'nf-card-lista';
 
             for (const [empresa, igrejas] of Object.entries(empresas)) {
-                igrejas.forEach((igreja, index) => {
-                    const tr = document.createElement('tr');
-                    tr.className = empresa.includes('Impacto') ? 'nf-row-impacto' : 'nf-row-spg';
+                igrejas.forEach((igreja) => {
+                    const card = document.createElement('div');
+                    card.className = 'nf-card';
 
                     const idx = dados.indexOf(igreja);
                     const btnWhatsApp = `<button onclick="compartilharNFWhatsApp('${tipo}', ${idx})" class="btn-whatsapp-nf" title="Compartilhar via WhatsApp"><i class="fab fa-whatsapp"></i></button>`;
@@ -1025,24 +1008,33 @@ function atualizarListaNF() {
                         </select>
                     `;
 
-                    const igrejaHTML = igreja.id
-                        ? `<span class="nf-igreja-link" data-index="${idx}" data-tipo="${tipo}">${igreja.nome}</span> - <span class="nf-id-link" data-id="${igreja.id}" data-link="${igreja.link || ''}" title="Clique para copiar o número e abrir o link">${igreja.id}</span>`
-                        : `<span class="nf-igreja-link" data-index="${idx}" data-tipo="${tipo}">${igreja.nome}</span>`;
+                    const badgeEmpresa = empresa.includes('Impacto') ? 'nf-badge-impacto' : 'nf-badge-spg';
+                    const idHtml = igreja.id
+                        ? `<span class="nf-id-link nf-badge" data-id="${igreja.id}" data-link="${(igreja.link || '').replace(/"/g, '&quot;')}" title="Clique para copiar o número e abrir o link">ID: ${igreja.id}</span>`
+                        : '';
+                    const valorHtml = igreja.valor
+                        ? `<span class="nf-badge nf-badge-valor">${igreja.valor}</span>`
+                        : '';
 
-                    tr.innerHTML = `
-                        <td class="${index === 0 ? (empresa.includes('Impacto') ? 'nf-empresa-impacto' : 'nf-empresa-spg') : ''}">${index === 0 ? empresa : ''}</td>
-                        <td data-label="Igreja">${igrejaHTML}</td>
-                        <td data-label="Pendência">${pendenciaOptions}</td>
-                        <td data-label="Valor">${igreja.valor}</td>
-                        <td data-label="Ações" class="nf-acoes">${acaoBotao}</td>
+                    card.innerHTML = `
+                        <div class="nf-card-icon"><i class="fas fa-church"></i></div>
+                        <div class="nf-card-info">
+                            <strong class="nf-igreja-link" data-index="${idx}" data-tipo="${tipo}">${igreja.nome}</strong>
+                            <div class="nf-card-meta">
+                                <span class="nf-badge ${badgeEmpresa}">${empresa}</span>
+                                ${idHtml}
+                                ${valorHtml}
+                            </div>
+                        </div>
+                        <div class="nf-card-pendencia">${pendenciaOptions}</div>
+                        <div class="nf-acoes">${acaoBotao}</div>
                     `;
 
-                    tbody.appendChild(tr);
+                    lista.appendChild(card);
                 });
             }
 
-            table.appendChild(tbody);
-            contentContainer.appendChild(table);
+            contentContainer.appendChild(lista);
 
             // Ativa clique no nome da igreja para abrir checklist
             contentContainer.querySelectorAll('.nf-igreja-link').forEach(el => {
@@ -1223,9 +1215,27 @@ function atualizarListaNF() {
             min-width: 130px;
             width: 130px;
             font-size: 0.82em;
-            padding: 4px 6px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            padding: 8px 10px;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            cursor: pointer;
+            background: white;
+        }
+        .nf-card .btn-archive,
+        .nf-card .btn-restore,
+        .nf-card .btn-especial,
+        .nf-card .btn-whatsapp-nf,
+        .nf-card .btn-edit,
+        .nf-card .btn-delete {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
             cursor: pointer;
         }
         .btn-archive, .btn-restore {

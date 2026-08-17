@@ -976,11 +976,6 @@ function atualizarListaRelatoriosNovo() {
         // Tabela
         let tabelaHTML = `
             <div class="relatorio-tabela">
-                <div class="relatorio-header">
-                    <div>Igreja</div>
-                    <div>Status</div>
-                    <div>Ações</div>
-                </div>
         `;
 
         listaAtual.forEach((igreja, index) => {

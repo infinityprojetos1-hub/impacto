@@ -339,6 +339,11 @@
             font-weight: 700;
             color: var(--text-color);
             margin: 0 0 8px 0;
+            padding-left: 0;
+        }
+
+        .section h2::before {
+            display: none;
         }
 
         .section h2 i {
@@ -2152,7 +2157,14 @@
                 border-left: 4px solid var(--primary-color) !important;
             }
 
-            /* NF: botões de ação envolvem em vez de transbordar */
+            .nf-card {
+                flex-wrap: wrap !important;
+            }
+            .nf-card-pendencia,
+            .nf-card .nf-acoes {
+                width: 100% !important;
+            }
+
             .nf-acoes {
                 white-space: normal !important;
                 display: flex !important;
@@ -3430,6 +3442,165 @@
             opacity: 0.5;
         }
 
+        /* ===== LISTAS NO PADRÃO ESTOQUE (cards, sem barra roxa) ===== */
+        .material-table,
+        .checklist-table,
+        .relatorio-tabela {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: transparent;
+            box-shadow: none;
+            overflow: visible;
+            border-radius: 0;
+            animation: none;
+        }
+
+        .material-header,
+        .checklist-header,
+        .relatorio-header {
+            display: none;
+        }
+
+        .material-row,
+        .checklist-row,
+        .relatorio-row {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 14px 18px;
+            border: 2px solid var(--border-color);
+            border-radius: 14px;
+            background: var(--card-bg);
+            transition: border-color 0.2s;
+        }
+
+        .material-row:hover,
+        .checklist-row:hover,
+        .relatorio-row:hover {
+            border-color: var(--primary-color);
+            background: var(--card-bg);
+            transform: none;
+        }
+
+        .material-row:last-child,
+        .checklist-row:last-child,
+        .relatorio-row:last-child {
+            border-radius: 14px;
+        }
+
+        .material-col-igreja,
+        .checklist-col-igreja,
+        .relatorio-col-igreja {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .material-col-status,
+        .material-row > div:nth-child(2),
+        .checklist-row > div:nth-child(2),
+        .relatorio-row > div:nth-child(2) {
+            flex-shrink: 0;
+            text-align: center;
+            min-width: 88px;
+        }
+
+        .material-col-acoes,
+        .checklist-col-acoes,
+        .relatorio-col-acoes {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .nf-card-lista {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .nf-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 18px;
+            border: 2px solid var(--border-color);
+            border-radius: 14px;
+            background: var(--card-bg);
+            transition: border-color 0.2s;
+            cursor: default;
+        }
+
+        .nf-card:hover {
+            border-color: var(--primary-color);
+        }
+
+        .nf-card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: #e3f2fd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .nf-card-icon i {
+            color: #1565c0;
+            font-size: 16px;
+        }
+
+        .nf-card-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .nf-card-info strong {
+            display: block;
+            font-size: 15px;
+            color: var(--text-color);
+            margin-bottom: 4px;
+        }
+
+        .nf-card-meta {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .nf-badge {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            background: #e8eaf6;
+            color: #3949ab;
+        }
+
+        .nf-badge-impacto { background: #ffebee; color: #c62828; }
+        .nf-badge-spg { background: #e3f2fd; color: #1565c0; }
+        .nf-badge-valor { background: #e8f5e9; color: #2e7d32; }
+
+        .nf-card-pendencia {
+            flex-shrink: 0;
+        }
+
+        .nf-card .nf-acoes {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+            flex-wrap: wrap;
+            white-space: normal;
+        }
+
         .pag-card-titulo i {
             color: var(--primary-color);
         }
@@ -3542,8 +3713,8 @@
 
         .pag-igreja-item {
             border: 2px solid var(--border-color);
-            border-radius: 10px;
-            padding: 10px 12px;
+            border-radius: 14px;
+            padding: 14px 18px;
             background: white;
             transition: border-color 0.2s, background 0.2s;
             display: flex;

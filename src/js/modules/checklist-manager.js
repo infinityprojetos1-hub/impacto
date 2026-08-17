@@ -263,13 +263,7 @@ function mostrarListaChecklistTipo(tipo) {
 
     const tabela = document.createElement('div');
     tabela.className = 'checklist-table';
-    tabela.innerHTML = `
-        <div class="checklist-header">
-            <div><i class="fas fa-church"></i> Igreja</div>
-            <div><i class="fas fa-clipboard-check"></i> Status</div>
-            <div><i class="fas fa-cog"></i> Ações</div>
-        </div>
-    `;
+    tabela.innerHTML = '';
 
     dados.forEach((igreja, index) => {
         const linha = document.createElement('div');

@@ -321,13 +321,7 @@ function mostrarListaTipo(tipo) {
     // Cria a tabela
     const tabela = document.createElement('div');
     tabela.className = 'material-table';
-    tabela.innerHTML = `
-        <div class="material-header">
-            <div class="material-col-igreja"><i class="fas fa-church"></i> Igreja</div>
-            <div class="material-col-status-header"><i class="fas fa-clipboard-check"></i> Status</div>
-            <div class="material-col-acoes"><i class="fas fa-cog"></i> Ações</div>
-        </div>
-    `;
+    tabela.innerHTML = '';
 
     dados.forEach((igreja, index) => {
         const linha = document.createElement('div');
