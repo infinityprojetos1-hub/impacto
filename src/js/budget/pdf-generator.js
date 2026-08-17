@@ -371,10 +371,18 @@ function escolherEmpresasConcorrentes(dadosOrcamento, config, quantidade, empres
 function _dadosOrcamentoComTextoConcorrente(dadosOrcamento, indice) {
     const clone = Object.assign({}, dadosOrcamento);
     const textos = dadosOrcamento.textosConcorrentesGerados;
+    let texto = '';
     if (textos && textos[indice]) {
-        clone.textoPersonalizadoConcorrente = textos[indice];
+        texto = textos[indice];
     } else if (indice === 1 && dadosOrcamento.textoPersonalizadoConcorrente2) {
-        clone.textoPersonalizadoConcorrente = dadosOrcamento.textoPersonalizadoConcorrente2;
+        texto = dadosOrcamento.textoPersonalizadoConcorrente2;
+    } else if (clone.textoPersonalizadoConcorrente) {
+        texto = clone.textoPersonalizadoConcorrente;
+    }
+    if (texto && typeof sanitizarTextoPDF === 'function') {
+        clone.textoPersonalizadoConcorrente = sanitizarTextoPDF(texto);
+    } else if (texto) {
+        clone.textoPersonalizadoConcorrente = texto;
     }
     return clone;
 }

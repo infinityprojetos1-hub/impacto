@@ -204,5 +204,38 @@ function carregarLogosDoLocalStorage() {
     return null;
 }
 
+// Converte texto para caracteres que o Helvetica do jsPDF consegue gravar
+// (setas/marcadores unicode viravam "!" e "%" no PDF do concorrente)
+function sanitizarTextoPDF(texto) {
+    return String(texto || '')
+        .replace(/[\u2192\u25B8\u25BA\u2794\u279C\u27A4]/g, '-')
+        .replace(/[\u2022\u25CF\u25CB\u25E6]/g, '-')
+        .replace(/[\u2013\u2014]/g, '-')
+        .replace(/[\u201C\u201D]/g, '"')
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/\u2026/g, '...')
+        .replace(/[^\t\n\r\x20-\x7E\xA0-\xFF]/g, '');
+}
+
+// Interpreta valor no formato brasileiro (7.843,00) ou simples (7843 / 7843.00)
+function parseValorManualBR(raw) {
+    if (raw == null) return NaN;
+    let s = String(raw).trim().replace(/[R$\s]/gi, '');
+    if (!s) return NaN;
+    const temPonto = s.indexOf('.') !== -1;
+    const temVirgula = s.indexOf(',') !== -1;
+    if (temPonto && temVirgula) {
+        s = s.replace(/\./g, '').replace(',', '.');
+    } else if (temVirgula) {
+        s = s.replace(/\./g, '').replace(',', '.');
+    } else if ((s.match(/\./g) || []).length > 1) {
+        s = s.replace(/\./g, '');
+    } else if (/^\d{1,3}(\.\d{3})+$/.test(s)) {
+        s = s.replace(/\./g, '');
+    }
+    const n = parseFloat(s);
+    return n;
+}
+
 // Não precisamos mais exportar as funções pois elas estarão no escopo global
 // quando o arquivo for carregado diretamente 

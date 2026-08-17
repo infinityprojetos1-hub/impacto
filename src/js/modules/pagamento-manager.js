@@ -241,7 +241,11 @@ function renderizarAbaPagamento() {
 
             // Resumo
             '<div class="pag-card pag-card-resumo">' +
+            '<div class="pag-card-header">' +
             '<h3 class="pag-card-titulo"><i class="fas fa-receipt"></i> Resumo</h3>' +
+            '<button class="pag-btn pag-btn-pago" onclick="marcarPagoResumo()" title="Arquivar todas as igrejas do resumo">' +
+            '<i class="fas fa-check-circle"></i> Pago</button>' +
+            '</div>' +
             '<div id="pagResumo" class="pag-resumo-lista">' + renderizarResumo() + '</div>' +
             '<div class="pag-total-box" id="pagTotalBox">' + renderizarTotal() + '</div>' +
             '</div>' +
@@ -523,6 +527,29 @@ function desarquivarIgrejaPagamento(chave) {
     pagamentoState.igrejasArquivadas.delete(chave);
     salvarDadosPagamento();
     atualizarPainelIgrejas();
+}
+
+function marcarPagoResumo() {
+    var chaves = Object.keys(pagamentoState.igrejasSelecionadas);
+    if (chaves.length === 0) {
+        if (typeof mostrarToastPagamento === 'function') {
+            mostrarToastPagamento('<i class="fas fa-info-circle"></i> Nenhuma igreja no resumo para marcar como paga.');
+        } else {
+            alert('Nenhuma igreja no resumo para marcar como paga.');
+        }
+        return;
+    }
+    if (!confirm('Marcar ' + chaves.length + ' igreja(s) como paga(s) e arquivar?')) return;
+    chaves.forEach(function(chave) {
+        pagamentoState.igrejasArquivadas.add(chave);
+        delete pagamentoState.igrejasSelecionadas[chave];
+    });
+    salvarDadosPagamento();
+    atualizarResumoPagamento();
+    atualizarPainelIgrejas();
+    if (typeof mostrarToastPagamento === 'function') {
+        mostrarToastPagamento('<i class="fas fa-check-circle"></i> ' + chaves.length + ' igreja(s) marcada(s) como paga(s) e arquivada(s).');
+    }
 }
 
 // Atualiza apenas o painel de lista de igrejas (sem re-renderizar tudo)
@@ -1045,6 +1072,7 @@ window.toggleIgrejaPagamento = toggleIgrejaPagamento;
 window.atualizarValorIgreja = atualizarValorIgreja;
 window.arquivarIgrejaPagamento = arquivarIgrejaPagamento;
 window.desarquivarIgrejaPagamento = desarquivarIgrejaPagamento;
+window.marcarPagoResumo = marcarPagoResumo;
 window.alternarAbaPagamento = alternarAbaPagamento;
 window.filtrarIgrejasPagamento = filtrarIgrejasPagamento;
 window.alterarMesPagamento = alterarMesPagamento;

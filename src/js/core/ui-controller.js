@@ -13,6 +13,53 @@ function atualizarRotuloBotaoAdicionarIgreja() {
     }
 }
 
+function resetarCamposFormularioOrcamento(incluirConcorrentes) {
+    const idsTexto = [
+        'nomeIgreja', 'idIgreja', 'linkIgreja', 'codigoIgreja',
+        'valorManual', 'textoOrcamentoSuaEmpresa', 'textoOrcamentoConcorrente'
+    ];
+    idsTexto.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+
+    const selEmp = document.getElementById('empresaSelecionada');
+    if (selEmp) selEmp.selectedIndex = 0;
+
+    const selTipoVal = document.getElementById('tipoValorOrcamento');
+    if (selTipoVal) selTipoVal.selectedIndex = 0;
+
+    const selTipoIgreja = document.getElementById('tipoIgreja');
+    if (selTipoIgreja) selTipoIgreja.selectedIndex = 0;
+
+    const selTipoTexto = document.getElementById('tipoTexto');
+    if (selTipoTexto) selTipoTexto.value = 'padrao';
+
+    const selPedido = document.getElementById('tipoPedido');
+    if (selPedido) selPedido.value = 'padrao';
+
+    const grupoValorManual = document.getElementById('grupoValorManual');
+    if (grupoValorManual) grupoValorManual.style.display = 'none';
+
+    const bloco = document.getElementById('blocoTextoOrcamento');
+    if (bloco) bloco.style.display = 'none';
+
+    const chk = document.getElementById('usarTextoPersonalizadoOrcamento');
+    if (chk) chk.checked = false;
+
+    if (incluirConcorrentes) {
+        const modo = document.getElementById('modoConcorrentes');
+        if (modo) modo.value = 'aleatorio';
+        const qtd = document.getElementById('qtdConcorrentes');
+        if (qtd) qtd.value = '1';
+        const blocoConc = document.getElementById('blocoConcorrentesManual');
+        if (blocoConc) blocoConc.style.display = 'none';
+        document.querySelectorAll('#listaConcorrentesManual input[type="checkbox"]').forEach(cb => {
+            cb.checked = false;
+        });
+    }
+}
+
 // Controle de tabs com animação do fundo roxo
 function inicializarTabs() {
     const tabsContainer = document.querySelector('.tabs');
@@ -180,7 +227,10 @@ function inicializarGerenciamentoIgrejas() {
         const codigoIgreja = document.getElementById('codigoIgreja').value.trim();
         const empresaSelecionada = document.getElementById('empresaSelecionada').value;
         const tipoValorOrcamento = document.getElementById('tipoValorOrcamento').value;
-        const valorManual = parseFloat(document.getElementById('valorManual').value);
+        const valorManualRaw = document.getElementById('valorManual').value;
+        const valorManual = (typeof parseValorManualBR === 'function')
+            ? parseValorManualBR(valorManualRaw)
+            : parseFloat(String(valorManualRaw).replace(/\./g, '').replace(',', '.'));
         const tipoIgreja = document.getElementById('tipoIgreja').value;
         const tipoTexto = (document.getElementById('tipoTexto') && document.getElementById('tipoTexto').value) || 'padrao';
         const tipoPedido = (document.getElementById('tipoPedido') && document.getElementById('tipoPedido').value) || 'padrao';
@@ -193,6 +243,10 @@ function inicializarGerenciamentoIgrejas() {
         // Validação obrigatória dos campos tipoValorOrcamento e tipoIgreja
         if (!tipoValorOrcamento) {
             alert('Por favor, selecione o Tipo de Valor do Orçamento.');
+            return;
+        }
+        if (tipoValorOrcamento === 'manual' && (isNaN(valorManual) || valorManual <= 0)) {
+            alert('Informe um valor válido no formato brasileiro. Ex: 7.843,00');
             return;
         }
         if (!tipoIgreja) {
@@ -235,29 +289,8 @@ function inicializarGerenciamentoIgrejas() {
         // Atualiza a interface
         atualizarListaIgrejas();
 
-        // Resetar campos de texto personalizado para a próxima igreja
-        try {
-            const chk = document.getElementById('usarTextoPersonalizadoOrcamento');
-            const bloco = document.getElementById('blocoTextoOrcamento');
-            const txtSua = document.getElementById('textoOrcamentoSuaEmpresa');
-            const txtConc = document.getElementById('textoOrcamentoConcorrente');
-            if (chk) chk.checked = false;
-            if (bloco) bloco.style.display = 'none';
-            if (txtSua) txtSua.value = '';
-            if (txtConc) txtConc.value = '';
-        } catch (_) { }
-
-        // Limpa os campos do formulário
-        document.getElementById('nomeIgreja').value = '';
-        document.getElementById('idIgreja').value = '';
-        document.getElementById('linkIgreja').value = '';
-        document.getElementById('codigoIgreja').value = '';
-        document.getElementById('tipoValorOrcamento').selectedIndex = 0;
-        document.getElementById('tipoIgreja').selectedIndex = 0;
-        document.getElementById('tipoTexto').selectedIndex = 0;
-        if (document.getElementById('tipoPedido')) document.getElementById('tipoPedido').value = 'padrao';
-        const grupoValorManual = document.getElementById('grupoValorManual');
-        if (grupoValorManual) grupoValorManual.style.display = 'none';
+        // Zera todas as opções para o próximo orçamento
+        resetarCamposFormularioOrcamento(false);
     });
 
     // Limpar a lista de igrejas
@@ -355,7 +388,12 @@ function atualizarListaIgrejas() {
             const elValorManual = document.getElementById('valorManual');
             if (ig.tipoValorOrcamento === 'manual' && ig.valorManual != null && !isNaN(ig.valorManual)) {
                 if (grupoValorManual) grupoValorManual.style.display = '';
-                if (elValorManual) elValorManual.value = String(ig.valorManual);
+                if (elValorManual) {
+                    elValorManual.value = Number(ig.valorManual).toLocaleString('pt-BR', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                }
             } else {
                 if (grupoValorManual) grupoValorManual.style.display = 'none';
                 if (elValorManual) elValorManual.value = '';
@@ -424,6 +462,7 @@ function inicializarInterface() {
 // Disponibiliza as funções globalmente
 window.inicializarInterface = inicializarInterface;
 window.atualizarListaIgrejas = atualizarListaIgrejas;
+window.resetarCamposFormularioOrcamento = resetarCamposFormularioOrcamento;
 
 // =============================================
 // SISTEMA DE PEDIDOS PENDENTES
