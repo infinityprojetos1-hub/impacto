@@ -599,6 +599,16 @@ function coordenadaSegura(valor) {
     return Number(valor);
 }
 
+// A4 = 297mm. Só cria nova página se o bloco seguinte realmente estourar a margem.
+const PDF_LIMITE_Y = 280;
+function pdfGarantirEspaco(pdf, y, alturaNecessaria, yNovaPagina) {
+    if (y + alturaNecessaria > PDF_LIMITE_Y) {
+        pdf.addPage();
+        return yNovaPagina == null ? 20 : yNovaPagina;
+    }
+    return y;
+}
+
 // Função para formatar valor em moeda (caso não esteja disponível na janela global)
 function formatarMoeda(valor) {
     // Implementação direta para evitar chamada circular
@@ -742,11 +752,7 @@ async function gerarPDFSuaEmpresa(dadosOrcamento) {
                 const linhasTexto = textoEspecial.split('\n');
 
                 for (const linha of linhasTexto) {
-                    // Verifica se precisa de nova página
-                    if (posicaoY > 270) {
-                        pdf.addPage();
-                        posicaoY = 25;
-                    }
+                    posicaoY = pdfGarantirEspaco(pdf, posicaoY, 8, 25);
 
                     if (linha.trim() === '') {
                         posicaoY += 3; // Espaço menor para linhas vazias
@@ -784,7 +790,7 @@ async function gerarPDFSuaEmpresa(dadosOrcamento) {
             } else if (usandoPersonalizadoImpacto) {
                 const explicativoLinhas = pdf.splitTextToSize(dadosOrcamento.textoPersonalizadoSuaEmpresa.trim(), 175);
                 for (let i = 0; i < explicativoLinhas.length; i++) {
-                    if (posicaoY > 260) { pdf.addPage(); posicaoY = 25; }
+                    posicaoY = pdfGarantirEspaco(pdf, posicaoY, 6, 25);
                     pdf.text(textoSeguro(explicativoLinhas[i]), coordenadaSegura(margemEsquerda), coordenadaSegura(posicaoY));
                     posicaoY += 6;
                 }
@@ -856,16 +862,9 @@ async function gerarPDFSuaEmpresa(dadosOrcamento) {
                     const linhasAdicionais = descricaoLinhas.length - 1;
                     const altLinha = 8 + (linhasAdicionais * 4);
 
-                    // Fundo alternado para linhas (compacto)
-                    if (contador % 2 === 0) {
-                        pdf.setFillColor(248, 248, 248);
-                        pdf.rect(inicioTabela, posicaoY - 2, larguraTabela, altLinha, 'F');
-                    }
-
-                    // Verifica se precisa de nova página
-                    if (posicaoY > 250) {
-                        pdf.addPage();
-                        posicaoY = 25;
+                    const paginasAntes = pdf.getNumberOfPages();
+                    posicaoY = pdfGarantirEspaco(pdf, posicaoY, altLinha + 4, 25);
+                    if (pdf.getNumberOfPages() > paginasAntes) {
 
                         // Repete o cabeçalho da tabela na nova página
                         pdf.setFillColor(240, 240, 240);
@@ -888,6 +887,11 @@ async function gerarPDFSuaEmpresa(dadosOrcamento) {
 
                         posicaoY += 15;
                         pdf.setFont("helvetica", "normal");
+                    }
+
+                    if (contador % 2 === 0) {
+                        pdf.setFillColor(248, 248, 248);
+                        pdf.rect(inicioTabela, posicaoY - 2, larguraTabela, altLinha, 'F');
                     }
 
                     // Número do item (centralizado)
@@ -923,8 +927,8 @@ async function gerarPDFSuaEmpresa(dadosOrcamento) {
                 pdf.text(totalFormatadoSemR$, coordenadaSegura(inicioTabela + 165), coordenadaSegura(posicaoY), { align: "right" });
             } else if (usandoTextoEspecial) {
                 // Para textos especiais (forro/tenda): valor total em destaque após o texto
-                posicaoY += 15;
-                if (posicaoY > 250) { pdf.addPage(); posicaoY = 25; }
+                posicaoY += 10;
+                posicaoY = pdfGarantirEspaco(pdf, posicaoY, 16, 25);
                 pdf.setFont("helvetica", "bold");
                 pdf.setFontSize(11);
                 pdf.text("VALOR TOTAL:", coordenadaSegura(margemEsquerda), coordenadaSegura(posicaoY));
@@ -936,8 +940,8 @@ async function gerarPDFSuaEmpresa(dadosOrcamento) {
                 pdf.text(totalFormatado, coordenadaSegura(margemEsquerda + 60), coordenadaSegura(posicaoY), { align: "center" });
             } else {
                 // Sem tabela quando houver texto personalizado: mostra apenas o total em destaque
-                posicaoY += 15;
-                if (posicaoY > 250) { pdf.addPage(); posicaoY = 25; }
+                posicaoY += 8;
+                posicaoY = pdfGarantirEspaco(pdf, posicaoY, 16, 25);
                 pdf.setFont("helvetica", "bold");
                 pdf.setFontSize(11);
                 // Reposiciona um pouco mais à esquerda para evitar sobreposição visual
@@ -952,16 +956,15 @@ async function gerarPDFSuaEmpresa(dadosOrcamento) {
             }
 
             // Observações (compacto para caber em 1 folha)
-            posicaoY += 12;
-            if (posicaoY > 245) { pdf.addPage(); posicaoY = 25; }
+            posicaoY += 8;
+            const obsTexto = "Todos os impostos inclusos, além de despesas com: mão de obra, ferramentas, locação de escadas, andaimes, traslado, alimentação e hospedagem.";
+            const obsLinhas = pdf.splitTextToSize(obsTexto, 165);
+            const obsAltura = 5 + obsLinhas.length * 5;
+            posicaoY = pdfGarantirEspaco(pdf, posicaoY, 6 + Math.min(obsAltura, 25) + 12, 25);
             pdf.setFont("helvetica", "bold");
             pdf.setFontSize(9);
             pdf.text("Observações:", coordenadaSegura(margemEsquerda), coordenadaSegura(posicaoY));
             posicaoY += 4;
-
-            const obsTexto = "Todos os impostos inclusos, além de despesas com: mão de obra, ferramentas, locação de escadas, andaimes, traslado, alimentação e hospedagem.";
-            const obsLinhas = pdf.splitTextToSize(obsTexto, 165);
-            const obsAltura = 5 + obsLinhas.length * 5;
             pdf.setFillColor(248, 248, 248);
             pdf.rect(margemEsquerda, posicaoY, 170, Math.min(obsAltura, 25), 'F');
             pdf.setFont("helvetica", "normal");
@@ -980,12 +983,9 @@ async function gerarPDFSuaEmpresa(dadosOrcamento) {
             pdf.text(`Validade da Proposta: ${prazoExecucao} dias.`, 105, posicaoY, { align: "center" });
             pdf.setTextColor(0, 0, 0);
 
-            // Carimbo Impacto (na mesma página quando possível)
-            posicaoY += 8;
-            if (posicaoY > 230) {
-                pdf.addPage();
-                posicaoY = 20;
-            }
+            // Carimbo + rodapé juntos: só mudam de página se os dois não couberem
+            posicaoY += 6;
+            posicaoY = pdfGarantirEspaco(pdf, posicaoY, 64, 20);
             try {
                 if (logos && logos.impactoSolucoesCarimbo) {
                     const fmt = (typeof logos.impactoSolucoesCarimbo === 'string' && logos.impactoSolucoesCarimbo.includes('jpeg')) ? 'JPEG' : 'PNG';
@@ -994,8 +994,6 @@ async function gerarPDFSuaEmpresa(dadosOrcamento) {
             } catch (_) {}
             posicaoY += 42;
 
-            // Rodapé centralizado (formato imagem 4)
-            if (posicaoY > 250) { pdf.addPage(); posicaoY = 20; }
             pdf.setDrawColor(220, 0, 0);
             pdf.setLineWidth(0.5);
             pdf.line(15, posicaoY - 3, 195, posicaoY - 3);
@@ -1063,11 +1061,7 @@ async function gerarPDFSuaEmpresa(dadosOrcamento) {
                 const linhasTexto = textoEspecial.split('\n');
 
                 for (const linha of linhasTexto) {
-                    // Verifica se precisa de nova página
-                    if (alturaReferencia > 270) {
-                        pdf.addPage();
-                        alturaReferencia = 25;
-                    }
+                    alturaReferencia = pdfGarantirEspaco(pdf, alturaReferencia, 8, 25);
 
                     if (linha.trim() === '') {
                         alturaReferencia += 3;
@@ -1102,7 +1096,7 @@ async function gerarPDFSuaEmpresa(dadosOrcamento) {
             } else if (usandoPersonalizadoSPG) {
                 const linhasPers = pdf.splitTextToSize(dadosOrcamento.textoPersonalizadoSuaEmpresa.trim(), 170);
                 for (let i = 0; i < linhasPers.length; i++) {
-                    if (alturaReferencia > 260) { pdf.addPage(); alturaReferencia = 25; }
+                    alturaReferencia = pdfGarantirEspaco(pdf, alturaReferencia, 5, 25);
                     pdf.text(textoSeguro(linhasPers[i]), coordenadaSegura(20), coordenadaSegura(alturaReferencia));
                     alturaReferencia += 5;
                 }
@@ -1150,24 +1144,17 @@ async function gerarPDFSuaEmpresa(dadosOrcamento) {
                     posicaoY += 8 + (linhasAdicionais * 4);
                     contador++;
 
-                    // Verifica se precisa de nova página
-                    if (posicaoY > 230) {
-                        pdf.addPage();
-                        posicaoY = 20;
-                    }
+                    posicaoY = pdfGarantirEspaco(pdf, posicaoY, 10, 20);
                 }
             }
 
             // ORDEM: Texto (já renderizado - itens) -> Observações -> Total -> Texto Final
 
-            // Adiciona espaçamento após os itens
-            posicaoY += 15;
-
-            // Verifica se há espaço suficiente para o restante (~90mm), senão adiciona nova página
-            if (posicaoY > 180) {
-                pdf.addPage();
-                posicaoY = 30;
-            }
+            // Observações + valor + rodapé ficam na mesma página do texto,
+            // salvo quando o bloco inteiro realmente não cabe.
+            const alturaBlocoFinalSPG = 82;
+            posicaoY = pdfGarantirEspaco(pdf, posicaoY, alturaBlocoFinalSPG, 25);
+            posicaoY += 5;
 
             // 1. OBSERVAÇÕES
             pdf.setFont("helvetica", "bold");
@@ -1182,9 +1169,7 @@ async function gerarPDFSuaEmpresa(dadosOrcamento) {
                 pdf.text(textoSeguro(linha), coordenadaSegura(margemEsquerda), coordenadaSegura(posicaoY));
                 posicaoY += 5;
             });
-            posicaoY += 4;
-
-            // 2. VALOR TOTAL
+            posicaoY += 3;
             pdf.setFont("helvetica", "bold");
             pdf.setFontSize(11);
             pdf.text(`Valor Total:`, coordenadaSegura(margemEsquerda), coordenadaSegura(posicaoY));
@@ -1201,7 +1186,7 @@ async function gerarPDFSuaEmpresa(dadosOrcamento) {
                 pdf.text(textoSeguro(linha), coordenadaSegura(margemEsquerda), coordenadaSegura(posicaoY));
                 posicaoY += 5;
             });
-            posicaoY += 8;
+            posicaoY += 5;
 
             const dataOrcamento = textoSeguro((typeof window.formatarData === 'function') ? window.formatarData(dadosOrcamento.dataOrcamento || "") : (dadosOrcamento.dataOrcamento || "N/A"));
             pdf.text(`Vitória, segunda-feira, ${dataOrcamento}`, coordenadaSegura(130), coordenadaSegura(posicaoY));
@@ -1212,7 +1197,7 @@ async function gerarPDFSuaEmpresa(dadosOrcamento) {
                 pdf.text(textoSeguro(linha), coordenadaSegura(margemEsquerda), coordenadaSegura(posicaoY));
                 posicaoY += 5;
             });
-            posicaoY += 8;
+            posicaoY += 5;
 
             // 3. TEXTO FINAL (Rodapé com dados da empresa)
             pdf.setFont("helvetica", "bold");
