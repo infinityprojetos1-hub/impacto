@@ -522,7 +522,7 @@
         .btn-icon.btn-success { color: #2e7d32 !important; border-color: #2e7d32; }
         .btn-icon.btn-warning { color: #e65100 !important; border-color: #fb8c00; }
         .btn-icon.btn-primary { color: #1e3a6e !important; border-color: #1e3a6e; }
-        .btn-icon.btn-secondary { color: #475569 !important; border-color: var(--border-color); }
+        .btn-icon.btn-secondary { color: #1e3a6e !important; border-color: #93c5fd; }
         .btn-icon.btn-danger {
             background: #fff !important;
             color: #c41e3a !important;
@@ -1564,8 +1564,11 @@
             }
             
             .btn-icon {
-                padding: 8px !important;
-                font-size: 0.85em !important;
+                width: 38px !important;
+                height: 38px !important;
+                min-width: 38px !important;
+                padding: 0 !important;
+                font-size: 0.9em !important;
             }
             
             /* Lista de igrejas - COMPACTA PARA MOBILE */
@@ -1735,30 +1738,27 @@
             }
             
             .checklist-col-acoes {
-                display: flex;
-                flex-direction: column;
-                gap: 8px !important;
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: wrap !important;
+                gap: 6px !important;
                 width: 100% !important;
+                justify-content: flex-start !important;
             }
             
             .checklist-col-acoes button {
-                width: 100% !important;
                 margin: 0 !important;
             }
             
             .checklist-col-acoes .btn-icon {
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                gap: 8px !important;
-                width: 100% !important;
-                padding: 10px 14px !important;
-                font-size: 0.85em !important;
-                border-radius: 8px !important;
+                width: 38px !important;
+                height: 38px !important;
+                min-width: 38px !important;
+                padding: 0 !important;
+                border-radius: 10px !important;
             }
             .checklist-col-acoes .btn-icon::after {
-                content: attr(data-label-mobile);
-                font-weight: 600;
+                display: none !important;
             }
             
             .checklist-question {
@@ -1977,11 +1977,8 @@
                 margin-bottom: 8px !important;
             }
 
-            /* Botões de ação material: mostra título abreviado */
             .material-col-acoes .btn-icon::after {
-                content: attr(data-label-mobile);
-                font-weight: 600;
-                font-size: 0.9em;
+                display: none !important;
             }
 
             .material-table {
@@ -2016,35 +2013,23 @@
 
             .material-col-acoes {
                 display: flex !important;
-                flex-direction: column !important;
-                gap: 8px !important;
+                flex-direction: row !important;
+                flex-wrap: wrap !important;
+                gap: 6px !important;
                 width: 100% !important;
                 justify-content: flex-start !important;
             }
 
-            /* Botões de mover status: mostra com label abreviado no mobile */
             .material-col-acoes .btn-icon {
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                gap: 8px !important;
-                width: 100% !important;
-                padding: 10px 14px !important;
-                font-size: 0.85em !important;
-                border-radius: 8px !important;
+                width: 38px !important;
+                height: 38px !important;
+                min-width: 38px !important;
+                padding: 0 !important;
+                border-radius: 10px !important;
             }
 
             .material-col-acoes .btn-icon::after {
-                content: attr(data-label-mobile);
-                font-weight: 600;
-            }
-
-            /* Botão "Gerenciar Material" full width */
-            .material-col-acoes .btn-primary {
-                width: 100% !important;
-                padding: 12px !important;
-                font-size: 0.9em !important;
-                margin: 0 !important;
+                display: none !important;
             }
 
             .material-botoes-container {
@@ -2088,24 +2073,22 @@
 
             .relatorio-col-acoes {
                 display: flex !important;
-                flex-direction: column !important;
-                gap: 8px !important;
+                flex-direction: row !important;
+                flex-wrap: wrap !important;
+                gap: 6px !important;
                 width: 100% !important;
                 justify-content: flex-start !important;
             }
 
             .relatorio-col-acoes button {
-                width: 100% !important;
                 margin: 0 !important;
             }
 
-            .relatorio-col-acoes .btn-relatorio-icon {
-                display: none !important;
-            }
-
-            .btn-relatorio {
-                width: 100% !important;
-                justify-content: center !important;
+            .relatorio-col-acoes .btn-icon {
+                width: 38px !important;
+                height: 38px !important;
+                min-width: 38px !important;
+                padding: 0 !important;
             }
 
             .relatorio-tabs {
@@ -2769,11 +2752,6 @@
             justify-content: flex-end;
             align-items: center;
             min-width: 0;
-        }
-        .checklist-col-acoes .btn-primary {
-            white-space: nowrap;
-            flex-shrink: 0;
-            min-width: fit-content;
         }
 
         /* Canvas de Assinatura */
@@ -3578,15 +3556,15 @@
             min-width: 88px;
         }
 
-        .material-col-acoes,
-        .checklist-col-acoes,
-        .relatorio-col-acoes {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-            justify-content: flex-end;
-            align-items: center;
-            flex-shrink: 0;
+        .material-col-acoes .btn-icon,
+        .checklist-col-acoes .btn-icon,
+        .relatorio-col-acoes .btn-icon,
+        .estoque-item-acoes .btn-icon,
+        .igreja-item .btn-icon {
+            width: 38px;
+            height: 38px;
+            min-width: 38px;
+            padding: 0;
         }
 
         .nf-card-lista {

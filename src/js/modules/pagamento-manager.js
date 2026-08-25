@@ -301,8 +301,8 @@ function renderizarListaIgrejas(igrejas, busca, modoArquivadas) {
 
             // Botão de arquivar / desarquivar
             var btnArquivo = modoArquivadas
-                ? '<button class="pag-btn-arquivo pag-btn-desarquivar" onclick="desarquivarIgrejaPagamento(\'' + chaveEsc + '\')" title="Desarquivar"><i class="fas fa-box-open"></i></button>'
-                : '<button class="pag-btn-arquivo" onclick="arquivarIgrejaPagamento(\'' + chaveEsc + '\')" title="Arquivar"><i class="fas fa-archive"></i></button>';
+                ? '<button class="btn-icon btn-success" onclick="desarquivarIgrejaPagamento(\'' + chaveEsc + '\')" title="Desarquivar"><i class="fas fa-box-open"></i></button>'
+                : '<button class="btn-icon btn-secondary" onclick="arquivarIgrejaPagamento(\'' + chaveEsc + '\')" title="Arquivar"><i class="fas fa-archive"></i></button>';
 
             if (modoArquivadas) {
                 // Modo arquivadas: mostra item simples (sem checkbox) + botão desarquivar

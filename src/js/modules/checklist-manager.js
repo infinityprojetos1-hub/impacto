@@ -302,8 +302,8 @@ function mostrarListaChecklistTipo(tipo) {
                         <i class="fas fa-download"></i>
                     </button>
                 ` : ''}
-                <button class="btn-primary" onclick="abrirModalChecklist('${tipo}', ${index})">
-                    <i class="fas fa-clipboard-check"></i> ${temChecklist ? 'Editar' : 'Adicionar'} Checklist
+                <button class="btn-icon btn-primary" onclick="abrirModalChecklist('${tipo}', ${index})" title="${temChecklist ? 'Editar checklist' : 'Adicionar checklist'}" data-label-mobile="${temChecklist ? 'Editar' : 'Adicionar'}">
+                    <i class="fas fa-clipboard-check"></i>
                 </button>
             </div>
         `;

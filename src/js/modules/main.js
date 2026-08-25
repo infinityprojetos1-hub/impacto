@@ -1008,26 +1008,26 @@ function atualizarListaRelatoriosNovo() {
                         <span class="relatorio-status ${statusClass}">${statusText}</span>
                     </div>
                     <div class="relatorio-col-acoes">
-                        <button class="btn-relatorio btn-relatorio-gerar" data-index="${index}" data-tipo="${abaAtivaRelatorio}" type="button">
-                            <i class="fas fa-file-pdf"></i> Gerar
+                        <button class="btn-icon btn-primary btn-relatorio-gerar" data-index="${index}" data-tipo="${abaAtivaRelatorio}" type="button" title="Gerar" data-label-mobile="Gerar">
+                            <i class="fas fa-file-pdf"></i>
                         </button>
                         ${abaAtivaRelatorio !== 'pendentes' ? `
-                            <button class="btn-relatorio btn-relatorio-icon" onclick="moverParaPendentesRelatorio('${abaAtivaRelatorio}', ${index})" title="Mover para Pendentes">
+                            <button class="btn-icon btn-warning" onclick="moverParaPendentesRelatorio('${abaAtivaRelatorio}', ${index})" title="Mover para Pendentes" data-label-mobile="Pendentes">
                                 <i class="fas fa-clock"></i>
                             </button>
                         ` : ''}
                         ${abaAtivaRelatorio !== 'gerados' ? `
-                            <button class="btn-relatorio btn-relatorio-icon" onclick="moverParaGeradosRelatorio('${abaAtivaRelatorio}', ${index})" title="Mover para Gerados">
+                            <button class="btn-icon btn-success" onclick="moverParaGeradosRelatorio('${abaAtivaRelatorio}', ${index})" title="Mover para Gerados" data-label-mobile="Gerados">
                                 <i class="fas fa-check"></i>
                             </button>
                         ` : ''}
                         ${abaAtivaRelatorio !== 'pedidosSandro' ? `
-                            <button class="btn-relatorio btn-relatorio-icon" onclick="moverParaSandroRelatorio('${abaAtivaRelatorio}', ${index})" title="Mover para Sandro">
+                            <button class="btn-icon btn-secondary" onclick="moverParaSandroRelatorio('${abaAtivaRelatorio}', ${index})" title="Mover para Sandro" data-label-mobile="Sandro">
                                 <i class="fas fa-user"></i>
                             </button>
                         ` : ''}
                         ${pdfsRelatoriosGerados[chave] ? `
-                            <button class="btn-relatorio btn-relatorio-download" data-index="${index}" data-tipo="${abaAtivaRelatorio}" type="button" title="Baixar PDF">
+                            <button class="btn-icon btn-success btn-relatorio-download" data-index="${index}" data-tipo="${abaAtivaRelatorio}" type="button" title="Baixar PDF" data-label-mobile="Baixar">
                                 <i class="fas fa-download"></i>
                             </button>
                         ` : ''}
