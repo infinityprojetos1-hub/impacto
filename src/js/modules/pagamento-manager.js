@@ -32,8 +32,7 @@ function carregarDadosPagamento() {
             pagamentoState.igrejasArquivadas   = new Set(Array.isArray(dados.igrejasArquivadas) ? dados.igrejasArquivadas : []);
             pagamentoState.igrejasSelecionadas = dados.igrejasSelecionadas  || {};
             pagamentoState.itensExtras         = Array.isArray(dados.itensExtras) ? dados.itensExtras : [];
-            if (dados.mesSelecionado  !== undefined) pagamentoState.mesSelecionado  = dados.mesSelecionado;
-            if (dados.anoSelecionado  !== undefined) pagamentoState.anoSelecionado  = dados.anoSelecionado;
+            sincronizarMesPagamentoAtual();
         } else {
             // Compatibilidade com chave antiga (apenas arquivadas)
             const arquivadas = localStorage.getItem('pagamento_arquivadas');
@@ -410,6 +409,21 @@ function renderizarTotal() {
 // AÇÕES DO USUÁRIO
 // =============================================
 
+function obterPeriodoGeracaoPagamento() {
+    var agora = new Date();
+    return { mes: agora.getMonth(), ano: agora.getFullYear() };
+}
+
+function sincronizarMesPagamentoAtual() {
+    var periodo = obterPeriodoGeracaoPagamento();
+    pagamentoState.mesSelecionado = periodo.mes;
+    pagamentoState.anoSelecionado = periodo.ano;
+    var selMes = document.getElementById('pagMes');
+    var selAno = document.getElementById('pagAno');
+    if (selMes) selMes.value = String(periodo.mes);
+    if (selAno) selAno.value = String(periodo.ano);
+}
+
 function alterarMesPagamento(valor) {
     pagamentoState.mesSelecionado = parseInt(valor, 10);
     salvarDadosPagamento();
@@ -658,6 +672,7 @@ function gerarImagemPagamento() {
         var selecionadas = Object.values(pagamentoState.igrejasSelecionadas);
         var extras = pagamentoState.itensExtras;
         var total = calcularTotal();
+        sincronizarMesPagamentoAtual();
         var mes = MESES_PT[pagamentoState.mesSelecionado];
         var ano = pagamentoState.anoSelecionado;
 
@@ -1039,8 +1054,7 @@ function _aplicarDadosFirebasePagamento(dados) {
         pagamentoState.igrejasArquivadas   = new Set(Array.isArray(dados.igrejasArquivadas) ? dados.igrejasArquivadas : []);
         pagamentoState.igrejasSelecionadas = dados.igrejasSelecionadas  || {};
         pagamentoState.itensExtras         = Array.isArray(dados.itensExtras) ? dados.itensExtras : [];
-        if (dados.mesSelecionado  !== undefined) pagamentoState.mesSelecionado  = dados.mesSelecionado;
-        if (dados.anoSelecionado  !== undefined) pagamentoState.anoSelecionado  = dados.anoSelecionado;
+        sincronizarMesPagamentoAtual();
         localStorage.setItem('pagamentoData', JSON.stringify(dados));
         // Re-renderiza somente se a aba estiver visível e não houver input com foco
         const abaPag = document.getElementById('pagamento');
