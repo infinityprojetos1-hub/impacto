@@ -295,7 +295,7 @@ function _previaAtualizarComparacao(chave) {
         <div style="overflow-x:auto;margin-bottom:16px;">
             <table style="width:100%;border-collapse:collapse;font-size:13px;">
                 <thead>
-                    <tr style="background:linear-gradient(90deg,#1e3a6e,#c41e3a);color:#fff;">
+                    <tr style="background:#1e3a6e;color:#fff;">
                         <th style="padding:10px;text-align:left;">Material</th>
                         <th style="padding:10px;text-align:center;">Necessário</th>
                         <th style="padding:10px;text-align:center;">Em Estoque</th>
