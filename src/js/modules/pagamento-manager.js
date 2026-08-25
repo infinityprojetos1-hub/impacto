@@ -664,6 +664,31 @@ function calcularTotal() {
 // GERAÇÃO DE IMAGEM (CANVAS)
 // =============================================
 
+function _pagRoundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+}
+
+function _carregarLogoPagamento(callback) {
+    if (window._pagLogoImg && window._pagLogoImg.complete && window._pagLogoImg.naturalWidth) {
+        callback(window._pagLogoImg);
+        return;
+    }
+    var img = new Image();
+    img.onload = function() { window._pagLogoImg = img; callback(img); };
+    img.onerror = function() { callback(null); };
+    img.src = 'assets/logos/impacto-logo.jpeg';
+}
+
 function gerarImagemPagamento() {
     try {
         var canvas = document.getElementById('pagCanvas');
@@ -689,220 +714,135 @@ function gerarImagemPagamento() {
             return;
         }
 
+        _carregarLogoPagamento(function(logo) {
+            _desenharImagemPagamento(canvas, todosItens, total, mes, ano, logo);
+        });
+    } catch (e) {
+        console.error('[Pagamento] Erro ao gerar imagem:', e);
+        mostrarHintPagamento('Erro ao gerar imagem. Verifique o console.');
+    }
+}
+
+function _desenharImagemPagamento(canvas, todosItens, total, mes, ano, logo) {
+    try {
+        var NAVY = '#1e3a6e';
+        var RED = '#c41e3a';
+        var GREEN = '#15803d';
+        var TEXT = '#0f172a';
+        var MUTED = '#64748b';
+        var BORDER = '#e2e8f0';
+
         var LARGURA = 800;
         var PADDING = 40;
-        var HEADER_H = 130;
+        var HEADER_H = 168;
         var ITEM_H = 52;
-        var FOOTER_H = 110;
-        var altura = HEADER_H + todosItens.length * ITEM_H + FOOTER_H + PADDING;
+        var FOOTER_H = 108;
+        var altura = HEADER_H + todosItens.length * ITEM_H + FOOTER_H + 16;
 
         canvas.width = LARGURA;
         canvas.height = altura;
         canvas.style.display = 'block';
 
         var ctx = canvas.getContext('2d');
-
-        // Fundo gradiente escuro
-        var grad = ctx.createLinearGradient(0, 0, LARGURA, altura);
-        grad.addColorStop(0, '#1a1a2e');
-        grad.addColorStop(0.5, '#16213e');
-        grad.addColorStop(1, '#0f3460');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, LARGURA, altura);
-
-        // Bordas arredondadas simuladas (clip)
         ctx.save();
-        ctx.beginPath();
-        var r = 20;
-        ctx.moveTo(r, 0);
-        ctx.lineTo(LARGURA - r, 0);
-        ctx.quadraticCurveTo(LARGURA, 0, LARGURA, r);
-        ctx.lineTo(LARGURA, altura - r);
-        ctx.quadraticCurveTo(LARGURA, altura, LARGURA - r, altura);
-        ctx.lineTo(r, altura);
-        ctx.quadraticCurveTo(0, altura, 0, altura - r);
-        ctx.lineTo(0, r);
-        ctx.quadraticCurveTo(0, 0, r, 0);
-        ctx.closePath();
+        _pagRoundRect(ctx, 0, 0, LARGURA, altura, 20);
         ctx.clip();
 
-        // Fundo de novo (com clip)
-        ctx.fillStyle = grad;
+        ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, LARGURA, altura);
 
-        // Brilho radial superior
-        var brilho = ctx.createRadialGradient(LARGURA / 2, 0, 10, LARGURA / 2, 0, 400);
-        brilho.addColorStop(0, 'rgba(100,100,255,0.12)');
-        brilho.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = brilho;
-        ctx.fillRect(0, 0, LARGURA, altura);
+        ctx.fillStyle = RED;
+        ctx.fillRect(0, 0, LARGURA, 6);
 
-        // Linha decorativa topo
-        var linhaTopo = ctx.createLinearGradient(PADDING, 0, LARGURA - PADDING, 0);
-        linhaTopo.addColorStop(0, 'rgba(30,58,110,0)');
-        linhaTopo.addColorStop(0.5, '#1e3a6e');
-        linhaTopo.addColorStop(1, 'rgba(196,30,58,0)');
-        ctx.strokeStyle = linhaTopo;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(PADDING, 28);
-        ctx.lineTo(LARGURA - PADDING, 28);
-        ctx.stroke();
+        if (logo && logo.naturalWidth) {
+            var logoH = 48;
+            var logoW = logo.naturalWidth * (logoH / logo.naturalHeight);
+            if (logoW > 460) { logoW = 460; logoH = logo.naturalHeight * (logoW / logo.naturalWidth); }
+            ctx.drawImage(logo, (LARGURA - logoW) / 2, 22, logoW, logoH);
+        } else {
+            ctx.font = 'bold 18px Arial';
+            ctx.fillStyle = NAVY;
+            ctx.textAlign = 'center';
+            ctx.fillText('IMPACTO SOLUÇÕES', LARGURA / 2, 52);
+        }
 
-        // Marca do sistema
-        ctx.font = 'bold 12px Arial';
-        ctx.fillStyle = 'rgba(150,150,255,0.6)';
+        ctx.font = 'bold 36px Arial';
+        ctx.fillStyle = NAVY;
         ctx.textAlign = 'center';
-        ctx.fillText('IMPACTO · SISTEMA DE GESTÃO', LARGURA / 2, 22);
+        ctx.fillText(mes + ' / ' + ano, LARGURA / 2, 108);
 
-        // Título mês/ano
-        ctx.font = 'bold 40px Arial';
-        var gradTitulo = ctx.createLinearGradient(200, 0, 600, 0);
-        gradTitulo.addColorStop(0, '#5b8def');
-        gradTitulo.addColorStop(1, '#e85a6c');
-        ctx.fillStyle = gradTitulo;
-        ctx.textAlign = 'center';
-        ctx.fillText(mes + ' / ' + ano, LARGURA / 2, 80);
-
-        // Subtítulo
         ctx.font = '15px Arial';
-        ctx.fillStyle = 'rgba(200,200,255,0.55)';
-        ctx.fillText('Relatório de Pagamentos', LARGURA / 2, 106);
+        ctx.fillStyle = MUTED;
+        ctx.fillText('Relatório de Pagamentos', LARGURA / 2, 132);
 
-        // Linha separadora header
-        var linhaH = ctx.createLinearGradient(PADDING, 0, LARGURA - PADDING, 0);
-        linhaH.addColorStop(0, 'rgba(30,58,110,0)');
-        linhaH.addColorStop(0.3, '#1e3a6e');
-        linhaH.addColorStop(0.7, '#c41e3a');
-        linhaH.addColorStop(1, 'rgba(196,30,58,0)');
-        ctx.strokeStyle = linhaH;
+        ctx.strokeStyle = BORDER;
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.moveTo(PADDING, HEADER_H - 5);
-        ctx.lineTo(LARGURA - PADDING, HEADER_H - 5);
+        ctx.moveTo(PADDING, HEADER_H - 8);
+        ctx.lineTo(LARGURA - PADDING, HEADER_H - 8);
         ctx.stroke();
 
-        // Itens
         todosItens.forEach(function(item, i) {
             var y = HEADER_H + i * ITEM_H;
-            var isAlternado = i % 2 === 0;
 
-            if (isAlternado) {
-                ctx.fillStyle = 'rgba(255,255,255,0.025)';
-                ctx.fillRect(PADDING, y + 6, LARGURA - PADDING * 2, ITEM_H - 6);
+            if (i % 2 === 0) {
+                ctx.fillStyle = '#f8fafc';
+                ctx.fillRect(PADDING, y + 4, LARGURA - PADDING * 2, ITEM_H - 4);
             }
 
-            // Bolinha colorida
-            ctx.fillStyle = item.tipo === 'extra' ? '#c41e3a' : '#5b8def';
+            ctx.fillStyle = item.tipo === 'extra' ? RED : NAVY;
             ctx.beginPath();
-            ctx.arc(PADDING + 10, y + ITEM_H / 2, 4, 0, Math.PI * 2);
+            ctx.arc(PADDING + 14, y + ITEM_H / 2 + 2, 4, 0, Math.PI * 2);
             ctx.fill();
 
-            // Nome
-            ctx.font = (item.tipo === 'extra' ? 'italic ' : '') + '15px Arial';
-            ctx.fillStyle = item.valor > 0 ? 'rgba(230,230,255,0.92)' : 'rgba(180,180,220,0.5)';
+            ctx.font = (item.tipo === 'extra' ? 'italic ' : 'bold ') + '15px Arial';
+            ctx.fillStyle = item.valor > 0 ? TEXT : MUTED;
             ctx.textAlign = 'left';
-            // Truncar nome longo
             var nomeExib = item.nome;
             while (ctx.measureText(nomeExib).width > 460 && nomeExib.length > 1) {
                 nomeExib = nomeExib.slice(0, -1);
             }
             if (nomeExib !== item.nome) nomeExib += '...';
-            ctx.fillText(nomeExib, PADDING + 24, y + ITEM_H / 2 + 6);
+            ctx.fillText(nomeExib, PADDING + 28, y + ITEM_H / 2 + 7);
 
-            // Valor
+            ctx.textAlign = 'right';
             if (item.valor > 0) {
-                var gradVal = ctx.createLinearGradient(LARGURA - PADDING - 160, 0, LARGURA - PADDING, 0);
-                gradVal.addColorStop(0, '#8eb4f5');
-                gradVal.addColorStop(1, '#e85a6c');
-                ctx.fillStyle = gradVal;
                 ctx.font = 'bold 16px Arial';
-                ctx.textAlign = 'right';
-                ctx.fillText(formatarMoeda(item.valor), LARGURA - PADDING, y + ITEM_H / 2 + 6);
+                ctx.fillStyle = GREEN;
+                ctx.fillText(formatarMoeda(item.valor), LARGURA - PADDING, y + ITEM_H / 2 + 7);
             } else {
-                ctx.fillStyle = 'rgba(150,150,200,0.35)';
                 ctx.font = '14px Arial';
-                ctx.textAlign = 'right';
-                ctx.fillText('—', LARGURA - PADDING, y + ITEM_H / 2 + 6);
-            }
-
-            // Divisória leve
-            if (i < todosItens.length - 1) {
-                ctx.strokeStyle = 'rgba(255,255,255,0.04)';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(PADDING + 20, y + ITEM_H);
-                ctx.lineTo(LARGURA - PADDING, y + ITEM_H);
-                ctx.stroke();
+                ctx.fillStyle = MUTED;
+                ctx.fillText('—', LARGURA - PADDING, y + ITEM_H / 2 + 7);
             }
         });
 
-        // Linha separadora rodapé
         var yFooter = HEADER_H + todosItens.length * ITEM_H;
-        var linhaTot = ctx.createLinearGradient(PADDING, 0, LARGURA - PADDING, 0);
-        linhaTot.addColorStop(0, 'rgba(30,58,110,0)');
-        linhaTot.addColorStop(0.3, '#1e3a6e');
-        linhaTot.addColorStop(0.7, '#c41e3a');
-        linhaTot.addColorStop(1, 'rgba(196,30,58,0)');
-        ctx.strokeStyle = linhaTot;
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(PADDING, yFooter + 14);
-        ctx.lineTo(LARGURA - PADDING, yFooter + 14);
-        ctx.stroke();
-
-        // Caixa total — fundo com gradiente
-        var totalGrad = ctx.createLinearGradient(PADDING, yFooter + 24, LARGURA - PADDING, yFooter + 84);
-        totalGrad.addColorStop(0, 'rgba(30,58,110,0.22)');
-        totalGrad.addColorStop(1, 'rgba(196,30,58,0.22)');
-        ctx.fillStyle = totalGrad;
-        // Retângulo com cantos arredondados manual
-        var bx = PADDING, by = yFooter + 24, bw = LARGURA - PADDING * 2, bh = 60, br = 12;
-        ctx.beginPath();
-        ctx.moveTo(bx + br, by);
-        ctx.lineTo(bx + bw - br, by);
-        ctx.quadraticCurveTo(bx + bw, by, bx + bw, by + br);
-        ctx.lineTo(bx + bw, by + bh - br);
-        ctx.quadraticCurveTo(bx + bw, by + bh, bx + bw - br, by + bh);
-        ctx.lineTo(bx + br, by + bh);
-        ctx.quadraticCurveTo(bx, by + bh, bx, by + bh - br);
-        ctx.lineTo(bx, by + br);
-        ctx.quadraticCurveTo(bx, by, bx + br, by);
-        ctx.closePath();
+        var bx = PADDING, by = yFooter + 18, bw = LARGURA - PADDING * 2, bh = 58, br = 12;
+        ctx.fillStyle = NAVY;
+        _pagRoundRect(ctx, bx, by, bw, bh, br);
         ctx.fill();
 
-        // Borda caixa total
-        ctx.strokeStyle = 'rgba(30,58,110,0.45)';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-
-        // Label TOTAL
         ctx.font = 'bold 13px Arial';
-        ctx.fillStyle = 'rgba(200,210,230,0.8)';
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
         ctx.textAlign = 'left';
-        ctx.fillText('TOTAL', PADDING + 20, yFooter + 59);
+        ctx.fillText('TOTAL', PADDING + 24, by + 36);
 
-        // Valor total
-        var gradTotalVal = ctx.createLinearGradient(LARGURA / 2, 0, LARGURA, 0);
-        gradTotalVal.addColorStop(0, '#8eb4f5');
-        gradTotalVal.addColorStop(1, '#e85a6c');
-        ctx.fillStyle = gradTotalVal;
-        ctx.font = 'bold 30px Arial';
+        ctx.font = 'bold 28px Arial';
+        ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'right';
-        ctx.fillText(formatarMoeda(total), LARGURA - PADDING - 20, yFooter + 62);
+        ctx.fillText(formatarMoeda(total), LARGURA - PADDING - 24, by + 38);
 
-        // Assinatura rodapé
         ctx.font = '11px Arial';
-        ctx.fillStyle = 'rgba(150,150,200,0.35)';
+        ctx.fillStyle = MUTED;
         ctx.textAlign = 'center';
-        ctx.fillText('Gerado em ' + new Date().toLocaleDateString('pt-BR') + ' · Impacto Sistema de Gestão', LARGURA / 2, altura - 12);
+        ctx.fillText('Gerado em ' + new Date().toLocaleDateString('pt-BR') + ' · Impacto Soluções', LARGURA / 2, altura - 16);
 
         ctx.restore();
-
         exibirBotoesImagemPagamento();
         esconderHintPagamento();
     } catch (e) {
-        console.error('[Pagamento] Erro ao gerar imagem:', e);
+        console.error('[Pagamento] Erro ao desenhar imagem:', e);
         mostrarHintPagamento('Erro ao gerar imagem. Verifique o console.');
     }
 }

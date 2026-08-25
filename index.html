@@ -5451,9 +5451,17 @@
     <script>
         // ── Service Worker ────────────────────────────────────────────────────
         if ('serviceWorker' in navigator) {
-            let _swWaiting = null;
+            window._swWaiting = null;
+            let _pularBannerNesteLoad = sessionStorage.getItem('impactoJustUpdated') === '1';
+            if (_pularBannerNesteLoad) sessionStorage.removeItem('impactoJustUpdated');
+
+            function _esconderBannerAtualizacao() {
+                const banner = document.getElementById('swUpdateBanner');
+                if (banner) banner.style.display = 'none';
+            }
 
             function _mostrarBannerAtualizacao() {
+                if (_pularBannerNesteLoad) return;
                 const banner = document.getElementById('swUpdateBanner');
                 if (banner) banner.style.display = 'flex';
             }
@@ -5463,7 +5471,6 @@
                     .then(registration => {
                         console.log('✅ SW registrado:', registration.scope);
 
-                        // Exibe versão do cache ativo no badge discreto
                         const _sw = registration.active || registration.installing || registration.waiting;
                         if (_sw) {
                             const msgCh = new MessageChannel();
@@ -5476,60 +5483,78 @@
                             _sw.postMessage({ type: 'GET_CACHE_VERSION' }, [msgCh.port2]);
                         }
 
-                        // Se já há SW aguardando (update baixado), mostra banner
-                        if (registration.waiting) {
-                            _swWaiting = registration.waiting;
+                        // Só avisa se há um SW novo esperando (precisa recarregar)
+                        if (registration.waiting && navigator.serviceWorker.controller) {
+                            window._swWaiting = registration.waiting;
                             _mostrarBannerAtualizacao();
+                        } else {
+                            _esconderBannerAtualizacao();
                         }
 
-                        // Detecta novo SW sendo baixado
                         registration.addEventListener('updatefound', () => {
                             const newWorker = registration.installing;
                             if (!newWorker) return;
                             newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed') {
-                                    _swWaiting = newWorker;
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    window._swWaiting = newWorker;
                                     _mostrarBannerAtualizacao();
                                 }
                             });
                         });
 
-                        // Verifica atualização ao abrir
                         registration.update().catch(() => {});
                     })
                     .catch(err => console.warn('⚠️ Erro ao registrar SW:', err));
             });
 
-            // Quando o novo SW assume controle: recarrega APENAS se o usuário pediu
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 if (window._swAtualizandoManualmente) {
-                    window.location.href = window.location.href;
+                    sessionStorage.setItem('impactoJustUpdated', '1');
+                    window._recarregarAppForcado();
                 }
             });
         }
 
-        // Usuário toca "Atualizar" no banner → ativa o SW novo e recarrega
+        window._esconderBannerAtualizacao = function() {
+            const banner = document.getElementById('swUpdateBanner');
+            if (banner) banner.style.display = 'none';
+        };
+
+        window._recarregarAppForcado = function() {
+            const url = new URL(window.location.href);
+            url.searchParams.set('_r', String(Date.now()));
+            window.location.replace(url.toString());
+        };
+
         window._aplicarAtualizacaoSW = function() {
+            window._esconderBannerAtualizacao();
+            sessionStorage.setItem('impactoJustUpdated', '1');
             if (window._swWaiting) {
                 window._swAtualizandoManualmente = true;
                 window._swWaiting.postMessage('SKIP_WAITING');
+                setTimeout(function() { window._forcarAtualizacaoApp(); }, 350);
             } else {
                 window._forcarAtualizacaoApp();
             }
         };
 
-        // Botão ↺ no cabeçalho: desregistra SW e limpa cache (nuclear option)
+        // Equivale a Ctrl+Shift+R: limpa SW/cache e recarrega da rede
         window._forcarAtualizacaoApp = function() {
+            window._esconderBannerAtualizacao();
+            sessionStorage.setItem('impactoJustUpdated', '1');
+            var recarregar = window._recarregarAppForcado;
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.getRegistrations()
-                    .then(regs => Promise.all(regs.map(r => r.unregister())))
-                    .then(() => 'caches' in window
-                        ? caches.keys().then(names => Promise.all(names.map(n => caches.delete(n))))
-                        : Promise.resolve())
-                    .then(() => { window.location.href = window.location.href; })
-                    .catch(() => { window.location.href = window.location.href; });
+                    .then(function(regs) { return Promise.all(regs.map(function(r) { return r.unregister(); })); })
+                    .then(function() {
+                        return 'caches' in window
+                            ? caches.keys().then(function(names) { return Promise.all(names.map(function(n) { return caches.delete(n); })); })
+                            : Promise.resolve();
+                    })
+                    .then(recarregar)
+                    .catch(recarregar);
             } else {
-                window.location.href = window.location.href;
+                recarregar();
             }
         };
 
