@@ -721,7 +721,7 @@ async function visualizarChecklist(tipo, igrejaIndex) {
                     ${igreja.id ? `<span style="font-size:0.8em;color:#64748b;margin-left:8px;">ID: ${igreja.id}</span>` : ''}
                 </div>
                 <div style="display:flex;gap:8px;align-items:center;">
-                    <button id="_btnDownloadChecklist" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:0.85em;font-weight:600;">
+                    <button id="_btnDownloadChecklist" style="background:linear-gradient(135deg,#1e3a6e,#c41e3a);color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:0.85em;font-weight:600;">
                         <i class="fas fa-download"></i> Baixar PDF
                     </button>
                     <button onclick="this.closest('[style*=fixed]').remove()" style="background:#f1f5f9;color:#475569;border:none;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:1.1em;font-weight:700;">✕</button>

@@ -739,9 +739,9 @@ function gerarImagemPagamento() {
 
         // Linha decorativa topo
         var linhaTopo = ctx.createLinearGradient(PADDING, 0, LARGURA - PADDING, 0);
-        linhaTopo.addColorStop(0, 'rgba(99,102,241,0)');
-        linhaTopo.addColorStop(0.5, '#6366f1');
-        linhaTopo.addColorStop(1, 'rgba(236,72,153,0)');
+        linhaTopo.addColorStop(0, 'rgba(30,58,110,0)');
+        linhaTopo.addColorStop(0.5, '#1e3a6e');
+        linhaTopo.addColorStop(1, 'rgba(196,30,58,0)');
         ctx.strokeStyle = linhaTopo;
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -753,13 +753,13 @@ function gerarImagemPagamento() {
         ctx.font = 'bold 12px Arial';
         ctx.fillStyle = 'rgba(150,150,255,0.6)';
         ctx.textAlign = 'center';
-        ctx.fillText('INPACTO · SISTEMA DE GESTÃO', LARGURA / 2, 22);
+        ctx.fillText('IMPACTO · SISTEMA DE GESTÃO', LARGURA / 2, 22);
 
         // Título mês/ano
         ctx.font = 'bold 40px Arial';
         var gradTitulo = ctx.createLinearGradient(200, 0, 600, 0);
-        gradTitulo.addColorStop(0, '#a78bfa');
-        gradTitulo.addColorStop(1, '#f472b6');
+        gradTitulo.addColorStop(0, '#5b8def');
+        gradTitulo.addColorStop(1, '#e85a6c');
         ctx.fillStyle = gradTitulo;
         ctx.textAlign = 'center';
         ctx.fillText(mes + ' / ' + ano, LARGURA / 2, 80);
@@ -771,10 +771,10 @@ function gerarImagemPagamento() {
 
         // Linha separadora header
         var linhaH = ctx.createLinearGradient(PADDING, 0, LARGURA - PADDING, 0);
-        linhaH.addColorStop(0, 'rgba(99,102,241,0)');
-        linhaH.addColorStop(0.3, '#6366f1');
-        linhaH.addColorStop(0.7, '#ec4899');
-        linhaH.addColorStop(1, 'rgba(236,72,153,0)');
+        linhaH.addColorStop(0, 'rgba(30,58,110,0)');
+        linhaH.addColorStop(0.3, '#1e3a6e');
+        linhaH.addColorStop(0.7, '#c41e3a');
+        linhaH.addColorStop(1, 'rgba(196,30,58,0)');
         ctx.strokeStyle = linhaH;
         ctx.lineWidth = 1.5;
         ctx.beginPath();
@@ -793,7 +793,7 @@ function gerarImagemPagamento() {
             }
 
             // Bolinha colorida
-            ctx.fillStyle = item.tipo === 'extra' ? '#f472b6' : '#818cf8';
+            ctx.fillStyle = item.tipo === 'extra' ? '#c41e3a' : '#5b8def';
             ctx.beginPath();
             ctx.arc(PADDING + 10, y + ITEM_H / 2, 4, 0, Math.PI * 2);
             ctx.fill();
@@ -813,8 +813,8 @@ function gerarImagemPagamento() {
             // Valor
             if (item.valor > 0) {
                 var gradVal = ctx.createLinearGradient(LARGURA - PADDING - 160, 0, LARGURA - PADDING, 0);
-                gradVal.addColorStop(0, '#a78bfa');
-                gradVal.addColorStop(1, '#f472b6');
+                gradVal.addColorStop(0, '#8eb4f5');
+                gradVal.addColorStop(1, '#e85a6c');
                 ctx.fillStyle = gradVal;
                 ctx.font = 'bold 16px Arial';
                 ctx.textAlign = 'right';
@@ -840,10 +840,10 @@ function gerarImagemPagamento() {
         // Linha separadora rodapé
         var yFooter = HEADER_H + todosItens.length * ITEM_H;
         var linhaTot = ctx.createLinearGradient(PADDING, 0, LARGURA - PADDING, 0);
-        linhaTot.addColorStop(0, 'rgba(99,102,241,0)');
-        linhaTot.addColorStop(0.3, '#6366f1');
-        linhaTot.addColorStop(0.7, '#ec4899');
-        linhaTot.addColorStop(1, 'rgba(236,72,153,0)');
+        linhaTot.addColorStop(0, 'rgba(30,58,110,0)');
+        linhaTot.addColorStop(0.3, '#1e3a6e');
+        linhaTot.addColorStop(0.7, '#c41e3a');
+        linhaTot.addColorStop(1, 'rgba(196,30,58,0)');
         ctx.strokeStyle = linhaTot;
         ctx.lineWidth = 1.5;
         ctx.beginPath();
@@ -853,8 +853,8 @@ function gerarImagemPagamento() {
 
         // Caixa total — fundo com gradiente
         var totalGrad = ctx.createLinearGradient(PADDING, yFooter + 24, LARGURA - PADDING, yFooter + 84);
-        totalGrad.addColorStop(0, 'rgba(99,102,241,0.18)');
-        totalGrad.addColorStop(1, 'rgba(236,72,153,0.18)');
+        totalGrad.addColorStop(0, 'rgba(30,58,110,0.22)');
+        totalGrad.addColorStop(1, 'rgba(196,30,58,0.22)');
         ctx.fillStyle = totalGrad;
         // Retângulo com cantos arredondados manual
         var bx = PADDING, by = yFooter + 24, bw = LARGURA - PADDING * 2, bh = 60, br = 12;
@@ -872,20 +872,20 @@ function gerarImagemPagamento() {
         ctx.fill();
 
         // Borda caixa total
-        ctx.strokeStyle = 'rgba(99,102,241,0.35)';
+        ctx.strokeStyle = 'rgba(30,58,110,0.45)';
         ctx.lineWidth = 1;
         ctx.stroke();
 
         // Label TOTAL
         ctx.font = 'bold 13px Arial';
-        ctx.fillStyle = 'rgba(167,139,250,0.75)';
+        ctx.fillStyle = 'rgba(200,210,230,0.8)';
         ctx.textAlign = 'left';
         ctx.fillText('TOTAL', PADDING + 20, yFooter + 59);
 
         // Valor total
         var gradTotalVal = ctx.createLinearGradient(LARGURA / 2, 0, LARGURA, 0);
-        gradTotalVal.addColorStop(0, '#a78bfa');
-        gradTotalVal.addColorStop(1, '#f472b6');
+        gradTotalVal.addColorStop(0, '#8eb4f5');
+        gradTotalVal.addColorStop(1, '#e85a6c');
         ctx.fillStyle = gradTotalVal;
         ctx.font = 'bold 30px Arial';
         ctx.textAlign = 'right';

@@ -12,10 +12,10 @@ function obterStatusNF(igreja, arquivada) {
     const cores = {
         'ASSINATURA': '#f59e0b',
         'EXECUÇÃO': '#0ea5e9',
-        'RELATÓRIO': '#8b5cf6',
-        'LOGIX': '#8b5cf6',
-        'NFE': '#ec4899',
-        'PAGAMENTO': '#6366f1',
+        'RELATÓRIO': '#1e3a6e',
+        'LOGIX': '#1e3a6e',
+        'NFE': '#c41e3a',
+        'PAGAMENTO': '#1e3a6e',
         'PAGO': '#10b981',
         'ARQUIVADA': '#64748b'
     };
