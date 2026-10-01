@@ -706,29 +706,30 @@ async function inicializarDownloadZip() {
 
             // Formatação do nome da igreja para evitar caracteres inválidos em nome de arquivo
             const nomeIgrejaSeguro = String(igreja.nome || 'igreja').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
-            const codigoIgreja = String(igreja.codigo || '000000').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20);
+            const codigoIgreja = String(igreja.codigo || '').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20);
+            const prefixoArquivo = codigoIgreja ? `${codigoIgreja}_${nomeIgrejaSeguro}` : nomeIgrejaSeguro;
 
             // Nome da empresa formatado
             const empresaNome = orcamento.suaEmpresa.nome.replace(/[^a-zA-Z0-9]/g, '_');
-            zip.file(`${codigoIgreja}_${nomeIgrejaSeguro}_${empresaNome}.pdf`,
+            zip.file(`${prefixoArquivo}_${empresaNome}.pdf`,
                 dados.pdfSuaEmpresa.output('blob'));
 
             // Adiciona concorrentes conforme existirem
             if (dados.pdfConcorrente && dados.empresaConcorrente) {
                 const concorrenteNome = dados.empresaConcorrente.replace(/[^a-zA-Z0-9]/g, '_');
-                zip.file(`${codigoIgreja}_${nomeIgrejaSeguro}_${concorrenteNome}.pdf`, dados.pdfConcorrente.output('blob'));
+                zip.file(`${prefixoArquivo}_${concorrenteNome}.pdf`, dados.pdfConcorrente.output('blob'));
             }
             if (dados.pdfConcorrente2 && dados.empresaConcorrente2) {
                 const concorrente2Nome = dados.empresaConcorrente2.replace(/[^a-zA-Z0-9]/g, '_');
-                zip.file(`${codigoIgreja}_${nomeIgrejaSeguro}_${concorrente2Nome}.pdf`, dados.pdfConcorrente2.output('blob'));
+                zip.file(`${prefixoArquivo}_${concorrente2Nome}.pdf`, dados.pdfConcorrente2.output('blob'));
             }
             if (dados.pdfConcorrenteMega && dados.empresaConcorrenteMega) {
                 const megaNome = dados.empresaConcorrenteMega.replace(/[^a-zA-Z0-9]/g, '_');
-                zip.file(`${codigoIgreja}_${nomeIgrejaSeguro}_${megaNome}.pdf`, dados.pdfConcorrenteMega.output('blob'));
+                zip.file(`${prefixoArquivo}_${megaNome}.pdf`, dados.pdfConcorrenteMega.output('blob'));
             }
             if (dados.pdfConcorrenteTella && dados.empresaConcorrenteTella) {
                 const tellaNome = dados.empresaConcorrenteTella.replace(/[^a-zA-Z0-9]/g, '_');
-                zip.file(`${codigoIgreja}_${nomeIgrejaSeguro}_${tellaNome}.pdf`, dados.pdfConcorrenteTella.output('blob'));
+                zip.file(`${prefixoArquivo}_${tellaNome}.pdf`, dados.pdfConcorrenteTella.output('blob'));
             }
         }
 
@@ -1413,11 +1414,10 @@ function gerarVariacaoTexto(item) {
 // Lê configuração de empresas concorrentes do formulário
 function obterConfigConcorrentes() {
     const tipoPedido = document.getElementById('tipoPedido')?.value;
-    if (tipoPedido === 'especial') {
-        return { modo: 'manual', qtd: 2, empresas: ['MEGA EVENTOS', 'TELLA VIDEO'] };
-    }
     const modo = (document.getElementById('modoConcorrentes')?.value || 'aleatorio');
-    const qtd = parseInt(document.getElementById('qtdConcorrentes')?.value || '1', 10);
+    const qtd = tipoPedido === 'especial'
+        ? 2
+        : parseInt(document.getElementById('qtdConcorrentes')?.value || '1', 10);
     const empresas = [];
     if (modo === 'manual') {
         document.querySelectorAll('#listaConcorrentesManual input[type="checkbox"]:checked').forEach(cb => {
@@ -1428,24 +1428,36 @@ function obterConfigConcorrentes() {
 }
 
 function aplicarConfigConcorrentes(config) {
-    if (document.getElementById('tipoPedido')?.value === 'especial') {
-        if (typeof aplicarPadraoPedidoEspecial === 'function') aplicarPadraoPedidoEspecial();
-        return;
-    }
     if (typeof inicializarCheckboxesConcorrentes === 'function') {
         inicializarCheckboxesConcorrentes();
     }
-    const cfg = config || { modo: 'aleatorio', qtd: 1, empresas: [] };
+    const especial = document.getElementById('tipoPedido')?.value === 'especial';
+    const cfg = config || { modo: especial ? 'manual' : 'aleatorio', qtd: especial ? 2 : 1, empresas: [] };
     const modo = document.getElementById('modoConcorrentes');
     const qtd = document.getElementById('qtdConcorrentes');
     const bloco = document.getElementById('blocoConcorrentesManual');
-    if (modo) modo.value = cfg.modo || 'aleatorio';
-    if (qtd) qtd.value = String(cfg.qtd === 2 ? 2 : 1);
-    if (bloco) bloco.style.display = (cfg.modo === 'manual') ? '' : 'none';
+    const aviso = document.getElementById('avisoPedidoEspecial');
+    if (modo) {
+        modo.disabled = false;
+        modo.value = cfg.modo || (especial ? 'manual' : 'aleatorio');
+    }
+    if (qtd) {
+        qtd.value = String((especial || cfg.qtd === 2) ? 2 : 1);
+        qtd.disabled = especial;
+    }
+    if (bloco) bloco.style.display = (modo && modo.value === 'manual') ? '' : 'none';
+    if (aviso) aviso.style.display = especial ? '' : 'none';
     const selecionadas = new Set(Array.isArray(cfg.empresas) ? cfg.empresas : []);
     document.querySelectorAll('#listaConcorrentesManual input[type="checkbox"]').forEach(cb => {
+        cb.disabled = false;
         cb.checked = selecionadas.has(cb.value);
     });
+    if (especial && modo && modo.value === 'manual' && selecionadas.size === 0) {
+        document.querySelectorAll('#listaConcorrentesManual input[type="checkbox"]').forEach(cb => {
+            const v = (cb.value || '').toUpperCase();
+            cb.checked = v === 'MEGA EVENTOS' || v === 'TELLA VIDEO';
+        });
+    }
     if (typeof atualizarCamposTextoConcorrentes === 'function') {
         atualizarCamposTextoConcorrentes();
     }
@@ -1749,11 +1761,27 @@ function gerarTextoConcorrenteAuto(textoBase, variante = 0) {
         const original = _sanitizarTextoOrcamento((textoBase || '').trim());
         if (!original) return '';
         const info = _analisarOrcamentoOriginal(original);
-        return _montarTextoConcorrente(info, variante % 2);
+        let gerado = _montarTextoConcorrente(info, variante % 2);
+        const unitarios = _linhasComPrecoUnitario(original);
+        if (unitarios.length) {
+            const reescritos = unitarios.map((l) => _reescreverItemCompleto(l, variante));
+            gerado += '\n\nValores de referencia\n\n' + reescritos.map((l) => '- ' + l).join('\n');
+        }
+        return gerado;
     } catch (_) {
         return _sanitizarTextoOrcamento(textoBase || '');
     }
 }
+
+function _linhasComPrecoUnitario(texto) {
+    const linhas = String(texto || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    const reUnit = /unit[aá]rio|valor\s*un(?:it|\.)?|pre[cç]o\s*(?:un|por)|\/\s*(?:m[²2]|unid|metro)|por\s+(?:unidade|metro|m[²2])|cada\s+(?:unid|m[²2])/i;
+    const reMoney = /R\$\s*\d|\d{1,3}(?:\.\d{3})+,\d{2}|\d+,\d{2}/;
+    const reTotal = /total|investimento|valor\s*(?:total|geral|do\s+servi[cç]o|do\s+or[cç]amento)/i;
+    return linhas.filter((l) => reUnit.test(l) && reMoney.test(l) && !reTotal.test(l));
+}
+
+window.gerarTextoConcorrenteAuto = gerarTextoConcorrenteAuto;
 
 // Função para processar imagem e manter orientação original
 async function processarImagem(file) {

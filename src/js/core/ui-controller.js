@@ -33,10 +33,10 @@ function resetarCamposFormularioOrcamento(incluirConcorrentes) {
     if (selTipoIgreja) selTipoIgreja.selectedIndex = 0;
 
     const selTipoTexto = document.getElementById('tipoTexto');
-    if (selTipoTexto) selTipoTexto.value = 'padrao';
+    if (selTipoTexto) selTipoTexto.selectedIndex = 0;
 
     const selPedido = document.getElementById('tipoPedido');
-    if (selPedido) selPedido.value = 'padrao';
+    if (selPedido) selPedido.selectedIndex = 0;
 
     const grupoValorManual = document.getElementById('grupoValorManual');
     if (grupoValorManual) grupoValorManual.style.display = 'none';
@@ -46,6 +46,14 @@ function resetarCamposFormularioOrcamento(incluirConcorrentes) {
 
     const chk = document.getElementById('usarTextoPersonalizadoOrcamento');
     if (chk) chk.checked = false;
+
+    const pdfIn = document.getElementById('pdfOrcamentoImportar');
+    if (pdfIn) pdfIn.value = '';
+    const pdfStatus = document.getElementById('statusPdfOrcamentoImportar');
+    if (pdfStatus) {
+        pdfStatus.textContent = 'Envie um PDF já pronto: o texto e os valores são lidos para gerar os dois concorrentes com redação diferente e preços proporcionais.';
+        pdfStatus.style.color = '#64748b';
+    }
 
     if (incluirConcorrentes) {
         const modo = document.getElementById('modoConcorrentes');
@@ -76,7 +84,7 @@ function atualizarVisibilidadeTextoOrcamento() {
 }
 
 function aplicarPadraoPedidoEspecial() {
-    const tipo = document.getElementById('tipoPedido')?.value || 'padrao';
+    const tipo = document.getElementById('tipoPedido')?.value || '';
     const modo = document.getElementById('modoConcorrentes');
     const qtd = document.getElementById('qtdConcorrentes');
     const bloco = document.getElementById('blocoConcorrentesManual');
@@ -90,14 +98,25 @@ function aplicarPadraoPedidoEspecial() {
     if (aviso) aviso.style.display = especial ? '' : 'none';
 
     if (especial) {
-        if (modo) { modo.value = 'manual'; modo.disabled = true; }
+        if (modo) {
+            modo.disabled = false;
+            modo.value = 'manual';
+        }
         if (qtd) { qtd.value = '2'; qtd.disabled = true; }
-        if (bloco) bloco.style.display = '';
         document.querySelectorAll('#listaConcorrentesManual input[type="checkbox"]').forEach(cb => {
-            const v = (cb.value || '').toUpperCase();
-            cb.checked = v === 'MEGA EVENTOS' || v === 'TELLA VIDEO';
-            cb.disabled = true;
+            cb.disabled = false;
         });
+        const modoAtual = modo ? modo.value : 'manual';
+        if (bloco) bloco.style.display = modoAtual === 'manual' ? '' : 'none';
+        if (modoAtual === 'manual') {
+            const algumaMarcada = Array.from(document.querySelectorAll('#listaConcorrentesManual input[type="checkbox"]:checked')).length > 0;
+            if (!algumaMarcada) {
+                document.querySelectorAll('#listaConcorrentesManual input[type="checkbox"]').forEach(cb => {
+                    const v = (cb.value || '').toUpperCase();
+                    cb.checked = v === 'MEGA EVENTOS' || v === 'TELLA VIDEO';
+                });
+            }
+        }
         const details = document.getElementById('detailsEmpresasConcorrentes');
         if (details) details.open = true;
     } else {
@@ -270,17 +289,25 @@ function inicializarGerenciamentoIgrejas() {
             ? parseValorManualBR(valorManualRaw)
             : parseFloat(String(valorManualRaw).replace(/\./g, '').replace(',', '.'));
         const tipoIgreja = document.getElementById('tipoIgreja').value;
-        const tipoTexto = (document.getElementById('tipoTexto') && document.getElementById('tipoTexto').value) || 'padrao';
-        const tipoPedido = (document.getElementById('tipoPedido') && document.getElementById('tipoPedido').value) || 'padrao';
+        const tipoTexto = (document.getElementById('tipoTexto') && document.getElementById('tipoTexto').value) || '';
+        const tipoPedido = (document.getElementById('tipoPedido') && document.getElementById('tipoPedido').value) || '';
 
-        if (!nomeIgreja || !idIgreja) {
-            alert('Por favor, preencha pelo menos o nome e o ID da igreja.');
+        if (!nomeIgreja) {
+            alert('Por favor, preencha o nome da igreja.');
             return;
         }
 
-        // Validação obrigatória dos campos tipoValorOrcamento e tipoIgreja
+        // Validação obrigatória dos campos tipoValorOrcamento, tipoIgreja, tipoTexto e tipoPedido
         if (!tipoValorOrcamento) {
             alert('Por favor, selecione o Tipo de Valor do Orçamento.');
+            return;
+        }
+        if (!tipoTexto) {
+            alert('Por favor, selecione o Tipo de texto.');
+            return;
+        }
+        if (!tipoPedido) {
+            alert('Por favor, selecione o Tipo de pedido.');
             return;
         }
         if (tipoValorOrcamento === 'manual' && (isNaN(valorManual) || valorManual <= 0)) {
@@ -368,7 +395,7 @@ function atualizarListaIgrejas() {
         itemIgreja.innerHTML = `
             <div class="estoque-item-info" style="flex:1;min-width:0;">
                 <strong>${igreja.nome}</strong>
-                <p><strong>ID:</strong> ${igreja.id} · <strong>Código:</strong> ${igreja.codigo || '-'}</p>
+                ${igreja.id || igreja.codigo ? `<p>${igreja.id ? `<strong>ID:</strong> ${igreja.id}` : ''}${igreja.id && igreja.codigo ? ' · ' : ''}${igreja.codigo ? `<strong>Código:</strong> ${igreja.codigo}` : ''}</p>` : ''}
                 <p><strong>Empresa:</strong> ${igreja.empresa}</p>
                 <p><strong>Tipo de igreja:</strong> ${igreja.tipoIgreja === 'padrao' ? 'Padrão' :
                     igreja.tipoIgreja === 'som_para_tras' ? 'Som para trás' :
@@ -456,7 +483,7 @@ function atualizarListaIgrejas() {
                 if (!selTipoIgreja.value) selTipoIgreja.selectedIndex = 0;
             }
             const selTipoTexto = document.getElementById('tipoTexto');
-            if (selTipoTexto) selTipoTexto.value = ig.tipoTexto || 'padrao';
+            if (selTipoTexto) selTipoTexto.value = ig.tipoTexto || '';
             const txtSuaEl = document.getElementById('textoOrcamentoSuaEmpresa');
             const txtConcEl = document.getElementById('textoOrcamentoConcorrente');
             const txtConc2El = document.getElementById('textoOrcamentoConcorrente2');
@@ -465,13 +492,10 @@ function atualizarListaIgrejas() {
             if (txtConc2El) txtConc2El.value = ig.textoConcorrente2 || '';
 
             const selPedido = document.getElementById('tipoPedido');
-            if (selPedido) selPedido.value = ig.tipoPedido || 'padrao';
+            if (selPedido) selPedido.value = ig.tipoPedido || '';
 
-            if (ig.tipoPedido === 'especial' && typeof aplicarPadraoPedidoEspecial === 'function') {
-                aplicarPadraoPedidoEspecial();
-            } else if (typeof aplicarConfigConcorrentes === 'function') {
+            if (typeof aplicarConfigConcorrentes === 'function') {
                 aplicarConfigConcorrentes(ig.configConcorrentes);
-                if (typeof aplicarPadraoPedidoEspecial === 'function') aplicarPadraoPedidoEspecial();
             } else if (typeof aplicarPadraoPedidoEspecial === 'function') {
                 aplicarPadraoPedidoEspecial();
             } else if (typeof atualizarCamposTextoConcorrentes === 'function') {
@@ -496,10 +520,10 @@ function inicializarInterface() {
     document.getElementById('tipoValorOrcamento').selectedIndex = 0;
     document.getElementById('tipoIgreja').selectedIndex = 0;
     if (document.getElementById('tipoTexto')) {
-        document.getElementById('tipoTexto').value = 'padrao';
+        document.getElementById('tipoTexto').selectedIndex = 0;
     }
     if (document.getElementById('tipoPedido')) {
-        document.getElementById('tipoPedido').value = 'padrao';
+        document.getElementById('tipoPedido').selectedIndex = 0;
     }
     // Preencher data do orçamento com a data atual
     const inputDataOrcamento = document.getElementById('dataOrcamento');

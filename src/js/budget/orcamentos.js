@@ -2,11 +2,11 @@
 function gerarDadosOrcamento(igreja, dataOrcamento, prazoExecucao, config, empresaEscolhida) {
     // Validação e valores padrão para os parâmetros
     if (!igreja || typeof igreja !== 'object') {
-        igreja = { nome: "Igreja sem nome", codigo: "000000" };
+        igreja = { nome: "Igreja sem nome", codigo: "" };
     }
 
     if (!igreja.nome) igreja.nome = "Igreja sem nome";
-    if (!igreja.codigo) igreja.codigo = "000000";
+    if (igreja.codigo == null) igreja.codigo = "";
 
     if (!dataOrcamento) {
         // Data padrão caso não seja fornecida: hoje + 5 dias
@@ -47,9 +47,9 @@ function gerarDadosOrcamento(igreja, dataOrcamento, prazoExecucao, config, empre
     let valorMaximoBase = intervalo.max;
 
     // Cria um valor específico para cada igreja usando uma seed mais variada
-    const semente = (igreja.nome.length * igreja.codigo.length) +
+    const semente = (igreja.nome.length * Math.max((igreja.codigo || '').length, 1)) +
         (igreja.nome.charCodeAt(0) || 0) +
-        (igreja.codigo.charCodeAt(0) || 0) +
+        ((igreja.codigo && igreja.codigo.charCodeAt(0)) || 0) +
         Date.now() % 10000;
 
     const aleatorio = new Math.seedrandom(semente.toString());

@@ -52,10 +52,15 @@ function gerarPDFInstalassom(dadosOrcamento, dadosConcorrente, logos) {
         pdf.text(`PRAZO: ${prazoExecucao} dias`, 150, posicaoY);
         posicaoY += 8;
 
-        // Verificar existência de dadosOrcamento.igreja.codigo
-        const codigoIgreja = dadosOrcamento.igreja && dadosOrcamento.igreja.codigo ? dadosOrcamento.igreja.codigo : "N/A";
-        pdf.text(`CÓDIGO: ${codigoIgreja}`, margemEsquerda, posicaoY);
-        posicaoY += 15;
+        const codigoIgreja = typeof codigoIgrejaExibicao === 'function'
+            ? codigoIgrejaExibicao(dadosOrcamento.igreja)
+            : (dadosOrcamento.igreja && dadosOrcamento.igreja.codigo ? dadosOrcamento.igreja.codigo : "");
+        if (codigoIgreja) {
+            pdf.text(`CÓDIGO: ${codigoIgreja}`, margemEsquerda, posicaoY);
+            posicaoY += 15;
+        } else {
+            posicaoY += 6;
+        }
 
         // Título do orçamento
         pdf.setFillColor(40, 100, 160);

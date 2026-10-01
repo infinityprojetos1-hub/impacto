@@ -98,17 +98,19 @@ function gerarPDFUPServicos(dadosOrcamento, dadosConcorrente, logos) {
         pdf.setFontSize(10);
         pdf.text("Cliente:", margemEsquerda + 2, posicaoY + 7);
         pdf.text("Data:", margemEsquerda + 2, posicaoY + 17);
-        pdf.text("Código:", margemEsquerda + 2, posicaoY + 27);
+        const codigoIgreja = typeof codigoIgrejaExibicao === 'function'
+            ? codigoIgrejaExibicao(dadosOrcamento.igreja)
+            : textoSeguro(dadosOrcamento.igreja && dadosOrcamento.igreja.codigo);
+        if (codigoIgreja) pdf.text("Código:", margemEsquerda + 2, posicaoY + 27);
 
         pdf.setFont("helvetica", "normal");
         pdf.text("Igreja Cristã Maranata", 72, posicaoY + 7);
 
         // Garantir valores seguros para textos
         const dataOrcamento = textoSeguro(dadosOrcamento.dataOrcamento);
-        const codigoIgreja = textoSeguro(dadosOrcamento.igreja && dadosOrcamento.igreja.codigo);
 
         pdf.text(dataOrcamento, 72, posicaoY + 17);
-        pdf.text(codigoIgreja, 72, posicaoY + 27);
+        if (codigoIgreja) pdf.text(codigoIgreja, 72, posicaoY + 27);
 
         posicaoY += 40;
 

@@ -154,10 +154,12 @@ function gerarPDFBasico(dadosOrcamento, dadosConcorrente) {
 
         // Verificar existência de dadosOrcamento.igreja.nome e .codigo
         const nomeIgreja = dadosOrcamento && dadosOrcamento.igreja && dadosOrcamento.igreja.nome ? dadosOrcamento.igreja.nome : "N/A";
-        const codigoIgreja = dadosOrcamento && dadosOrcamento.igreja && dadosOrcamento.igreja.codigo ? dadosOrcamento.igreja.codigo : "N/A";
+        const codigoIgreja = dadosOrcamento && dadosOrcamento.igreja && typeof codigoIgrejaExibicao === 'function'
+            ? codigoIgrejaExibicao(dadosOrcamento.igreja)
+            : (dadosOrcamento && dadosOrcamento.igreja && dadosOrcamento.igreja.codigo ? dadosOrcamento.igreja.codigo : "");
 
         pdf.text(`Igreja: ${nomeIgreja}`, 20, 50);
-        pdf.text(`Código: ${codigoIgreja}`, 20, 60);
+        if (codigoIgreja) pdf.text(`Código: ${codigoIgreja}`, 20, 60);
 
         // Texto de observação/explicativo (personalizado ou padrão do concorrente)
         try {

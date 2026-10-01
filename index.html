@@ -4522,6 +4522,7 @@
 
     <!-- Incluindo libraries necessárias -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/seedrandom/3.0.5/seedrandom.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -4716,7 +4717,8 @@
                             <div class="form-group">
                                 <label for="tipoTexto">Tipo de texto</label>
                                 <select id="tipoTexto">
-                                    <option value="padrao" selected>Padrão</option>
+                                    <option value="" disabled selected hidden>Selecione...</option>
+                                    <option value="padrao">Padrão</option>
                                     <option value="forro">Forro</option>
                                     <option value="tenda">Tenda</option>
                                     <option value="vidro">Vidro</option>
@@ -4726,7 +4728,8 @@
                             <div class="form-group">
                                 <label for="tipoPedido">Tipo de pedido</label>
                                 <select id="tipoPedido">
-                                    <option value="padrao" selected>Padrão</option>
+                                    <option value="" disabled selected hidden>Selecione...</option>
+                                    <option value="padrao">Padrão</option>
                                     <option value="especial">Especial</option>
                                 </select>
                             </div>
@@ -4750,6 +4753,14 @@
                             </div>
                         </div>
 
+                        <div class="form-group form-group-full" id="blocoImportarPdfOrcamento" style="margin-top:12px;">
+                            <label for="pdfOrcamentoImportar">Importar orçamento em PDF</label>
+                            <input type="file" id="pdfOrcamentoImportar" accept="application/pdf,.pdf">
+                            <p id="statusPdfOrcamentoImportar" style="font-size:0.85em; color:#64748b; margin:6px 0 0;">
+                                Envie um PDF já pronto: o texto e os valores são lidos para gerar os dois concorrentes com redação diferente e preços proporcionais.
+                            </p>
+                        </div>
+
                         <button id="adicionarIgreja" class="btn-primary" style="margin-top:12px;">
                             <i class="fas fa-plus-circle"></i> Adicionar Igreja
                         </button>
@@ -4760,7 +4771,7 @@
                     <summary><i class="fas fa-building"></i> Empresas concorrentes</summary>
                     <div class="orcamento-details-body">
                         <p id="avisoPedidoEspecial" class="aviso-pedido-especial" style="display:none;">
-                            Pedido especial: 2 concorrentes fixos — Mega Eventos e Tella Video.
+                            Pedido especial: 2 concorrentes. Mega Eventos e Tella Video vêm pré-selecionadas, mas você pode escolher outras.
                         </p>
                         <div class="orcamento-grid">
                             <div class="form-group">
@@ -5203,6 +5214,7 @@
     <script src="src/js/modules/material-manager.js"></script>
     <script src="src/js/modules/checklist-manager.js"></script>
     <script src="src/js/modules/main.js"></script>
+    <script src="src/js/budget/pdf-import.js"></script>
     <script src="src/js/modules/relatorio.js"></script>
     <script src="src/js/modules/pagamento-manager.js"></script>
     <script src="src/js/modules/previa-manager.js"></script>
@@ -5349,11 +5361,10 @@
             var blocoConcManual = document.getElementById('blocoConcorrentesManual');
             if (modoConc && blocoConcManual) {
                 modoConc.addEventListener('change', function () {
-                    if (document.getElementById('tipoPedido') && document.getElementById('tipoPedido').value === 'especial') {
-                        blocoConcManual.style.display = '';
-                        return;
-                    }
                     blocoConcManual.style.display = (this.value === 'manual') ? '' : 'none';
+                    if (typeof window.atualizarCamposTextoConcorrentes === 'function') {
+                        window.atualizarCamposTextoConcorrentes();
+                    }
                 });
             }
             var qtdConc = document.getElementById('qtdConcorrentes');

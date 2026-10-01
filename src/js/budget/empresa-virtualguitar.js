@@ -85,10 +85,13 @@ function gerarPDFVirtualGuitar(dadosOrcamento, dadosConcorrente, logos) {
         pdf.setFont("helvetica", "normal");
         pdf.text(textoSeguro(dadosOrcamento.igreja.nome), margemEsquerda + 60, posicaoY + 16);
 
-        pdf.setFont("helvetica", "bold");
-        pdf.text("CÓDIGO", margemEsquerda + 5, posicaoY + 24);
-        pdf.setFont("helvetica", "normal");
-        pdf.text(textoSeguro(dadosOrcamento.igreja.codigo), margemEsquerda + 60, posicaoY + 24);
+        const codigoVG = typeof codigoIgrejaExibicao === 'function' ? codigoIgrejaExibicao(dadosOrcamento.igreja) : (dadosOrcamento.igreja && dadosOrcamento.igreja.codigo);
+        if (codigoVG) {
+            pdf.setFont("helvetica", "bold");
+            pdf.text("CÓDIGO", margemEsquerda + 5, posicaoY + 24);
+            pdf.setFont("helvetica", "normal");
+            pdf.text(textoSeguro(codigoVG), margemEsquerda + 60, posicaoY + 24);
+        }
 
         posicaoY += 35; // Ajustado para o novo tamanho da caixa
 

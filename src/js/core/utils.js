@@ -237,5 +237,59 @@ function parseValorManualBR(raw) {
     return n;
 }
 
+function codigoIgrejaExibicao(igrejaOuCodigo) {
+    const bruto = (igrejaOuCodigo && typeof igrejaOuCodigo === 'object')
+        ? (igrejaOuCodigo.codigo || '')
+        : igrejaOuCodigo;
+    const c = String(bruto == null ? '' : bruto).trim();
+    if (!c || c === '000000' || /^n\/a$/i.test(c)) return '';
+    return c;
+}
+
+function idIgrejaExibicao(igrejaOuId) {
+    const bruto = (igrejaOuId && typeof igrejaOuId === 'object')
+        ? (igrejaOuId.id || '')
+        : igrejaOuId;
+    const id = String(bruto == null ? '' : bruto).trim();
+    if (!id || /^n\/a$/i.test(id)) return '';
+    return id;
+}
+
+function escalarValoresMonetariosTexto(texto, fator) {
+    if (!texto || fator == null || isNaN(Number(fator)) || Math.abs(Number(fator) - 1) < 0.0001) {
+        return texto;
+    }
+    const fatorNum = Number(fator);
+    const fmt = (n) => (typeof formatarMoeda === 'function')
+        ? formatarMoeda(n)
+        : ('R$ ' + n.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.'));
+    const parse = (s) => (typeof parseValorManualBR === 'function')
+        ? parseValorManualBR(s)
+        : parseFloat(String(s).replace(/[R$\s.]/g, '').replace(',', '.'));
+    const substituir = (m) => {
+        const v = parse(m);
+        if (isNaN(v) || v <= 0) return m;
+        return fmt(v * fatorNum);
+    };
+    let out = String(texto).replace(/R\$\s*\d{1,3}(?:[.\s\u00a0]\d{3})*(?:,\d{2})?|R\$\s*\d+(?:,\d{2})?/gi, substituir);
+    out = out.replace(/\d{1,3}(?:\.\d{3})+,\d{2}/g, (m, offset, full) => {
+        const antes = full.slice(Math.max(0, offset - 4), offset);
+        if (/R\$\s*$/i.test(antes)) return m;
+        return substituir(m);
+    });
+    out = out.replace(/((?:unit[aá]rio|valor\s*un(?:it|\.)?|pre[cç]o\s*(?:un|por)|\/\s*(?:m[²2]|unid)|por\s+(?:unidade|metro|m[²2]))[^\dR$]{0,24})(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2})/gi, (_, prefixo, num) => {
+        const v = parse(num);
+        if (isNaN(v) || v <= 0) return prefixo + num;
+        const formatado = fmt(v * fatorNum);
+        const soNumero = formatado.replace(/^R\$\s*/i, '');
+        return prefixo + soNumero;
+    });
+    return out;
+}
+
+window.codigoIgrejaExibicao = codigoIgrejaExibicao;
+window.idIgrejaExibicao = idIgrejaExibicao;
+window.escalarValoresMonetariosTexto = escalarValoresMonetariosTexto;
+
 // Não precisamos mais exportar as funções pois elas estarão no escopo global
 // quando o arquivo for carregado diretamente 

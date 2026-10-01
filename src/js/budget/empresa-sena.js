@@ -97,13 +97,18 @@ function gerarPDFSena(dadosOrcamento, dadosConcorrente, logos) {
         pdf.text(textoSeguro(nomeIgreja), margemEsquerda + 40, posicaoY);
         posicaoY += 7;
 
-        pdf.setFont("helvetica", "bold");
-        pdf.text("Código:", margemEsquerda, posicaoY);
-        pdf.setFont("helvetica", "normal");
-        // Verificar existência de dadosOrcamento.igreja.codigo
-        const codigoIgreja = textoSeguro(dadosOrcamento.igreja && dadosOrcamento.igreja.codigo ? dadosOrcamento.igreja.codigo : "N/A");
-        pdf.text(codigoIgreja, margemEsquerda + 40, posicaoY);
-        posicaoY += 15;
+        const codigoSena = typeof codigoIgrejaExibicao === 'function'
+            ? codigoIgrejaExibicao(dadosOrcamento.igreja)
+            : (dadosOrcamento.igreja && dadosOrcamento.igreja.codigo ? String(dadosOrcamento.igreja.codigo) : "");
+        if (codigoSena) {
+            pdf.setFont("helvetica", "bold");
+            pdf.text("Código:", margemEsquerda, posicaoY);
+            pdf.setFont("helvetica", "normal");
+            pdf.text(codigoSena, margemEsquerda + 40, posicaoY);
+            posicaoY += 15;
+        } else {
+            posicaoY += 8;
+        }
 
         // Descrição do serviço
         pdf.setFillColor(240, 240, 240);

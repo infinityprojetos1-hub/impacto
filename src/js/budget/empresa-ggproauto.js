@@ -55,9 +55,10 @@ function gerarPDFGGProauto(dadosOrcamento, dadosConcorrente, logos) {
         pdf.setFont("helvetica", "normal");
         pdf.text(`Igreja Crista Maranata`, 90, 45);
 
-        // Verificar se código da igreja existe
-        const codigoIgreja = dadosOrcamento.igreja && dadosOrcamento.igreja.codigo ? dadosOrcamento.igreja.codigo : "N/A";
-        pdf.text(`ICM - ${codigoIgreja}`, 90, 55);
+        const codigoIgreja = typeof codigoIgrejaExibicao === 'function'
+            ? codigoIgrejaExibicao(dadosOrcamento.igreja)
+            : (dadosOrcamento.igreja && dadosOrcamento.igreja.codigo ? dadosOrcamento.igreja.codigo : "");
+        pdf.text(codigoIgreja ? `ICM - ${codigoIgreja}` : 'Igreja Crista Maranata', 90, 55);
 
         // Linha divisória
         pdf.line(20, 60, 190, 60);

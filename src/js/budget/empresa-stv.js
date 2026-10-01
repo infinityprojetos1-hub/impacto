@@ -52,14 +52,17 @@ function gerarPDFSTV(dadosOrcamento, dadosConcorrente, logos) {
         pdf.text(`LOCAL: ICM ${nomeIgreja}`, margemEsquerda, posicaoY);
         posicaoY += 10;
 
-        // Verificar existência de dadosOrcamento.igreja.codigo
-        let codigoIgreja = "N/A";
-        if (dadosOrcamento.igreja && dadosOrcamento.igreja.codigo) {
-            const codigoParts = dadosOrcamento.igreja.codigo.split(" ");
-            codigoIgreja = codigoParts.length > 0 ? codigoParts[0] : "N/A";
+        const codigoBruto = typeof codigoIgrejaExibicao === 'function'
+            ? codigoIgrejaExibicao(dadosOrcamento.igreja)
+            : (dadosOrcamento.igreja && dadosOrcamento.igreja.codigo ? String(dadosOrcamento.igreja.codigo) : "");
+        if (codigoBruto) {
+            const codigoParts = codigoBruto.split(" ");
+            const codigoIgreja = codigoParts.length > 0 ? codigoParts[0] : codigoBruto;
+            pdf.text(`COMBENS ID ${codigoIgreja}`, margemEsquerda, posicaoY);
+            posicaoY += 20;
+        } else {
+            posicaoY += 10;
         }
-        pdf.text(`COMBENS ID ${codigoIgreja}`, margemEsquerda, posicaoY);
-        posicaoY += 20;
 
         // Descrição do serviço
         pdf.setFont("helvetica", "bold");
